@@ -1,0 +1,361 @@
+import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { Upload, Image as ImageIcon, Trash2, Search, Grid, List } from 'lucide-react';
+import { useMedia, useUploadMedia, useDeleteMedia } from '../../hooks/useApi';
+import { Button, Input, ContentLoader, EmptyState, Modal, ConfirmModal } from '../../components/common/index.jsx';
+import { formatBytes, formatRelativeTime } from '../../utils';
+import toast from 'react-hot-toast';
+
+export function MediaPage() {
+  const { data, isLoading } = useMedia();
+  const { mutate: uploadMedia, isPending: isUploading } = useUploadMedia();
+  const { mutate: deleteMedia, isPending: isDeleting } = useDeleteMedia();
+
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
+  };
+
+  const handleUpload = () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Please select files to upload');
+      return;
+    }
+
+    const formData = new FormData();
+    selectedFiles.forEach((file) => {
+      formData.append('images', file);
+    });
+
+    uploadMedia(formData, {
+      onSuccess: () => {
+        setIsUploadModalOpen(false);
+        setSelectedFiles([]);
+        toast.success('Files uploaded successfully');
+      },
+      onError: () => {
+        toast.error('Upload failed');
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    if (deleteModal) {
+      deleteMedia(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(null);
+          toast.success('File deleted');
+        }
+      });
+    }
+  };
+
+  if (isLoading) return <ContentLoader />;
+
+  const mediaFiles = data?.data || [];
+  const filteredMedia = mediaFiles.filter(file => 
+    file.originalName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <>
+      <Helmet><title>Media Library - Bassac Media Center</title></Helmet>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Media Library</h1>
+          <p className="text-dark-500">Manage your uploaded files</p>
+        </div>
+        <Button
+          leftIcon={<Upload className="w-4 h-4" />}
+          onClick={() => setIsUploadModalOpen(true)}
+        >
+          Upload Files
+        </Button>
+      </div>
+
+      {/* Search and View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+            <input
+              type="text"
+              placeholder="Search files..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input pl-10 w-full"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-lg ${
+              viewMode === 'grid'
+                ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30'
+                : 'bg-dark-100 text-dark-600 dark:bg-dark-800'
+            }`}
+          >
+            <Grid className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-lg ${
+              viewMode === 'list'
+                ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30'
+                : 'bg-dark-100 text-dark-600 dark:bg-dark-800'
+            }`}
+          >
+            <List className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Media Grid/List */}
+      {filteredMedia.length > 0 ? (
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredMedia.map((file) => (
+              <div key={file._id} className="card p-3 group relative">
+                <div
+                  className="aspect-square bg-dark-100 dark:bg-dark-800 rounded-lg mb-2 overflow-hidden cursor-pointer"
+                  onClick={() => setPreviewImage(file)}
+                >
+                  {(file.mimeType || file.mimetype)?.startsWith('image/') ? (
+                    <img
+                      src={file.url}
+                      alt={file.originalName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '';
+                        e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-dark-400"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg></div>';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="w-12 h-12 text-dark-400" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-dark-900 dark:text-white truncate">
+                  {file.originalName}
+                </p>
+                <p className="text-xs text-dark-500">{formatBytes(file.size)}</p>
+                <button
+                  onClick={() => setDeleteModal({ id: file._id, name: file.originalName })}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-dark-50 dark:bg-dark-800">
+                  <tr>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Preview</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Name</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Size</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Type</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Uploaded</th>
+                    <th className="px-6 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-100 dark:divide-dark-800">
+                  {filteredMedia.map((file) => (
+                    <tr key={file._id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
+                      <td className="px-6 py-4">
+                        <div className="w-12 h-12 bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
+                          {(file.mimeType || file.mimetype)?.startsWith('image/') ? (
+                            <img src={file.url} alt={file.originalName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <ImageIcon className="w-6 h-6 text-dark-400" />
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-dark-900 dark:text-white truncate max-w-xs">
+                          {file.originalName}
+                        </p>
+                      </td>
+                      <td className="px-6 py-4 text-dark-500">{formatBytes(file.size)}</td>
+                      <td className="px-6 py-4 text-dark-500">{file.mimeType || file.mimetype}</td>
+                      <td className="px-6 py-4 text-dark-500">{formatRelativeTime(file.createdAt)}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => setDeleteModal({ id: file._id, name: file.originalName })}
+                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      ) : (
+        <EmptyState
+          icon={ImageIcon}
+          title={searchTerm ? 'No files found' : 'No files uploaded'}
+          description={searchTerm ? 'Try a different search term' : 'Upload your first files to get started'}
+          action={
+            !searchTerm && (
+              <Button
+                leftIcon={<Upload className="w-4 h-4" />}
+                onClick={() => setIsUploadModalOpen(true)}
+              >
+                Upload Files
+              </Button>
+            )
+          }
+        />
+      )}
+
+      {/* Upload Modal */}
+      <Modal
+        isOpen={isUploadModalOpen}
+        onClose={() => {
+          setIsUploadModalOpen(false);
+          setSelectedFiles([]);
+        }}
+        title="Upload Files"
+      >
+        <div className="space-y-4">
+          <div className="border-2 border-dashed border-dark-200 dark:border-dark-700 rounded-lg p-8 text-center">
+            <Upload className="w-12 h-12 mx-auto mb-3 text-dark-400" />
+            <p className="text-dark-900 dark:text-white font-medium mb-1">
+              Choose files to upload
+            </p>
+            <p className="text-sm text-dark-500 mb-4">
+              Supports: Images, Documents, Videos
+            </p>
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*,.pdf,.doc,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-upload"
+            />
+            <label htmlFor="file-upload" className="btn btn-primary cursor-pointer inline-block">
+              Select Files
+            </label>
+          </div>
+
+          {selectedFiles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-dark-700 dark:text-dark-300">
+                Selected files ({selectedFiles.length}):
+              </p>
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-dark-50 dark:bg-dark-800 rounded-lg"
+                  >
+                    <span className="text-sm text-dark-700 dark:text-dark-300 truncate flex-1">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-dark-500 ml-2">
+                      {formatBytes(file.size)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsUploadModalOpen(false);
+                setSelectedFiles([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpload} isLoading={isUploading}>
+              Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Preview Modal */}
+      {previewImage && (
+        <Modal
+          isOpen={!!previewImage}
+          onClose={() => setPreviewImage(null)}
+          title={previewImage.originalName}
+          size="xl"
+        >
+          <div className="space-y-4">
+            <img
+              src={previewImage.url}
+              alt={previewImage.originalName}
+              className="w-full rounded-lg"
+            />
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-dark-500">Size:</span>{' '}
+                <span className="text-dark-900 dark:text-white">{formatBytes(previewImage.size)}</span>
+              </div>
+              <div>
+                <span className="text-dark-500">Type:</span>{' '}
+                <span className="text-dark-900 dark:text-white">{previewImage.mimetype}</span>
+              </div>
+              <div>
+                <span className="text-dark-500">Uploaded:</span>{' '}
+                <span className="text-dark-900 dark:text-white">
+                  {formatRelativeTime(previewImage.createdAt)}
+                </span>
+              </div>
+              <div>
+                <span className="text-dark-500">URL:</span>{' '}
+                <a
+                  href={previewImage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:underline"
+                >
+                  View full size
+                </a>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteModal}
+        onClose={() => setDeleteModal(null)}
+        onConfirm={handleDelete}
+        title="Delete File"
+        message={`Are you sure you want to delete "${deleteModal?.name}"?`}
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+        icon={Trash2}
+      />
+    </>
+  );
+}
