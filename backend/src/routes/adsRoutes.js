@@ -14,7 +14,7 @@ import {
   getAllAdsStats,
   bulkUpdateStatus
 } from '../controllers/adsController.js';
-import { protect, adminOnly, authorize } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -31,25 +31,25 @@ router.post('/event', trackEvent);
 // All routes below require authentication
 
 // Stats summary (admin)
-router.get('/stats/summary', protect, authorize('admin', 'editor'), getAllAdsStats);
+router.get('/stats/summary', authenticate, authorize('admin', 'editor'), getAllAdsStats);
 
 // Bulk operations
-router.patch('/bulk/status', protect, authorize('admin', 'editor'), bulkUpdateStatus);
+router.patch('/bulk/status', authenticate, authorize('admin', 'editor'), bulkUpdateStatus);
 
 // Individual ad stats
-router.get('/:id/stats', protect, authorize('admin', 'editor'), getAdStats);
+router.get('/:id/stats', authenticate, authorize('admin', 'editor'), getAdStats);
 
 // Duplicate ad
-router.post('/:id/duplicate', protect, authorize('admin', 'editor'), duplicateAd);
+router.post('/:id/duplicate', authenticate, authorize('admin', 'editor'), duplicateAd);
 
 // CRUD operations
 router.route('/')
-  .get(protect, authorize('admin', 'editor'), getAllAds)
-  .post(protect, authorize('admin', 'editor'), createAd);
+  .get(authenticate, authorize('admin', 'editor'), getAllAds)
+  .post(authenticate, authorize('admin', 'editor'), createAd);
 
 router.route('/:id')
-  .get(protect, authorize('admin', 'editor'), getAd)
-  .put(protect, authorize('admin', 'editor'), updateAd)
-  .delete(protect, authorize('admin'), deleteAd);
+  .get(authenticate, authorize('admin', 'editor'), getAd)
+  .put(authenticate, authorize('admin', 'editor'), updateAd)
+  .delete(authenticate, authorize('admin'), deleteAd);
 
 export default router;
