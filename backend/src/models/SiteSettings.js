@@ -79,7 +79,13 @@ const homeSectionSchema = new mongoose.Schema({
     imageUrl: { type: String, default: '' },
     linkUrl: { type: String, default: '' },
     altText: { type: String, default: '' },
-    position: { type: String, default: 'horizontal' }
+    position: { type: String, default: 'horizontal' },
+    adId: { type: String, default: '' },
+    fallbackImageUrl: { type: String, default: '' },
+    fallbackLinkUrl: { type: String, default: '' },
+    showLabel: { type: Boolean, default: true },
+    placement: { type: String, default: 'custom' },
+    placementId: { type: String, default: '' }
   }
 }, { _id: false });
 
@@ -242,86 +248,7 @@ const siteSettingsSchema = new mongoose.Schema({
     frequency: { type: String, enum: ['always', 'once_per_session', 'once_per_day'], default: 'once_per_session' },
   },
 
-  // ==================== BODY ADS SYSTEM ====================
-  // Dynamic ads that can be placed throughout the content body
-  bodyAds: {
-    enabled: { type: Boolean, default: true },
-    // Collection of all body ads
-    ads: [{
-      _id: { type: String, default: () => Date.now().toString() },
-      name: { type: String, default: 'New Ad' }, // Admin reference name
-      isActive: { type: Boolean, default: true },
-      // Ad Content
-      type: { type: String, enum: ['image', 'html', 'adsense', 'video'], default: 'image' },
-      imageUrl: { type: String, default: '' },
-      mobileImageUrl: { type: String, default: '' },
-      linkUrl: { type: String, default: '' },
-      linkTarget: { type: String, enum: ['_self', '_blank'], default: '_blank' },
-      htmlContent: { type: String, default: '' }, // For custom HTML/script ads
-      videoUrl: { type: String, default: '' },
-      altText: { type: String, default: '' },
-      // Display Settings
-      style: { type: String, enum: ['banner', 'card', 'native', 'fullwidth', 'inline'], default: 'banner' },
-      size: { type: String, enum: ['small', 'medium', 'large', 'responsive'], default: 'responsive' },
-      alignment: { type: String, enum: ['left', 'center', 'right'], default: 'center' },
-      maxWidth: { type: Number, default: 728 }, // Max width in pixels
-      backgroundColor: { type: String, default: '' },
-      borderRadius: { type: Number, default: 8 },
-      padding: { type: Number, default: 16 },
-      showLabel: { type: Boolean, default: true }, // "Advertisement" label
-      labelText: { type: String, default: 'Advertisement' },
-      // Placement Settings
-      placement: { 
-        type: String, 
-        enum: [
-          'after_hero',           // After hero section on homepage
-          'between_sections',     // Between homepage sections
-          'in_article',           // Inside article content
-          'after_article',        // After article content
-          'before_comments',      // Before comments section
-          'in_category',          // In category listing
-          'in_search',            // In search results
-          'custom'                // Custom placement (use placementId)
-        ], 
-        default: 'between_sections' 
-      },
-      placementId: { type: String, default: '' }, // For custom placements
-      sectionIndex: { type: Number, default: 2 }, // For between_sections: after which section (0-indexed)
-      paragraphIndex: { type: Number, default: 3 }, // For in_article: after which paragraph
-      // Targeting
-      showOnPages: { type: String, enum: ['all', 'homepage', 'articles', 'category', 'search'], default: 'all' },
-      showOnMobile: { type: Boolean, default: true },
-      showOnDesktop: { type: Boolean, default: true },
-      showForLoggedIn: { type: Boolean, default: true },
-      showForGuests: { type: Boolean, default: true },
-      // Scheduling
-      startDate: { type: Date, default: null },
-      endDate: { type: Date, default: null },
-      // Analytics
-      impressions: { type: Number, default: 0 },
-      clicks: { type: Number, default: 0 },
-      // Priority & Order
-      priority: { type: Number, default: 0 }, // Higher = shows first if multiple ads same placement
-      order: { type: Number, default: 0 },
-      // Frequency
-      frequency: { type: String, enum: ['always', 'once_per_page', 'once_per_session'], default: 'always' },
-      // Animation
-      animation: { type: String, enum: ['none', 'fade', 'slide', 'zoom'], default: 'fade' },
-      // Created/Updated
-      createdAt: { type: Date, default: Date.now },
-      updatedAt: { type: Date, default: Date.now },
-    }],
-    // Global body ads settings
-    globalSettings: {
-      maxAdsPerPage: { type: Number, default: 5 }, // Maximum ads shown on any page
-      minSpacingBetweenAds: { type: Number, default: 3 }, // Min sections/paragraphs between ads
-      defaultAnimation: { type: String, enum: ['none', 'fade', 'slide', 'zoom'], default: 'fade' },
-      lazyLoad: { type: Boolean, default: true },
-      respectAdBlockers: { type: Boolean, default: false },
-    }
-  },
-
-  // In-Article Ads (legacy - kept for backward compatibility, use bodyAds instead)
+  // In-Article Ads (legacy - kept for backward compatibility, use /api/ads instead)
   inArticleAd: {
     enabled: { type: Boolean, default: false },
     position: { type: Number, default: 3 }, // After which paragraph

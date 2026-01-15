@@ -105,9 +105,9 @@ After running backend seed:
 
 ## Development
 
-The frontend proxies `/api` requests to `http://localhost:5000` in development.
+The frontend proxies `/api` requests to `http://localhost:8888` in development.
 
-Make sure the backend is running on port 5000.
+Make sure the backend is running on port 8888.
 
 ```bash
 # Terminal 1 - Backend

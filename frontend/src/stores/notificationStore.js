@@ -10,18 +10,22 @@ const getSocketUrl = () => {
     return import.meta.env.VITE_SOCKET_URL;
   }
   
-  // In development with Vite proxy, use same origin (empty string or window.location.origin)
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl && apiUrl.startsWith('http')) {
+    return new URL(apiUrl).origin;
+  }
+
+  // In development, default to backend port to avoid Vite proxy socket errors
   if (import.meta.env.DEV) {
-    return window.location.origin;
+    return 'http://localhost:8888';
   }
   
   // In production, derive from API URL or use default
-  const apiUrl = import.meta.env.VITE_API_URL;
   if (apiUrl) {
-    return apiUrl.replace('/api', '');
+    return window.location.origin;
   }
   
-  return 'http://localhost:8888';
+  return window.location.origin;
 };
 
 const useNotificationStore = create((set, get) => ({

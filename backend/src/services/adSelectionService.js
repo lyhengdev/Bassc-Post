@@ -24,6 +24,8 @@ class AdSelectionService {
       articleId = null,
       sectionIndex = null,
       paragraphIndex = null,
+      placementId = null,
+      adId = null,
       limit = 3,
       excludeAdIds = []
     } = context;
@@ -33,9 +35,16 @@ class AdSelectionService {
     // Build query
     const query = {
       status: 'active',
-      placement,
       _id: { $nin: excludeAdIds }
     };
+    if (adId) {
+      query._id = adId;
+    } else if (placement) {
+      query.$or = [
+        { placement },
+        { placements: placement }
+      ];
+    }
     
     // Schedule filtering
     query.$and = [
@@ -54,10 +63,16 @@ class AdSelectionService {
     ];
     
     // Page type targeting
-    query.$or = [
-      { 'targeting.pages': 'all' },
-      { 'targeting.pages': pageType }
-    ];
+    query.$and = query.$and || [];
+    query.$and.push({
+      $or: [
+        { 'targeting.pages': 'all' },
+        { 'targeting.pages': pageType }
+      ]
+    });
+    if (placement === 'custom' || placementId) {
+      query.$and.push({ $or: [{ 'targeting.pages': 'custom' }] });
+    }
     
     // Device targeting
     const deviceField = `targeting.devices.${device}`;
@@ -76,6 +91,9 @@ class AdSelectionService {
     if (placement === 'in_article' && paragraphIndex !== null) {
       query.paragraphIndex = paragraphIndex;
     }
+    if (placementId) {
+      query.placementId = placementId;
+    }
     
     // Category targeting (if provided)
     if (categoryId) {
@@ -86,6 +104,16 @@ class AdSelectionService {
         ]
       });
       query['targeting.excludeCategories'] = { $ne: categoryId };
+    }
+
+    // Article targeting (if provided)
+    if (articleId) {
+      query.$and.push({
+        $or: [
+          { 'targeting.articles': { $size: 0 } },
+          { 'targeting.articles': articleId }
+        ]
+      });
     }
     
     // Fetch matching ads

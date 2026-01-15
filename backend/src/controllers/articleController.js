@@ -1,5 +1,5 @@
-import {Article, Category, User} from '../models/index.js';
-import {analyticsHelpers} from '../models/Analytics.js';
+import {Article, Category, Media} from '../models/index.js';
+import {analyticsHelpers, PageView} from '../models/Analytics.js';
 import {sanitizeEditorContent, parsePaginationParams, generateHash, getClientIp} from '../utils/helpers.js';
 import emailService from '../services/emailService.js';
 import cacheService from '../services/cacheService.js';
@@ -13,6 +13,22 @@ import {
     badRequestResponse,
 } from '../utils/apiResponse.js';
 import {asyncHandler} from '../middleware/errorHandler.js';
+
+const syncFeaturedImageUsage = async (articleId, newUrl, oldUrl = null) => {
+    if (oldUrl && oldUrl !== newUrl) {
+        const oldMedia = await Media.findOne({url: oldUrl});
+        if (oldMedia) {
+            await oldMedia.removeUsage('Article', articleId);
+        }
+    }
+
+    if (newUrl && newUrl !== oldUrl) {
+        const newMedia = await Media.findOne({url: newUrl});
+        if (newMedia) {
+            await newMedia.trackUsage('Article', articleId);
+        }
+    }
+};
 
 /**
  * Create article
@@ -61,6 +77,7 @@ export const createArticle = asyncHandler(async (req, res) => {
 
     await article.populate('author', 'firstName lastName avatar');
     await article.populate('category', 'name slug color');
+    await syncFeaturedImageUsage(article._id, featuredImage);
 
     // Invalidate article list caches
     await cacheService.invalidateArticleLists();
@@ -252,6 +269,7 @@ export const updateArticle = asyncHandler(async (req, res) => {
     if (!article) {
         return notFoundResponse(res, 'Article not found');
     }
+    const previousFeaturedImage = article.featuredImage;
 
     // Check ownership or admin/editor role
     const isOwner = article.author.toString() === req.user._id.toString();
@@ -317,6 +335,7 @@ export const updateArticle = asyncHandler(async (req, res) => {
 
     article.lastEditedBy = req.user._id;
     await article.save();
+    await syncFeaturedImageUsage(article._id, article.featuredImage, previousFeaturedImage);
 
     // Invalidate caches
     await cacheService.invalidateArticle(oldSlug);
@@ -341,6 +360,7 @@ export const deleteArticle = asyncHandler(async (req, res) => {
     if (!article) {
         return notFoundResponse(res, 'Article not found');
     }
+    const featuredImage = article.featuredImage;
 
     const isOwner = article.author.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
@@ -351,6 +371,7 @@ export const deleteArticle = asyncHandler(async (req, res) => {
 
     const slug = article.slug;
     await article.deleteOne();
+    await syncFeaturedImageUsage(article._id, null, featuredImage);
 
     // Invalidate caches
     await cacheService.invalidateArticle(slug);
@@ -383,6 +404,37 @@ export const getMyArticles = asyncHandler(async (req, res) => {
     ]);
 
     return paginatedResponse(res, articles, {page, limit, total});
+});
+
+/**
+ * Get all articles (admin)
+ * GET /api/articles/admin
+ */
+export const getAllArticlesAdmin = asyncHandler(async (req, res) => {
+    const { page, limit, skip } = parsePaginationParams(req.query);
+    const { status, author, q, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+    const filter = {};
+    if (status) filter.status = status;
+    if (author) filter.author = author;
+    if (q) {
+        filter.title = { $regex: q, $options: 'i' };
+    }
+
+    const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+
+    const [articles, total] = await Promise.all([
+        Article.find(filter)
+            .populate('author', 'firstName lastName avatar role')
+            .populate('category', 'name slug color')
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
+            .select('-content'),
+        Article.countDocuments(filter),
+    ]);
+
+    return paginatedResponse(res, articles, { page, limit, total });
 });
 
 /**
@@ -604,6 +656,56 @@ export const getArticlesByCategory = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * Get article insights (staff)
+ * GET /api/articles/:id/insights
+ */
+export const getArticleInsights = asyncHandler(async (req, res) => {
+    const {id} = req.params;
+    const {startDate, endDate} = req.query;
+
+    const article = await Article.findById(id)
+        .select('title slug status viewCount createdAt updatedAt publishedAt author')
+        .populate('author', 'firstName lastName');
+
+    if (!article) {
+        return notFoundResponse(res, 'Article not found');
+    }
+
+    const match = {article: id};
+    if (startDate || endDate) {
+        const parsedStart = startDate ? new Date(startDate) : null;
+        const parsedEnd = endDate ? new Date(endDate) : null;
+        if ((parsedStart && Number.isNaN(parsedStart.getTime())) || (parsedEnd && Number.isNaN(parsedEnd.getTime()))) {
+            return badRequestResponse(res, 'Invalid date range');
+        }
+        match.date = {};
+        if (parsedStart) match.date.$gte = parsedStart;
+        if (parsedEnd) match.date.$lte = parsedEnd;
+    }
+
+    const daily = await PageView.find(match)
+        .sort({date: 1})
+        .select('date views uniqueVisitors')
+        .lean();
+
+    const totals = daily.reduce(
+        (acc, day) => ({
+            views: acc.views + (day.views || 0),
+            uniqueVisitors: acc.uniqueVisitors + (day.uniqueVisitors || 0),
+        }),
+        {views: 0, uniqueVisitors: 0}
+    );
+
+    const stats = {
+        views: article.viewCount || totals.views || 0,
+        trackedViews: totals.views || 0,
+        uniqueVisitors: totals.uniqueVisitors || 0,
+    };
+
+    return successResponse(res, {article, stats, daily});
+});
+
 export default {
     createArticle,
     getArticles,
@@ -614,6 +716,7 @@ export default {
     updateArticle,
     deleteArticle,
     getMyArticles,
+    getAllArticlesAdmin,
     getPendingArticles,
     approveArticle,
     rejectArticle,
@@ -621,4 +724,5 @@ export default {
     getRelatedArticles,
     searchArticles,
     getArticlesByCategory,
+    getArticleInsights,
 };

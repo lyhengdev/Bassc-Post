@@ -55,7 +55,7 @@ export function AnalyticsPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((stat) => (
           <div key={stat.label} className="card p-6">
             <div className="flex items-center justify-between mb-4">
@@ -72,7 +72,7 @@ export function AnalyticsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">
         {/* Top Articles */}
         <div className="card p-6">
           <h2 className="font-semibold text-dark-900 dark:text-white mb-4 flex items-center gap-2">

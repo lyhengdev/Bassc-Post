@@ -32,7 +32,7 @@ const SECTION_TYPES = [
 export function HomepageBuilderPage() {
   const { data: settings, isLoading } = useSiteSettings();
   const { data: categoriesData } = useCategories();
-  const categories = categoriesData?.data || [];
+  const categories = categoriesData || [];
   const { mutate: updateSections, isPending: isSaving } = useUpdateHomepageSections();
   
   const [sections, setSections] = useState([]);
@@ -79,6 +79,12 @@ export function HomepageBuilderPage() {
         linkUrl: '',
         altText: 'Advertisement',
         sidebarTitle: 'More Stories',
+        adId: '',
+        fallbackImageUrl: '',
+        fallbackLinkUrl: '',
+        showLabel: true,
+        placement: 'custom',
+        placementId: '',
       }
     };
     setSections([...sections, newSection]);
@@ -134,7 +140,7 @@ export function HomepageBuilderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="card">
             <div className="p-4 border-b border-dark-200 dark:border-dark-700 flex items-center justify-between">
@@ -160,59 +166,92 @@ export function HomepageBuilderPage() {
                   const sectionType = SECTION_TYPES.find(s => s.type === section.type);
                   const Icon = sectionType?.icon || Layout;
                   const isExpanded = expandedSections[section.id];
+                  const hasLayoutControls = !['ad_banner', 'custom_html', 'newsletter_signup'].includes(section.type);
+                  const categorySlug = section.settings?.categorySlug || section.settings?.category || '';
+                  const categoryLabel = categorySlug
+                    ? categories.find(cat => cat.slug === categorySlug)?.name || categorySlug
+                    : '';
+                  const metaItems = [
+                    hasLayoutControls ? `Layout: ${section.settings?.layout || 'grid'}` : 'Layout: custom',
+                    hasLayoutControls ? `Items: ${section.settings?.limit || 6}` : null,
+                    categoryLabel ? `Category: ${categoryLabel}` : null,
+                    section.type === 'grid_with_sidebar' ? `Sidebar: ${section.settings?.sidebarTitle || 'More Stories'}` : null,
+                  ].filter(Boolean);
                   
                   return (
-                    <div key={section.id}>
-                      <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                        <div className="flex flex-col gap-1">
-                          <button 
-                            onClick={() => moveSection(index, -1)} 
-                            disabled={index === 0}
-                            className="p-1 hover:bg-dark-100 dark:hover:bg-dark-800 rounded disabled:opacity-30"
-                          >
-                            <ChevronUp className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => moveSection(index, 1)} 
-                            disabled={index === sections.length - 1}
-                            className="p-1 hover:bg-dark-100 dark:hover:bg-dark-800 rounded disabled:opacity-30"
-                          >
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className={cn('p-2 rounded-lg', section.enabled ? 'bg-primary-100 dark:bg-primary-900/30' : 'bg-dark-100 dark:bg-dark-800')}>
-                          <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', section.enabled ? 'text-primary-600' : 'text-dark-400')} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('font-medium text-sm sm:text-base truncate', section.enabled ? 'text-dark-900 dark:text-white' : 'text-dark-500')}>
-                            {section.title}
-                          </p>
-                          <p className="text-xs text-dark-500 hidden sm:block">{sectionType?.description}</p>
-                        </div>
-                        <div className="flex items-center gap-1 sm:gap-2">
-                          <button
-                            onClick={() => updateSection(section.id, { enabled: !section.enabled })}
-                            className={cn(
-                              'px-2 py-1 rounded text-xs font-medium hidden sm:block',
-                              section.enabled 
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                : 'bg-dark-100 text-dark-500 dark:bg-dark-800'
+                    <div key={section.id} className={cn('relative', section.enabled ? 'bg-white dark:bg-dark-900' : 'bg-dark-50 dark:bg-dark-900/40')}>
+                      <div className={cn('border-l-4', section.enabled ? 'border-primary-600' : 'border-dark-200 dark:border-dark-700')}>
+                        <div className="p-4 sm:p-5 flex items-start gap-3">
+                          <div className="flex flex-col gap-1 pt-1">
+                            <button 
+                              onClick={() => moveSection(index, -1)} 
+                              disabled={index === 0}
+                              className="p-1 hover:bg-dark-100 dark:hover:bg-dark-800 rounded disabled:opacity-30"
+                              aria-label="Move section up"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => moveSection(index, 1)} 
+                              disabled={index === sections.length - 1}
+                              className="p-1 hover:bg-dark-100 dark:hover:bg-dark-800 rounded disabled:opacity-30"
+                              aria-label="Move section down"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-dark-500">
+                              <Icon className={cn('w-4 h-4', section.enabled ? 'text-primary-600' : 'text-dark-400')} />
+                              <span>{sectionType?.label || 'Section'}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="hidden sm:inline">Order {index + 1}</span>
+                            </div>
+                            <p className={cn('text-lg sm:text-xl font-semibold leading-snug mt-2', section.enabled ? 'text-dark-900 dark:text-white' : 'text-dark-500')}>
+                              {section.title}
+                            </p>
+                            {section.subtitle && (
+                              <p className="text-sm text-dark-500 italic mt-1 line-clamp-2">{section.subtitle}</p>
                             )}
-                          >
-                            {section.enabled ? 'Active' : 'Hidden'}
-                          </button>
-                          <button onClick={() => toggleExpand(section.id)} className="p-2 hover:bg-dark-100 dark:hover:bg-dark-800 rounded-lg">
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-                          <button onClick={() => setDeleteModal(section.id)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-dark-400">
+                              {metaItems.map(item => (
+                                <span key={item} className="px-2 py-1 rounded-full bg-dark-100 dark:bg-dark-800">{item}</span>
+                              ))}
+                              <span className={cn(
+                                'px-2 py-1 rounded-full',
+                                section.enabled
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                  : 'bg-dark-100 text-dark-500 dark:bg-dark-800'
+                              )}>
+                                {section.enabled ? 'Active' : 'Hidden'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <button
+                              onClick={() => updateSection(section.id, { enabled: !section.enabled })}
+                              className={cn(
+                                'px-2 py-1 rounded text-xs font-medium hidden sm:block',
+                                section.enabled 
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                  : 'bg-dark-100 text-dark-500 dark:bg-dark-800'
+                              )}
+                            >
+                              {section.enabled ? 'Active' : 'Hidden'}
+                            </button>
+                            <button onClick={() => toggleExpand(section.id)} className="p-2 hover:bg-dark-100 dark:hover:bg-dark-800 rounded-lg">
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                            <button onClick={() => setDeleteModal(section.id)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                       
                       {isExpanded && (
-                        <div className="px-3 sm:px-4 pb-4 pt-4 sm:ml-12 bg-dark-50 dark:bg-dark-800/50 border-t border-dark-100 dark:border-dark-800">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="px-3 sm:px-4 pb-4 pt-4 sm:ml-12 bg-dark-50 dark:bg-dark-800/50 border-t border-dashed border-dark-200 dark:border-dark-700">
+                          <div className="grid grid-cols-2 gap-4">
                             <Input label="Section Title" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
                             <Input label="Subtitle" value={section.subtitle || ''} onChange={(e) => updateSection(section.id, { subtitle: e.target.value })} />
                             
@@ -249,19 +288,55 @@ export function HomepageBuilderPage() {
                             {section.type === 'ad_banner' && (
                               <>
                                 <div>
-                                  <label className="label">Position</label>
-                                  <select value={section.settings?.position || 'horizontal'} onChange={(e) => updateSectionSettings(section.id, 'position', e.target.value)} className="input">
-                                    <option value="horizontal">Horizontal</option>
-                                    <option value="vertical">Vertical</option>
+                                  <label className="label">Placement</label>
+                                  <select
+                                    value={section.settings?.placement || 'custom'}
+                                    onChange={(e) => updateSectionSettings(section.id, 'placement', e.target.value)}
+                                    className="input"
+                                  >
+                                    <option value="custom">Custom (section slot)</option>
+                                    <option value="after_hero">After Hero</option>
+                                    <option value="between_sections">Between Sections</option>
+                                    <option value="in_article">In Article</option>
+                                    <option value="after_article">After Article</option>
+                                    <option value="before_comments">Before Comments</option>
+                                    <option value="in_category">In Category</option>
+                                    <option value="in_search">In Search</option>
                                   </select>
                                 </div>
-                                <Input label="Image URL" value={section.settings?.imageUrl || ''} onChange={(e) => updateSectionSettings(section.id, 'imageUrl', e.target.value)} placeholder="https://..." />
-                                <Input label="Link URL" value={section.settings?.linkUrl || ''} onChange={(e) => updateSectionSettings(section.id, 'linkUrl', e.target.value)} placeholder="https://..." />
-                                <Input label="Alt Text" value={section.settings?.altText || ''} onChange={(e) => updateSectionSettings(section.id, 'altText', e.target.value)} />
-                                <div className="sm:col-span-2">
-                                  <label className="label">Or Custom Ad HTML</label>
-                                  <textarea value={section.settings?.customHtml || ''} onChange={(e) => updateSectionSettings(section.id, 'customHtml', e.target.value)} className="input font-mono text-sm" rows={3} placeholder="<script>...</script>" />
-                                </div>
+                                <Input
+                                  label="Ad ID (optional)"
+                                  value={section.settings?.adId || ''}
+                                  onChange={(e) => updateSectionSettings(section.id, 'adId', e.target.value)}
+                                  placeholder="Paste an ad ID"
+                                />
+                                <Input
+                                  label="Placement ID (optional)"
+                                  value={section.settings?.placementId || ''}
+                                  onChange={(e) => updateSectionSettings(section.id, 'placementId', e.target.value)}
+                                  placeholder={`Default: ${section.id}`}
+                                />
+                                <Input
+                                  label="Fallback Image URL"
+                                  value={section.settings?.fallbackImageUrl || ''}
+                                  onChange={(e) => updateSectionSettings(section.id, 'fallbackImageUrl', e.target.value)}
+                                  placeholder="https://..."
+                                />
+                                <Input
+                                  label="Fallback Link URL"
+                                  value={section.settings?.fallbackLinkUrl || ''}
+                                  onChange={(e) => updateSectionSettings(section.id, 'fallbackLinkUrl', e.target.value)}
+                                  placeholder="https://..."
+                                />
+                                <label className="flex items-center gap-2 text-sm text-dark-600 dark:text-dark-400">
+                                  <input
+                                    type="checkbox"
+                                    checked={section.settings?.showLabel ?? true}
+                                    onChange={(e) => updateSectionSettings(section.id, 'showLabel', e.target.checked)}
+                                    className="w-4 h-4 text-primary-600 rounded"
+                                  />
+                                  Show "Advertisement" label
+                                </label>
                               </>
                             )}
 
@@ -293,14 +368,20 @@ export function HomepageBuilderPage() {
         <div className="hidden lg:block">
           <div className="card p-4 sticky top-4">
             <h3 className="font-semibold text-dark-900 dark:text-white mb-4">Layout Preview</h3>
-            <div className="bg-dark-100 dark:bg-dark-800 rounded-lg p-3 space-y-2">
+            <div className="bg-dark-100 dark:bg-dark-800 rounded-lg p-3 space-y-3">
               {sections.filter(s => s.enabled).sort((a, b) => a.order - b.order).map(section => {
                 const sectionType = SECTION_TYPES.find(s => s.type === section.type);
                 const Icon = sectionType?.icon || Layout;
                 return (
-                  <div key={section.id} className="flex items-center gap-2 p-2 bg-white dark:bg-dark-900 rounded text-sm">
-                    <Icon className="w-4 h-4 text-primary-600 flex-shrink-0" />
-                    <span className="truncate">{section.title}</span>
+                  <div key={section.id} className="bg-white dark:bg-dark-900 rounded-lg p-3 border-l-4 border-primary-600">
+                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-dark-500">
+                      <Icon className="w-3 h-3 text-primary-600" />
+                      <span>{sectionType?.label || 'Section'}</span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-dark-900 dark:text-white line-clamp-2">{section.title}</p>
+                    {section.subtitle && (
+                      <p className="mt-1 text-xs text-dark-500 italic line-clamp-2">{section.subtitle}</p>
+                    )}
                   </div>
                 );
               })}
@@ -314,16 +395,26 @@ export function HomepageBuilderPage() {
 
       {/* Add Section Modal */}
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Section" size="lg">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto">
+        <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
           {SECTION_TYPES.map(section => (
             <button
               key={section.type}
               onClick={() => addSection(section.type)}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dark-200 dark:border-dark-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+              className="group text-left p-4 rounded-lg border-2 border-dark-200 dark:border-dark-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
             >
-              <section.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" />
-              <span className="font-medium text-dark-900 dark:text-white text-xs sm:text-sm text-center">{section.label}</span>
-              <span className="text-xs text-dark-500 text-center hidden sm:block">{section.description}</span>
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-dark-500">
+                <section.icon className="w-4 h-4 text-primary-600" />
+                <span>Section Type</span>
+              </div>
+              <div className="mt-3">
+                <span className="block text-sm sm:text-base font-semibold text-dark-900 dark:text-white group-hover:text-primary-700">
+                  {section.label}
+                </span>
+                <span className="block text-xs text-dark-500 mt-1 line-clamp-2">{section.description}</span>
+              </div>
+              <div className="mt-4 border-t border-dashed border-dark-200 dark:border-dark-700 pt-2 text-[10px] uppercase tracking-widest text-dark-400">
+                Click to add
+              </div>
             </button>
           ))}
         </div>

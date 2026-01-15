@@ -1,6 +1,9 @@
 import SiteSettings from '../models/SiteSettings.js';
+import { Category } from '../models/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { successResponse, badRequestResponse } from '../utils/apiResponse.js';
+import sanitizationService from '../services/sanitizationService.js';
+import { normalizeSection, validateHomepageSections } from '../validators/homepageValidator.js';
 
 /**
  * Get site settings
@@ -27,15 +30,6 @@ export const updateSettings = asyncHandler(async (req, res) => {
 export const getPublicSettings = asyncHandler(async (req, res) => {
   const settings = await SiteSettings.getSettings();
   
-  // Filter active body ads based on schedule and status
-  const now = new Date();
-  const activeBodyAds = settings.bodyAds?.ads?.filter(ad => {
-    if (!ad.isActive) return false;
-    if (ad.startDate && new Date(ad.startDate) > now) return false;
-    if (ad.endDate && new Date(ad.endDate) < now) return false;
-    return true;
-  }).sort((a, b) => (b.priority || 0) - (a.priority || 0) || (a.order || 0) - (b.order || 0)) || [];
-  
   // Return only public-facing settings
   const publicSettings = {
     siteName: settings.siteName,
@@ -59,20 +53,12 @@ export const getPublicSettings = asyncHandler(async (req, res) => {
       metaDescription: settings.seo.metaDescription,
       ogImage: settings.seo.ogImage
     },
-    // Ads settings
+    // Ads settings (legacy settings remain, ads inventory is served via /api/ads)
     welcomePopup: settings.welcomePopup,
     floatingBanner: settings.floatingBanner,
-    inArticleAd: settings.inArticleAd,
-    // New body ads system
-    bodyAds: {
-      enabled: settings.bodyAds?.enabled ?? true,
-      ads: activeBodyAds,
-      globalSettings: settings.bodyAds?.globalSettings || {}
-    },
     mobileAds: settings.mobileAds,
     exitPopup: settings.exitPopup,
     scrollAd: settings.scrollAd,
-    adsGlobal: settings.adsGlobal,
   };
   
   return successResponse(res, { settings: publicSettings });
@@ -101,8 +87,13 @@ export const updateHomepageSections = asyncHandler(async (req, res) => {
     const normalized = normalizeSection(section, categoryMap);
     
     // Sanitize custom HTML content
-    if (normalized.type === 'custom_html' && normalized.settings?.content) {
-      normalized.settings.content = sanitizationService.homepageBlock(normalized.settings.content);
+    if (normalized.type === 'custom_html') {
+      const html = normalized.settings?.customHtml || normalized.settings?.content;
+      if (html) {
+        const sanitized = sanitizationService.homepageBlock(html);
+        normalized.settings.customHtml = sanitized;
+        normalized.settings.content = sanitized;
+      }
     }
     
     return normalized;

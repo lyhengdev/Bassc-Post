@@ -127,6 +127,22 @@ export function useArticleById(id) {
   });
 }
 
+export function useArticleInsights(id, options = {}) {
+  const { startDate, endDate } = options;
+
+  return useQuery({
+    queryKey: ['article', 'insights', id, startDate, endDate],
+    queryFn: async () => {
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      const response = await articlesAPI.getInsights(id, params);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useArticlesByCategory(slug, params = {}) {
   return useQuery({
     queryKey: ['articles', 'category', slug, params],
@@ -149,13 +165,25 @@ export function useRelatedArticles(id, limit = 4) {
   });
 }
 
-export function useMyArticles(params = {}) {
+export function useMyArticles(params = {}, options = {}) {
   return useQuery({
     queryKey: ['articles', 'my', params],
     queryFn: async () => {
       const response = await articlesAPI.getMy(params);
       return response.data;
     },
+    ...options,
+  });
+}
+
+export function useAdminArticles(params = {}, options = {}) {
+  return useQuery({
+    queryKey: ['articles', 'admin', params],
+    queryFn: async () => {
+      const response = await articlesAPI.getAdmin(params);
+      return response.data;
+    },
+    ...options,
   });
 }
 

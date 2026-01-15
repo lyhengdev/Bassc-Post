@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, XCircle } from 'lucide-react';
-import { useDashboardSummary, useMyArticles, usePendingArticles, useDeleteArticle, useApproveArticle, useRejectArticle, useUpdateProfile } from '../../hooks/useApi';
+import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, XCircle, ExternalLink } from 'lucide-react';
+import { useDashboardSummary, useMyArticles, useAdminArticles, usePendingArticles, useDeleteArticle, useApproveArticle, useRejectArticle, useUpdateProfile } from '../../hooks/useApi';
+import { usersAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { Button, ContentLoader, StatusBadge, Avatar, Modal, Input, Textarea, EmptyState, ConfirmModal, AlertModal } from '../../components/common/index.jsx';
 import { formatNumber, formatRelativeTime } from '../../utils';
@@ -46,7 +47,7 @@ export function DashboardHome() {
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Welcome back, {user?.firstName}!</h1>
         <p className="text-dark-500">Here's what's happening today</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat) => (
           <div key={stat.label} className="card p-6">
             <div className="flex items-center justify-between mb-4">
@@ -60,7 +61,7 @@ export function DashboardHome() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">
         <div className="card p-6">
           <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Recent Articles</h2>
           {data?.recentArticles?.length > 0 ? (
@@ -96,6 +97,18 @@ export function DashboardHome() {
                 <span className="font-medium">Review Pending Articles</span>
               </Link>
             )}
+            {role === 'admin' && (
+              <Link to="/dashboard/ads" className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors">
+                <BarChart3 className="w-5 h-5" />
+                <span className="font-medium">Ad Insights</span>
+              </Link>
+            )}
+            {role === 'admin' && (
+              <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors">
+                <BarChart3 className="w-5 h-5" />
+                <span className="font-medium">Article Insights</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -104,7 +117,21 @@ export function DashboardHome() {
 }
 
 export function MyArticlesPage() {
-  const { data, isLoading } = useMyArticles();
+  const { user } = useAuthStore();
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const params = useMemo(() => ({
+    page,
+    limit: 10,
+    status: statusFilter || undefined,
+    q: search || undefined,
+  }), [page, statusFilter, search]);
+  const isAdmin = user?.role === 'admin';
+  const adminQuery = useAdminArticles(params, { enabled: isAdmin });
+  const myQuery = useMyArticles(params, { enabled: !isAdmin });
+  const data = isAdmin ? adminQuery.data : myQuery.data;
+  const isLoading = isAdmin ? adminQuery.isLoading : myQuery.isLoading;
   const { mutate: deleteArticle, isPending: isDeleting } = useDeleteArticle();
   const navigate = useNavigate();
   const [deleteModal, setDeleteModal] = useState(null);
@@ -118,15 +145,59 @@ export function MyArticlesPage() {
   };
 
   if (isLoading) return <ContentLoader />;
+  const articles = data?.data || [];
+  const pagination = data?.pagination;
 
   return (
     <>
-      <Helmet><title>My Articles - Bassac Media Center</title></Helmet>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">My Articles</h1>
-        <Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>New Article</Button></Link>
+      <Helmet><title>{isAdmin ? 'All Articles' : 'My Articles'} - Bassac Media Center</title></Helmet>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{isAdmin ? 'All Articles' : 'My Articles'}</h1>
+          <p className="text-dark-500 text-sm">
+            {isAdmin ? 'Review and manage every article across the newsroom.' : 'Drafts, submissions, and published stories in one place.'}
+          </p>
+        </div>
+        <Link to="/dashboard/articles/new">
+          <Button leftIcon={<Plus className="w-4 h-4" />}>New Article</Button>
+        </Link>
       </div>
-      {data?.data?.length > 0 ? (
+
+      <div className="card p-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <Input
+              label="Search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by title..."
+            />
+          </div>
+          <div>
+            <label className="label">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="input"
+            >
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="pending">Pending</option>
+              <option value="published">Published</option>
+              <option value="rejected">Rejected</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {articles.length > 0 ? (
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block card overflow-hidden">
@@ -135,6 +206,7 @@ export function MyArticlesPage() {
                 <thead className="bg-dark-50 dark:bg-dark-800">
                   <tr>
                     <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Title</th>
+                    {isAdmin && <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Author</th>}
                     <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Status</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Views</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Date</th>
@@ -142,14 +214,50 @@ export function MyArticlesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dark-100 dark:divide-dark-800">
-                  {data.data.map((article) => (
+                  {articles.map((article) => (
                     <tr key={article._id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
-                      <td className="px-6 py-4"><p className="font-medium text-dark-900 dark:text-white truncate max-w-xs">{article.title}</p></td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <Link to={`/article/${article.slug}`} className="block w-12 h-12 flex-shrink-0">
+                            <img
+                              src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                              alt={article.title}
+                              className="w-12 h-12 rounded-lg object-cover"
+                              loading="lazy"
+                            />
+                          </Link>
+                          <Link
+                            to={`/article/${article.slug}`}
+                            className="font-medium text-dark-900 dark:text-white truncate max-w-xs block hover:text-primary-600 transition-colors"
+                          >
+                            {article.title}
+                          </Link>
+                        </div>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4 text-sm text-dark-500">
+                          {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || 'Unknown'}
+                        </td>
+                      )}
                       <td className="px-6 py-4"><StatusBadge status={article.status} /></td>
                       <td className="px-6 py-4 text-dark-500">{article.viewCount || 0}</td>
                       <td className="px-6 py-4 text-dark-500">{formatRelativeTime(article.createdAt)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
+                          <Link
+                            to={`/article/${article.slug}`}
+                            className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
+                            title="View article"
+                          >
+                            <ExternalLink className="w-4 h-4 text-dark-500" />
+                          </Link>
+                          <Link
+                            to={`/dashboard/articles/${article._id}/insights`}
+                            className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
+                            title="Insights"
+                          >
+                            <BarChart3 className="w-4 h-4 text-dark-500" />
+                          </Link>
                           <button onClick={() => navigate(`/dashboard/articles/${article._id}/edit`)} className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"><Edit className="w-4 h-4 text-dark-500" /></button>
                           <button onClick={() => setDeleteModal(article._id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
                         </div>
@@ -163,18 +271,47 @@ export function MyArticlesPage() {
 
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
-            {data.data.map((article) => (
+            {articles.map((article) => (
               <div key={article._id} className="card p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
-                  <h3 className="font-medium text-dark-900 dark:text-white line-clamp-2 flex-1">{article.title}</h3>
+                  <Link to={`/article/${article.slug}`} className="flex items-start gap-3 flex-1">
+                    <img
+                      src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                      alt={article.title}
+                      className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                      loading="lazy"
+                    />
+                    <span className="font-medium text-dark-900 dark:text-white line-clamp-2 hover:text-primary-600 transition-colors">
+                      {article.title}
+                    </span>
+                  </Link>
                   <StatusBadge status={article.status} />
                 </div>
+                {isAdmin && (
+                  <p className="text-xs text-dark-500 mb-2">
+                    {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || 'Unknown'}
+                  </p>
+                )}
                 <div className="flex items-center justify-between text-sm text-dark-500">
                   <div className="flex items-center gap-4">
                     <span>{article.viewCount || 0} views</span>
                     <span>{formatRelativeTime(article.createdAt)}</span>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Link
+                      to={`/article/${article.slug}`}
+                      className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
+                      title="View article"
+                    >
+                      <ExternalLink className="w-4 h-4 text-dark-500" />
+                    </Link>
+                    <Link
+                      to={`/dashboard/articles/${article._id}/insights`}
+                      className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
+                      title="Insights"
+                    >
+                      <BarChart3 className="w-4 h-4 text-dark-500" />
+                    </Link>
                     <button onClick={() => navigate(`/dashboard/articles/${article._id}/edit`)} className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"><Edit className="w-4 h-4 text-dark-500" /></button>
                     <button onClick={() => setDeleteModal(article._id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
                   </div>
@@ -182,9 +319,37 @@ export function MyArticlesPage() {
               </div>
             ))}
           </div>
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 text-sm">
+              <span className="text-dark-500">
+                Page {pagination.page} of {pagination.totalPages} • {pagination.total} articles
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={pagination.page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+                  disabled={pagination.page >= pagination.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
-        <EmptyState icon={FileText} title="No articles yet" description="Start writing your first article" action={<Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>New Article</Button></Link>} />
+        <EmptyState
+          icon={FileText}
+          title={isAdmin ? 'No articles found' : 'No articles yet'}
+          description={isAdmin ? 'Try adjusting your filters or create the first article.' : 'Start writing your first article.'}
+          action={<Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>New Article</Button></Link>}
+        />
       )}
 
       {/* Delete Confirmation Modal */}
@@ -244,21 +409,41 @@ export function PendingArticlesPage() {
       </div>
       {data?.data?.length > 0 ? (
         <div className="space-y-4">
-          {data.data.map((article) => (
-            <div key={article._id} className="card p-6">
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-dark-900 dark:text-white mb-1 truncate">{article.title}</h3>
-                  <p className="text-dark-500 text-sm mb-2">By {article.author?.fullName || 'Unknown'} • {formatRelativeTime(article.createdAt)}</p>
-                  <p className="text-dark-600 dark:text-dark-400 line-clamp-2">{article.excerpt}</p>
+              {data.data.map((article) => (
+                <div key={article._id} className="card p-6">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="flex-1 min-w-0 flex gap-4">
+                      <Link to={`/article/${article.slug}`} className="block w-16 h-16 flex-shrink-0">
+                        <img
+                          src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/160/160`}
+                          alt={article.title}
+                          className="w-16 h-16 rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                      </Link>
+                      <div className="min-w-0">
+                        <Link
+                          to={`/article/${article.slug}`}
+                          className="font-semibold text-dark-900 dark:text-white mb-1 truncate block hover:text-primary-600 transition-colors"
+                        >
+                          {article.title}
+                        </Link>
+                        <p className="text-dark-500 text-sm mb-2">
+                          By {article.author?.fullName || 'Unknown'} • {formatRelativeTime(article.createdAt)}
+                        </p>
+                        <p className="text-dark-600 dark:text-dark-400 line-clamp-2">{article.excerpt}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Link to={`/article/${article.slug}`}>
+                        <Button variant="secondary" size="sm">View</Button>
+                      </Link>
+                      <Button variant="secondary" size="sm" onClick={() => setApproveModal(article._id)}>Approve</Button>
+                      <Button variant="danger" size="sm" onClick={() => setRejectModal(article._id)}>Reject</Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <Button variant="secondary" size="sm" onClick={() => setApproveModal(article._id)}>Approve</Button>
-                  <Button variant="danger" size="sm" onClick={() => setRejectModal(article._id)}>Reject</Button>
-                </div>
-              </div>
-            </div>
-          ))}
+              ))}
         </div>
       ) : (
         <EmptyState icon={CheckCircle} title="All caught up!" description="No articles pending review" />
@@ -300,7 +485,7 @@ export function PendingArticlesPage() {
 }
 
 export function ProfilePage() {
-  const { user, setUser, accessToken } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const { mutate: updateProfile, isPending } = useUpdateProfile();
   const [form, setForm] = useState({
     firstName: user?.firstName || '',
@@ -334,24 +519,15 @@ export function ProfilePage() {
     try {
       const formData = new FormData();
       formData.append('avatar', avatarFile);
-      
-      const response = await fetch('/api/users/avatar', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setUser({ ...user, avatar: data.data.avatar });
+      const response = await usersAPI.uploadAvatar(formData);
+      const avatar = response?.data?.data?.avatar;
+      if (avatar) {
+        setUser({ ...user, avatar });
         setAvatarFile(null);
         setAvatarPreview(null);
         toast.success('Profile picture updated!');
       } else {
-        toast.error(data.message || 'Upload failed');
+        toast.error('Upload failed');
       }
     } catch (error) {
       toast.error('Upload failed');
@@ -369,7 +545,7 @@ export function ProfilePage() {
     <>
       <Helmet><title>Profile - Bassac Media Center</title></Helmet>
       <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Profile</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="card p-6 text-center">
           {/* Avatar with upload */}
           <div className="relative inline-block mb-4">
@@ -427,7 +603,7 @@ export function ProfilePage() {
         <div className="lg:col-span-2 card p-6">
           <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Edit Profile</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input label="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
               <Input label="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
             </div>
@@ -454,3 +630,5 @@ export { CommentsPage } from './CommentsPage';
 export { NewsletterPage } from './NewsletterPage';
 export { NotificationsPage } from './NotificationsPage';
 export { AdsControlPage } from './AdsControlPage';
+export { AdInsightsPage } from './AdInsightsPage';
+export { ArticleInsightsPage } from './ArticleInsightsPage';

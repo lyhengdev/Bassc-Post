@@ -15,7 +15,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
  * POST /api/categories
  */
 export const createCategory = asyncHandler(async (req, res) => {
-  const { name, description, color, parent, order, metaTitle, metaDescription } = req.body;
+  const { name, description, color, image, parent, order, metaTitle, metaDescription } = req.body;
 
   // Check if name exists
   const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
@@ -35,6 +35,7 @@ export const createCategory = asyncHandler(async (req, res) => {
     name,
     description,
     color,
+    image: image || null,
     parent: parent || null,
     order: order || 0,
     metaTitle,
@@ -113,7 +114,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
     return notFoundResponse(res, 'Category not found');
   }
 
-  const { name, description, color, parent, order, isActive, metaTitle, metaDescription } = req.body;
+  const { name, description, color, image, parent, order, isActive, metaTitle, metaDescription } = req.body;
 
   // Check name uniqueness if changed
   if (name && name !== category.name) {
@@ -146,6 +147,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
 
   if (description !== undefined) category.description = description;
   if (color !== undefined) category.color = color;
+  if (image !== undefined) category.image = image || null;
   if (order !== undefined) category.order = order;
   if (isActive !== undefined) category.isActive = isActive;
   if (metaTitle !== undefined) category.metaTitle = metaTitle;

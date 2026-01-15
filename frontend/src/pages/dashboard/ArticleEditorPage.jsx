@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Save, Send, Eye, Image as ImageIcon, X, ArrowLeft } from 'lucide-react';
+import { Save, Send, Eye, Image as ImageIcon, X, ArrowLeft, BarChart3 } from 'lucide-react';
 import { useCreateArticle, useUpdateArticle, useArticleById, useCategories, useUploadMedia } from '../../hooks/useApi';
 import { Button, Input, ContentLoader } from '../../components/common/index.jsx';
 import EditorComponent from '../../components/common/EditorJS';
@@ -11,6 +11,7 @@ export function ArticleEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const editorRef = useRef(null);
+  const isEditMode = Boolean(id);
 
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
@@ -21,10 +22,23 @@ export function ArticleEditorPage() {
   const [tagInput, setTagInput] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [isBreaking, setIsBreaking] = useState(false);
-  const [editorData, setEditorData] = useState(null);
+  const [editorData, setEditorData] = useState({ blocks: [] });
+  const editorContentRef = useRef({ blocks: [] });
+  const [isEditorReady, setIsEditorReady] = useState(!id);
+
+  const normalizeContent = (content) => {
+    if (!content) return { blocks: [] };
+    const normalized = Array.isArray(content) ? { blocks: content } : content;
+    const blocks = Array.isArray(normalized.blocks) ? normalized.blocks : [];
+    const withIds = blocks.map((block, index) => ({
+      id: block.id || `block_${index}_${Date.now()}`,
+      ...block,
+    }));
+    return { ...normalized, blocks: withIds };
+  };
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: articleResponse, isLoading: isLoadingArticle } = useArticleById(id);
+  const { data: articleResponse, isLoading: isLoadingArticle, isError: isArticleError } = useArticleById(id);
   const { data: categoriesData } = useCategories();
   const { mutate: createArticle, isPending: isCreating } = useCreateArticle();
   const { mutate: updateArticle, isPending: isUpdating } = useUpdateArticle();
@@ -32,8 +46,8 @@ export function ArticleEditorPage() {
 
   // Load article data when editing
   useEffect(() => {
-    if (articleResponse?.data) {
-      const article = articleResponse.data;
+    if (articleResponse?.data?.article) {
+      const article = articleResponse.data.article;
       setTitle(article.title || '');
       setExcerpt(article.excerpt || '');
       setCategoryId(article.category?._id || '');
@@ -42,9 +56,18 @@ export function ArticleEditorPage() {
       setTags(article.tags || []);
       setIsFeatured(article.isFeatured || false);
       setIsBreaking(article.isBreaking || false);
-      setEditorData(article.content || { blocks: [] });
+      const content = normalizeContent(article.content);
+      setEditorData(content);
+      editorContentRef.current = content;
+      setIsEditorReady(true);
     }
   }, [articleResponse]);
+
+  useEffect(() => {
+    if (isEditMode && isArticleError) {
+      setIsEditorReady(true);
+    }
+  }, [isEditMode, isArticleError]);
 
   const handleFeaturedImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -98,7 +121,7 @@ export function ArticleEditorPage() {
   };
 
   const handleEditorChange = (data) => {
-    setEditorData(data);
+    editorContentRef.current = data;
   };
 
   const validateForm = () => {
@@ -182,10 +205,6 @@ export function ArticleEditorPage() {
     }
   };
 
-  if (id && isLoadingArticle) {
-    return <ContentLoader />;
-  }
-
   // categoriesData is already an array from useCategories hook
   const categories = categoriesData || [];
   const isSaving = isCreating || isUpdating;
@@ -215,6 +234,13 @@ export function ArticleEditorPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {id && (
+            <Link to={`/dashboard/articles/${id}/insights`}>
+              <Button variant="outline" leftIcon={<BarChart3 className="w-4 h-4" />}>
+                Insights
+              </Button>
+            </Link>
+          )}
           <Button
             variant="outline"
             leftIcon={<Eye className="w-4 h-4" />}
@@ -241,7 +267,7 @@ export function ArticleEditorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Main Editor */}
         <div className="lg:col-span-2 space-y-6">
           {/* Title */}
@@ -325,12 +351,22 @@ export function ArticleEditorPage() {
               <label className="label mb-0">Article Content *</label>
               <p className="text-xs text-dark-500">Use rich text formatting</p>
             </div>
-            <EditorComponent
-              ref={editorRef}
-              data={editorData}
-              onChange={handleEditorChange}
-              placeholder="Start writing your article..."
-            />
+            {isEditMode && isArticleError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                Failed to load article content. Please refresh or try again.
+              </div>
+            )}
+            {isEditMode && !isEditorReady ? (
+              <ContentLoader className="min-h-[320px]" />
+            ) : (
+              <EditorComponent
+                ref={editorRef}
+                key={isEditMode ? id : 'new'}
+                data={editorData}
+                onChange={handleEditorChange}
+                placeholder="Start writing your article..."
+              />
+            )}
             <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <p className="text-sm text-blue-800 dark:text-blue-300">
                 💡 <strong>Tip:</strong> Use "/" to see formatting options. Drag blocks to reorder them.

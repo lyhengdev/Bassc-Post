@@ -1,8 +1,6 @@
 import {useState} from 'react';
 import {Link, NavLink, useNavigate, useLocation} from 'react-router-dom';
 import {
-    Menu,
-    X,
     Search,
     Sun,
     Moon,
@@ -17,7 +15,6 @@ import {NotificationDropdown} from '../common/NotificationDropdown.jsx';
 import {cn} from '../../utils';
 
 export default function Header() {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -39,12 +36,12 @@ export default function Header() {
             navigate(`/articles?q=${encodeURIComponent(searchQuery)}`);
             setSearchQuery('');
             setSearchOpen(false);
-            setMobileMenuOpen(false);
         }
     };
 
-    const closeMobileMenu = () => setMobileMenuOpen(false);
     const closeUserMenu = () => setUserMenuOpen(false);
+    const canAccessDashboard = isAuthenticated && ['admin', 'editor', 'writer'].includes(user?.role);
+    const profilePath = canAccessDashboard ? '/dashboard/profile' : '/account';
 
     // Check if current path matches category
     const isActiveCategory = (slug) => {
@@ -77,6 +74,14 @@ export default function Header() {
                         <div className="flex items-center gap-2">
                             {/* Top Nav Links - Desktop */}
                             <nav className="hidden md:flex items-center gap-4 mr-4 text-sm">
+                                <Link to="/articles" className="text-dark-500 hover:text-dark-900 dark:hover:text-white">
+                                    ARTICLES
+                                </Link>
+                                {canAccessDashboard && (
+                                    <Link to="/dashboard" className="text-dark-500 hover:text-dark-900 dark:hover:text-white">
+                                        DASHBOARD
+                                    </Link>
+                                )}
                                 <Link to="/about" className="text-dark-500 hover:text-dark-900 dark:hover:text-white">
                                     ABOUT
                                 </Link>
@@ -124,12 +129,22 @@ export default function Header() {
                                                         <p className="font-medium text-dark-900 dark:text-white truncate">{user?.fullName}</p>
                                                         <p className="text-sm text-dark-500 truncate">{user?.email}</p>
                                                     </div>
-                                                    <Link to="/dashboard" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
-                                                        <LayoutDashboard className="w-4 h-4"/> Dashboard
-                                                    </Link>
-                                                    <Link to="/dashboard/profile" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
+                                                    {canAccessDashboard && (
+                                                        <Link to="/dashboard" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
+                                                            <LayoutDashboard className="w-4 h-4"/> Dashboard
+                                                        </Link>
+                                                    )}
+                                                    <Link to={profilePath} className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
                                                         <User className="w-4 h-4"/> Profile
                                                     </Link>
+                                                    <div className="md:hidden">
+                                                        <Link to="/about" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
+                                                            About
+                                                        </Link>
+                                                        <Link to="/contact" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
+                                                            Contact
+                                                        </Link>
+                                                    </div>
                                                     <button onClick={() => { closeUserMenu(); logout(); }} className="flex items-center gap-2 w-full px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950">
                                                         <LogOut className="w-4 h-4"/> Logout
                                                     </button>
@@ -139,18 +154,11 @@ export default function Header() {
                                     </div>
                                 </>
                             ) : (
-                                <Link to="/login" className="hidden md:block px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded hover:bg-primary-700 transition-colors">
+                                <Link to="/login" className="px-3 py-2 md:px-4 md:py-2 bg-primary-600 text-white text-xs md:text-sm font-medium rounded hover:bg-primary-700 transition-colors">
                                     SIGN IN
                                 </Link>
                             )}
 
-                            {/* Mobile Menu Toggle */}
-                            <button
-                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="md:hidden p-2 text-dark-500 hover:text-dark-900 dark:hover:text-white"
-                            >
-                                {mobileMenuOpen ? <X className="w-6 h-6"/> : <Menu className="w-6 h-6"/>}
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -208,18 +216,6 @@ export default function Header() {
                 </div>
             )}
 
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-                <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-dark-900 border-b border-dark-200 dark:border-dark-700 shadow-lg">
-                    <div className="container-custom py-4 space-y-2">
-                        <Link to="/about" onClick={closeMobileMenu} className="block px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800 rounded">About</Link>
-                        <Link to="/contact" onClick={closeMobileMenu} className="block px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800 rounded">Contact</Link>
-                        {!isAuthenticated && (
-                            <Link to="/login" onClick={closeMobileMenu} className="block px-4 py-2 bg-primary-600 text-white text-center rounded hover:bg-primary-700">Sign In</Link>
-                        )}
-                    </div>
-                </div>
-            )}
         </header>
     );
 }

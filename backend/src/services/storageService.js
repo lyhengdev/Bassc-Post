@@ -172,7 +172,8 @@ class StorageService {
             }
         } else {
             // Local delete
-            const filepath = path.join(config.upload.path, storageKey);
+            const normalizedKey = storageKey.startsWith('/') ? storageKey.slice(1) : storageKey;
+            const filepath = path.join(config.upload.path, normalizedKey);
             if (fs.existsSync(filepath)) {
                 fs.unlinkSync(filepath);
             }

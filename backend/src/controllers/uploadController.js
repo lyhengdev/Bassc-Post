@@ -1,4 +1,4 @@
-import { Media } from '../models/index.js';
+import { Media, Article } from '../models/index.js';
 import storageService from '../services/storageService.js';
 import { parsePaginationParams } from '../utils/helpers.js';
 import {
@@ -9,6 +9,110 @@ import {
   badRequestResponse,
 } from '../utils/apiResponse.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+
+const attachUsedInArticles = async (mediaDocs) => {
+  const mediaList = Array.isArray(mediaDocs) ? mediaDocs : [mediaDocs];
+  const articleIds = new Set();
+  const urls = new Set();
+
+  mediaList.forEach((media) => {
+    if (media.url) {
+      urls.add(media.url);
+    }
+    media.usedIn?.forEach((entry) => {
+      if (entry.model === 'Article' && entry.documentId) {
+        articleIds.add(entry.documentId.toString());
+      }
+    });
+  });
+
+  if (articleIds.size === 0 && urls.size === 0) {
+    return mediaList.map((media) => media.toObject({ virtuals: true }));
+  }
+
+  const [articlesById, articlesByFeatured, articlesByContent] = await Promise.all([
+    articleIds.size > 0
+      ? Article.find({ _id: { $in: Array.from(articleIds) } }).select('slug title')
+      : [],
+    urls.size > 0
+      ? Article.find({ featuredImage: { $in: Array.from(urls) } })
+        .select('slug title featuredImage')
+      : [],
+    urls.size > 0
+      ? Article.find({
+        $or: [
+          { 'content.blocks.data.file.url': { $in: Array.from(urls) } },
+          { 'content.blocks.data.url': { $in: Array.from(urls) } },
+        ],
+      }).select('slug title content')
+      : [],
+  ]);
+  const articleMap = new Map(
+    articlesById.map((article) => [article._id.toString(), article])
+  );
+  const featuredMap = new Map();
+  articlesByFeatured.forEach((article) => {
+    if (!article.featuredImage) {
+      return;
+    }
+    if (!featuredMap.has(article.featuredImage)) {
+      featuredMap.set(article.featuredImage, []);
+    }
+    featuredMap.get(article.featuredImage).push(article);
+  });
+  const contentMap = new Map();
+  articlesByContent.forEach((article) => {
+    const blocks = article.content?.blocks || [];
+    blocks.forEach((block) => {
+      const url = block?.data?.file?.url || block?.data?.url;
+      if (!url || !urls.has(url)) {
+        return;
+      }
+      if (!contentMap.has(url)) {
+        contentMap.set(url, []);
+      }
+      contentMap.get(url).push(article);
+    });
+  });
+
+  return mediaList.map((media) => {
+    const mediaObj = media.toObject({ virtuals: true });
+    const usedInArticles = (media.usedIn || [])
+      .filter((entry) => entry.model === 'Article' && entry.documentId)
+      .map((entry) => articleMap.get(entry.documentId.toString()))
+      .filter(Boolean)
+      .map((article) => ({
+        _id: article._id,
+        slug: article.slug,
+        title: article.title,
+      }));
+    const featuredArticles = (featuredMap.get(media.url) || []).map((article) => ({
+      _id: article._id,
+      slug: article.slug,
+      title: article.title,
+    }));
+    const contentArticles = (contentMap.get(media.url) || []).map((article) => ({
+      _id: article._id,
+      slug: article.slug,
+      title: article.title,
+    }));
+    const seen = new Set(usedInArticles.map((article) => article._id.toString()));
+    featuredArticles.forEach((article) => {
+      if (!seen.has(article._id.toString())) {
+        usedInArticles.push(article);
+        seen.add(article._id.toString());
+      }
+    });
+    contentArticles.forEach((article) => {
+      if (!seen.has(article._id.toString())) {
+        usedInArticles.push(article);
+        seen.add(article._id.toString());
+      }
+    });
+    mediaObj.usedInArticles = usedInArticles;
+    return mediaObj;
+  });
+};
 
 /**
  * Upload single file
@@ -130,7 +234,8 @@ export const getMedia = asyncHandler(async (req, res) => {
     Media.countDocuments(filter),
   ]);
 
-  return paginatedResponse(res, media, { page, limit, total });
+  const mediaWithArticles = await attachUsedInArticles(media);
+  return paginatedResponse(res, mediaWithArticles, { page, limit, total });
 });
 
 /**
@@ -145,7 +250,8 @@ export const getMediaById = asyncHandler(async (req, res) => {
     return notFoundResponse(res, 'Media not found');
   }
 
-  return successResponse(res, { media });
+  const [mediaWithArticles] = await attachUsedInArticles(media);
+  return successResponse(res, { media: mediaWithArticles });
 });
 
 /**
