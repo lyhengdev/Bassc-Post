@@ -36,11 +36,17 @@ const adSchema = new mongoose.Schema({
   },
   imageUrl: { type: String, default: '' },
   mobileImageUrl: { type: String, default: '' },
+  imageUrls: { type: [String], default: [] },
   linkUrl: { type: String, default: '' },
   linkTarget: { type: String, enum: ['_self', '_blank'], default: '_blank' },
   htmlContent: { type: String, default: '' }, // Sanitized on save
   videoUrl: { type: String, default: '' },
   altText: { type: String, default: '', maxlength: 200 },
+  title: { type: String, default: '', maxlength: 120 },
+  description: { type: String, default: '', maxlength: 300 },
+  ctaText: { type: String, default: '', maxlength: 40 },
+  autoCloseSeconds: { type: Number, default: 0, min: 0, max: 120 },
+  slideIntervalMs: { type: Number, default: 3000, min: 1000, max: 30000 },
   
   // Display Settings
   style: { 
@@ -86,6 +92,23 @@ const adSchema = new mongoose.Schema({
       'custom'
     ], 
     default: 'between_sections',
+    index: true
+  },
+  placements: {
+    type: [String],
+    enum: [
+      'after_hero',
+      'between_sections',
+      'in_article',
+      'after_article',
+      'before_comments',
+      'in_category',
+      'in_search',
+      'floating_banner',
+      'popup',
+      'custom'
+    ],
+    default: [],
     index: true
   },
   placementId: { type: String, default: '' }, // For custom placements

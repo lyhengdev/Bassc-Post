@@ -212,7 +212,7 @@ export function SiteSettingsPage() {
               placeholder="A brief description of your website..."
               rows={3}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
               <Input
                 label="Contact Email"
                 type="email"
@@ -248,7 +248,7 @@ export function SiteSettingsPage() {
         <div className="space-y-6">
           <div className="card p-6">
             <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">Logo & Favicon</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
               <div>
                 <label className="label">Site Logo</label>
                 <div className="border-2 border-dashed border-dark-200 dark:border-dark-700 rounded-lg p-4 text-center">
@@ -302,7 +302,7 @@ export function SiteSettingsPage() {
 
           <div className="card p-6">
             <h2 className="text-lg font-semibold text-dark-900 dark:text-white mb-4">Brand Colors</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="label">Primary Color</label>
                 <div className="flex gap-2">
@@ -392,7 +392,7 @@ export function SiteSettingsPage() {
               placeholder="https://example.com/og-image.jpg"
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
               <Input
                 label="Google Analytics ID"
                 value={form.seo.googleAnalyticsId || ''}

@@ -9,20 +9,27 @@ import { z } from 'zod';
 const SECTION_TYPES = [
   'hero',
   'featured',
+  'featured_articles',
   'category_grid',
   'latest',
+  'latest_articles',
   'trending',
   'popular',
   'editor_picks',
   'video',
   'newsletter',
+  'newsletter_signup',
   'custom_html',
   'ad_banner',
   'category_tabs',
   'breaking_news',
   'spotlight',
+  'category_spotlight',
   'opinion',
-  'lifestyle'
+  'lifestyle',
+  'news_list',
+  'grid_with_sidebar',
+  'magazine_layout'
 ];
 
 // Base section schema (common fields)
@@ -32,7 +39,9 @@ const baseSectionSchema = z.object({
   enabled: z.boolean().default(true),
   order: z.number().int().min(0).max(100).default(0),
   title: z.string().max(200).optional(),
-  showTitle: z.boolean().default(true)
+  subtitle: z.string().max(200).optional(),
+  showTitle: z.boolean().default(true),
+  settings: z.record(z.any()).optional()
 });
 
 // Type-specific settings schemas
@@ -71,6 +80,17 @@ const customHtmlSettings = z.object({
 
 const adBannerSettings = z.object({
   adId: z.string().max(100).optional(),
+  placement: z.enum([
+    'after_hero',
+    'between_sections',
+    'in_article',
+    'after_article',
+    'before_comments',
+    'in_category',
+    'in_search',
+    'custom'
+  ]).optional(),
+  placementId: z.string().max(200).optional(),
   fallbackImageUrl: z.string().url().max(500).optional().or(z.literal('')),
   fallbackLinkUrl: z.string().url().max(500).optional().or(z.literal('')),
   showLabel: z.boolean().default(true)
@@ -84,79 +104,8 @@ const newsletterSettings = z.object({
   buttonText: z.string().max(50).default('Subscribe')
 });
 
-// Combined section schema with discriminated union
-const sectionSchema = z.discriminatedUnion('type', [
-  baseSectionSchema.extend({
-    type: z.literal('hero'),
-    settings: heroSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('featured'),
-    settings: categorySettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('category_grid'),
-    settings: categorySettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('latest'),
-    settings: latestSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('trending'),
-    settings: latestSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('popular'),
-    settings: latestSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('editor_picks'),
-    settings: categorySettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('video'),
-    settings: categorySettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('newsletter'),
-    settings: newsletterSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('custom_html'),
-    settings: customHtmlSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('ad_banner'),
-    settings: adBannerSettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('category_tabs'),
-    settings: z.object({
-      categories: z.array(z.string()).max(10).optional(),
-      articlesPerCategory: z.number().int().min(1).max(10).default(5)
-    }).optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('breaking_news'),
-    settings: z.object({
-      maxItems: z.number().int().min(1).max(10).default(5),
-      autoScroll: z.boolean().default(true)
-    }).optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('spotlight'),
-    settings: categorySettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('opinion'),
-    settings: categorySettings.optional()
-  }),
-  baseSectionSchema.extend({
-    type: z.literal('lifestyle'),
-    settings: categorySettings.optional()
-  })
-]);
+// Flexible section schema to support frontend settings keys
+const sectionSchema = baseSectionSchema.passthrough();
 
 // Homepage sections array schema
 const homepageSectionsSchema = z.array(sectionSchema).max(30);

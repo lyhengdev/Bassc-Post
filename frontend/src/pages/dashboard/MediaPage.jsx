@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Upload, Image as ImageIcon, Trash2, Search, Grid, List } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Upload, Image as ImageIcon, Trash2, Search, Grid, List, ExternalLink } from 'lucide-react';
 import { useMedia, useUploadMedia, useDeleteMedia } from '../../hooks/useApi';
 import { Button, Input, ContentLoader, EmptyState, Modal, ConfirmModal } from '../../components/common/index.jsx';
 import { formatBytes, formatRelativeTime } from '../../utils';
@@ -55,6 +56,11 @@ export function MediaPage() {
         }
       });
     }
+  };
+
+  const getArticleLink = (file) => {
+    const article = file.usedInArticles?.[0];
+    return article?.slug ? `/article/${article.slug}` : null;
   };
 
   if (isLoading) return <ContentLoader />;
@@ -123,10 +129,13 @@ export function MediaPage() {
       {filteredMedia.length > 0 ? (
         viewMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filteredMedia.map((file) => (
-              <div key={file._id} className="card p-3 group relative">
+            {filteredMedia.map((file) => {
+              const articleLink = getArticleLink(file);
+              return (
+                <div key={file._id} className="card p-3 group relative">
                 <div
-                  className="aspect-square bg-dark-100 dark:bg-dark-800 rounded-lg mb-2 overflow-hidden cursor-pointer"
+                  className={`aspect-square bg-dark-100 dark:bg-dark-800 rounded-lg mb-2 overflow-hidden cursor-pointer ${articleLink ? '' : 'border border-red-300'}`}
+                  style={articleLink ? undefined : { borderWidth: '2.5px' }}
                   onClick={() => setPreviewImage(file)}
                 >
                   {(file.mimeType || file.mimetype)?.startsWith('image/') ? (
@@ -150,14 +159,36 @@ export function MediaPage() {
                   {file.originalName}
                 </p>
                 <p className="text-xs text-dark-500">{formatBytes(file.size)}</p>
-                <button
-                  onClick={() => setDeleteModal({ id: file._id, name: file.originalName })}
-                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {articleLink ? (
+                    <Link
+                      to={articleLink}
+                      className="px-2 py-1 text-xs font-medium bg-emerald-600 text-white rounded-lg inline-flex items-center gap-1"
+                      title="Open article"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Article
+                    </Link>
+                  ) : (
+                    <span
+                      className="px-2 py-1 text-xs font-medium bg-dark-200 text-dark-500 rounded-lg inline-flex items-center gap-1 cursor-not-allowed"
+                      title="No article linked"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Article
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setDeleteModal({ id: file._id, name: file.originalName })}
+                    className="inline-flex items-center justify-center p-1.5 bg-red-500 text-white rounded-lg"
+                    title="Delete file"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="card overflow-hidden">
@@ -174,10 +205,15 @@ export function MediaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dark-100 dark:divide-dark-800">
-                  {filteredMedia.map((file) => (
-                    <tr key={file._id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
+                  {filteredMedia.map((file) => {
+                    const articleLink = getArticleLink(file);
+                    return (
+                      <tr key={file._id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
                       <td className="px-6 py-4">
-                        <div className="w-12 h-12 bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
+                        <div
+                          className={`w-12 h-12 bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden ${articleLink ? '' : 'border border-red-300'}`}
+                          style={articleLink ? undefined : { borderWidth: '2.5px' }}
+                        >
                           {(file.mimeType || file.mimetype)?.startsWith('image/') ? (
                             <img src={file.url} alt={file.originalName} className="w-full h-full object-cover" />
                           ) : (
@@ -196,15 +232,37 @@ export function MediaPage() {
                       <td className="px-6 py-4 text-dark-500">{file.mimeType || file.mimetype}</td>
                       <td className="px-6 py-4 text-dark-500">{formatRelativeTime(file.createdAt)}</td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => setDeleteModal({ id: file._id, name: file.originalName })}
-                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {articleLink ? (
+                            <Link
+                              to={articleLink}
+                              className="px-2 py-1 text-xs font-medium rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20 inline-flex items-center gap-1"
+                              title="Open article"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Article
+                            </Link>
+                          ) : (
+                            <span
+                              className="px-2 py-1 text-xs font-medium rounded-lg border border-dark-200 text-dark-500 inline-flex items-center gap-1 cursor-not-allowed bg-dark-50 dark:bg-dark-800"
+                              title="No article linked"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Article
+                            </span>
+                          )}
+                          <button
+                            onClick={() => setDeleteModal({ id: file._id, name: file.originalName })}
+                            className="inline-flex items-center justify-center p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="Delete file"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
+                        </div>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -1,46 +1,47 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useThemeStore } from './stores/authStore';
 import useNotificationStore from './stores/notificationStore';
 import { PublicLayout, DashboardLayout } from './components/layout/index.jsx';
-import { ErrorBoundary, PageErrorFallback } from './components/common/index.jsx';
-import {
-  HomePage,
-  ArticlesPage,
-  ArticlePage,
-  CategoryPage,
-  CategoriesListPage,
-  LoginPage,
-  RegisterPage,
-  ContactPage,
-  AboutPage,
-  PreviewPage,
-  VerifyEmailPage,
-  ForgotPasswordPage,
-  ResetPasswordPage,
-  DynamicPage,
-} from './pages/public/index.jsx';
-import {
-  DashboardHome,
-  MyArticlesPage,
-  PendingArticlesPage,
-  ProfilePage,
-  ArticleEditorPage,
-  CategoriesPage as DashboardCategoriesPage,
-  MediaPage,
-  UsersPage,
-  MessagesPage,
-  AnalyticsPage,
-  AIAssistantPage,
-  SiteSettingsPage,
-  HomepageBuilderPage,
-  PagesListPage,
-  PageEditorPage,
-  CommentsPage,
-  NewsletterPage,
-  NotificationsPage,
-  AdsControlPage,
-} from './pages/dashboard/index.jsx';
+import { ContentLoader, ErrorBoundary, PageErrorFallback } from './components/common/index.jsx';
+
+const HomePage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.HomePage })));
+const ArticlesPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ArticlesPage })));
+const ArticlePage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ArticlePage })));
+const CategoryPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.CategoryPage })));
+const CategoriesListPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.CategoriesListPage })));
+const LoginPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.RegisterPage })));
+const ContactPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ContactPage })));
+const AboutPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.AboutPage })));
+const AccountPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.AccountPage })));
+const PreviewPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.PreviewPage })));
+const VerifyEmailPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.VerifyEmailPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ResetPasswordPage })));
+const DynamicPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.DynamicPage })));
+
+const DashboardHome = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.DashboardHome })));
+const MyArticlesPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.MyArticlesPage })));
+const PendingArticlesPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.PendingArticlesPage })));
+const ProfilePage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.ProfilePage })));
+const ArticleEditorPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.ArticleEditorPage })));
+const DashboardCategoriesPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.CategoriesPage })));
+const MediaPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.MediaPage })));
+const UsersPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.UsersPage })));
+const MessagesPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.MessagesPage })));
+const AnalyticsPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.AnalyticsPage })));
+const AIAssistantPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.AIAssistantPage })));
+const SiteSettingsPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.SiteSettingsPage })));
+const HomepageBuilderPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.HomepageBuilderPage })));
+const PagesListPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.PagesListPage })));
+const PageEditorPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.PageEditorPage })));
+const CommentsPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.CommentsPage })));
+const NewsletterPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.NewsletterPage })));
+const NotificationsPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.NotificationsPage })));
+const AdsControlPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.AdsControlPage })));
+const AdInsightsPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.AdInsightsPage })));
+const ArticleInsightsPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.ArticleInsightsPage })));
 
 // Protected Route Component - for writer/editor/admin
 function ProtectedRoute({ children, roles }) {
@@ -58,6 +59,17 @@ function ProtectedRoute({ children, roles }) {
 
   if (roles && !roles.includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+function AccountRoute({ children }) {
+  const { isAuthenticated } = useAuthStore();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;
@@ -115,185 +127,204 @@ export default function App() {
 
   return (
     <ErrorBoundary FallbackComponent={PageErrorFallback}>
-      <Routes>
-        {/* Public Routes with Header/Footer */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/articles" element={<ArticlesPage />} />
-          <Route path="/article/:slug" element={<ArticlePage />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/categories" element={<CategoriesListPage />} />
+      <Suspense fallback={<ContentLoader className="min-h-screen" />}>
+        <Routes>
+          {/* Public Routes with Header/Footer */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/articles" element={<ArticlesPage />} />
+            <Route path="/article/:slug" element={<ArticlePage />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/categories" element={<CategoriesListPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/page/:slug" element={<DynamicPage />} />
-        </Route>
-
-        {/* Auth Routes (no layout) */}
-        <Route
-          path="/login"
-          element={
-            <GuestRoute>
-              <LoginPage />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <GuestRoute>
-              <RegisterPage />
-            </GuestRoute>
-          }
-        />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route
-          path="/forgot-password"
-          element={
-            <GuestRoute>
-              <ForgotPasswordPage />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <GuestRoute>
-              <ResetPasswordPage />
-            </GuestRoute>
-          }
-        />
-
-        {/* Dashboard Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<DashboardHome />} />
-          <Route path="articles" element={<MyArticlesPage />} />
-          <Route path="articles/new" element={<ArticleEditorPage />} />
-          <Route path="articles/:id/edit" element={<ArticleEditorPage />} />
           <Route
-            path="pending"
+            path="/account"
             element={
-              <ProtectedRoute roles={['editor', 'admin']}>
-                <PendingArticlesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="categories"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <DashboardCategoriesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="media" element={<MediaPage />} />
-          <Route
-            path="users"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <UsersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="messages"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <MessagesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="comments"
-            element={
-              <ProtectedRoute roles={['admin', 'editor']}>
-                <CommentsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="newsletter"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <NewsletterPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="notifications" element={<NotificationsPage />} />
-          <Route
-            path="analytics"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <AnalyticsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="ai" element={<AIAssistantPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          
-          {/* New CMS Pages - Admin Only */}
-          <Route
-            path="settings"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <SiteSettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="homepage"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <HomepageBuilderPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="pages"
-            element={
-              <ProtectedRoute roles={['admin', 'editor']}>
-                <PagesListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="pages/new"
-            element={
-              <ProtectedRoute roles={['admin', 'editor']}>
-                <PageEditorPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="pages/:id/edit"
-            element={
-              <ProtectedRoute roles={['admin', 'editor']}>
-                <PageEditorPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="ads"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <AdsControlPage />
-              </ProtectedRoute>
+              <AccountRoute>
+                <AccountPage />
+              </AccountRoute>
             }
           />
         </Route>
 
-        {/* Preview Route (no layout, for article preview) */}
-        <Route path="/preview" element={<PreviewPage />} />
+          {/* Auth Routes (no layout) */}
+          <Route
+            path="/login"
+            element={
+              <GuestRoute>
+                <LoginPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <GuestRoute>
+                <RegisterPage />
+              </GuestRoute>
+            }
+          />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route
+            path="/forgot-password"
+            element={
+              <GuestRoute>
+                <ForgotPasswordPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <GuestRoute>
+                <ResetPasswordPage />
+              </GuestRoute>
+            }
+          />
 
-        {/* 404 */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          {/* Dashboard Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DashboardHome />} />
+            <Route path="articles" element={<MyArticlesPage />} />
+            <Route path="articles/new" element={<ArticleEditorPage />} />
+            <Route path="articles/:id/edit" element={<ArticleEditorPage />} />
+            <Route path="articles/:id/insights" element={<ArticleInsightsPage />} />
+            <Route
+              path="pending"
+              element={
+                <ProtectedRoute roles={['editor', 'admin']}>
+                  <PendingArticlesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="categories"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <DashboardCategoriesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="media" element={<MediaPage />} />
+            <Route
+              path="users"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="messages"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="comments"
+              element={
+                <ProtectedRoute roles={['admin', 'editor']}>
+                  <CommentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="newsletter"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <NewsletterPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route
+              path="analytics"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="ai" element={<AIAssistantPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            
+            {/* New CMS Pages - Admin Only */}
+            <Route
+              path="settings"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <SiteSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="homepage"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <HomepageBuilderPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="pages"
+              element={
+                <ProtectedRoute roles={['admin', 'editor']}>
+                  <PagesListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="pages/new"
+              element={
+                <ProtectedRoute roles={['admin', 'editor']}>
+                  <PageEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="pages/:id/edit"
+              element={
+                <ProtectedRoute roles={['admin', 'editor']}>
+                  <PageEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="ads"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <AdsControlPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="ads/:id/insights"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <AdInsightsPage />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+
+          {/* Preview Route (no layout, for article preview) */}
+          <Route path="/preview" element={<PreviewPage />} />
+
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }

@@ -27,6 +27,31 @@ const getAuthToken = () => {
   return null;
 };
 
+const getCsrfTokenFromCookie = () => {
+  const match = document.cookie.match(/csrf-token=([^;]+)/);
+  return match ? match[1] : null;
+};
+
+const ensureCsrfToken = async () => {
+  let token = getCsrfTokenFromCookie();
+  if (token) return token;
+
+  try {
+    const response = await fetch('/api/auth/csrf-token', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (response.ok) {
+      const result = await response.json();
+      token = result?.data?.csrfToken || getCsrfTokenFromCookie();
+    }
+  } catch (error) {
+    console.warn('Failed to fetch CSRF token:', error);
+  }
+
+  return token;
+};
+
 const EditorComponent = forwardRef(({ data, onChange, placeholder }, ref) => {
   const editorRef = useRef(null);
   const instanceRef = useRef(null);
@@ -65,6 +90,8 @@ const EditorComponent = forwardRef(({ data, onChange, placeholder }, ref) => {
       initialData.current = data;
     }
   }, [data]);
+
+  // Do not re-render content after initialization to avoid EditorJS reset loops.
 
   useEffect(() => {
     if (!editorRef.current || isInitialized.current) return;
@@ -129,11 +156,14 @@ const EditorComponent = forwardRef(({ data, onChange, placeholder }, ref) => {
 
                               try {
                                   const token = getAuthToken();
+                                  const csrfToken = await ensureCsrfToken();
                                   const response = await fetch('/api/uploads', {
                                       method: 'POST',
                                       headers: {
-                                          'Authorization': `Bearer ${token}`
+                                          'Authorization': `Bearer ${token}`,
+                                          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
                                       },
+                                      credentials: 'include',
                                       body: formData
                                   });
 

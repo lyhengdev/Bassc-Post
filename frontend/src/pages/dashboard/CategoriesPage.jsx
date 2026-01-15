@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Plus, Edit, Trash2, Folder } from 'lucide-react';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '../../hooks/useApi';
 import { Button, Input, Modal, ContentLoader, EmptyState, ConfirmModal } from '../../components/common/index.jsx';
+import { getCategoryAccent } from '../../utils';
 import toast from 'react-hot-toast';
 
 export function CategoriesPage() {
@@ -17,6 +18,7 @@ export function CategoriesPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    image: '',
     color: '#3B82F6'
   });
 
@@ -26,11 +28,12 @@ export function CategoriesPage() {
       setFormData({
         name: category.name,
         description: category.description || '',
+        image: category.image || '',
         color: category.color || '#3B82F6'
       });
     } else {
       setEditingCategory(null);
-      setFormData({ name: '', description: '', color: '#3B82F6' });
+      setFormData({ name: '', description: '', image: '', color: '#3B82F6' });
     }
     setIsModalOpen(true);
   };
@@ -38,7 +41,7 @@ export function CategoriesPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCategory(null);
-    setFormData({ name: '', description: '', color: '#3B82F6' });
+    setFormData({ name: '', description: '', image: '', color: '#3B82F6' });
   };
 
   const handleSubmit = (e) => {
@@ -82,7 +85,7 @@ export function CategoriesPage() {
 
   if (isLoading) return <ContentLoader />;
 
-  const categories = data?.data || [];
+  const categories = data || [];
 
   return (
     <>
@@ -99,17 +102,15 @@ export function CategoriesPage() {
       </div>
 
       {categories.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
           {categories.map((category) => (
-            <div key={category._id} className="card p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${category.color}20` }}
-                  >
-                    <Folder className="w-5 h-5" style={{ color: category.color }} />
-                  </div>
+            <div key={category._id} className="card overflow-hidden">
+              <div
+                className="h-2 w-full"
+                style={{ backgroundColor: category.color || getCategoryAccent(category.name) }}
+              />
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="font-semibold text-dark-900 dark:text-white">
                       {category.name}
@@ -119,29 +120,28 @@ export function CategoriesPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+                {category.description && (
+                  <p className="text-dark-600 dark:text-dark-400 text-sm mb-4 line-clamp-2">
+                    {category.description}
+                  </p>
+                )}
 
-              {category.description && (
-                <p className="text-dark-600 dark:text-dark-400 text-sm mb-4 line-clamp-2">
-                  {category.description}
-                </p>
-              )}
-
-              <div className="flex gap-2 pt-4 border-t border-dark-100 dark:border-dark-800">
-                <button
-                  onClick={() => handleOpenModal(category)}
-                  className="flex-1 btn btn-sm btn-secondary"
-                >
-                  <Edit className="w-3.5 h-3.5 mr-1" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => setDeleteModal(category)}
-                  className="flex-1 btn btn-sm btn-outline text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" />
-                  Delete
-                </button>
+                <div className="flex gap-2 pt-4 border-t border-dark-100 dark:border-dark-800">
+                  <button
+                    onClick={() => handleOpenModal(category)}
+                    className="flex-1 btn btn-sm btn-secondary"
+                  >
+                    <Edit className="w-3.5 h-3.5 mr-1" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setDeleteModal(category)}
+                    className="flex-1 btn btn-sm btn-outline text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -181,6 +181,16 @@ export function CategoriesPage() {
               placeholder="Brief description of this category..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="label">Category Image URL (Optional)</label>
+            <Input
+              type="text"
+              placeholder="https://... or /uploads/..."
+              value={formData.image}
+              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
             />
           </div>
 

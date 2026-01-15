@@ -13,7 +13,7 @@ import commentRoutes from './commentRoutes.js';
 import newsletterRoutes from './newsletterRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import adsRoutes from './adsRoutes.js';
-import { authenticate } from '../middleware/auth.js';
+import { optionalAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.get('/health', (req, res) => {
 });
 
 // Fetch URL endpoint for EditorJS LinkTool
-router.get('/fetch-url', authenticate, async (req, res) => {
+router.get('/fetch-url', optionalAuth, async (req, res) => {
   try {
     const { url } = req.query;
     

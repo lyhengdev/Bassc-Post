@@ -4,7 +4,7 @@ import AdStatsDaily from '../models/AdStatsDaily.js';
 import adSelectionService from '../services/adSelectionService.js';
 import sanitizationService from '../services/sanitizationService.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { successResponse, errorResponse } from '../utils/apiResponse.js';
+import { createdResponse, successResponse, errorResponse } from '../utils/apiResponse.js';
 
 /**
  * Get all ads (admin)
@@ -90,7 +90,7 @@ export const createAd = asyncHandler(async (req, res) => {
   
   const ad = await Ad.create(data);
   
-  return successResponse(res, { ad }, 201);
+  return createdResponse(res, { ad }, 'Ad created');
 });
 
 /**
@@ -145,14 +145,9 @@ export const deleteAd = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Ad not found', 404);
   }
   
-  // Soft delete by setting status to archived
-  ad.status = 'archived';
-  await ad.save();
+  await ad.deleteOne();
   
-  // Or hard delete:
-  // await ad.deleteOne();
-  
-  return successResponse(res, { message: 'Ad archived successfully' });
+  return successResponse(res, { message: 'Ad deleted successfully' });
 });
 
 /**
@@ -181,7 +176,7 @@ export const duplicateAd = asyncHandler(async (req, res) => {
   
   const ad = await Ad.create(original);
   
-  return successResponse(res, { ad }, 201);
+  return createdResponse(res, { ad }, 'Ad duplicated');
 });
 
 /**
@@ -195,6 +190,8 @@ export const selectAds = asyncHandler(async (req, res) => {
     device = 'desktop',
     sectionIndex,
     paragraphIndex,
+    placementId,
+    adId,
     categoryId,
     articleId,
     limit = 3
@@ -214,6 +211,8 @@ export const selectAds = asyncHandler(async (req, res) => {
     articleId,
     sectionIndex: sectionIndex ? parseInt(sectionIndex) : null,
     paragraphIndex: paragraphIndex ? parseInt(paragraphIndex) : null,
+    placementId,
+    adId,
     limit: parseInt(limit)
   });
   
@@ -223,11 +222,17 @@ export const selectAds = asyncHandler(async (req, res) => {
     type: ad.type,
     imageUrl: ad.imageUrl,
     mobileImageUrl: ad.mobileImageUrl,
+    imageUrls: ad.imageUrls,
     linkUrl: ad.linkUrl,
     linkTarget: ad.linkTarget,
     htmlContent: ad.htmlContent,
     videoUrl: ad.videoUrl,
     altText: ad.altText,
+    title: ad.title,
+    description: ad.description,
+    ctaText: ad.ctaText,
+    autoCloseSeconds: ad.autoCloseSeconds,
+    slideIntervalMs: ad.slideIntervalMs,
     style: ad.style,
     size: ad.size,
     alignment: ad.alignment,
@@ -239,6 +244,7 @@ export const selectAds = asyncHandler(async (req, res) => {
     labelText: ad.labelText,
     animation: ad.animation,
     placement: ad.placement,
+    placements: ad.placements,
     sectionIndex: ad.sectionIndex,
     paragraphIndex: ad.paragraphIndex
   }));
@@ -335,7 +341,10 @@ export const getAdStats = asyncHandler(async (req, res) => {
   const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const end = endDate ? new Date(endDate) : new Date();
   
-  const stats = await AdStatsDaily.getStatsForAd(id, start, end);
+  let stats = await AdStatsDaily.getStatsForAd(id, start, end);
+  if (!stats || (stats.impressions === 0 && stats.clicks === 0)) {
+    stats = await AdEvent.getAdStats(id, start, end);
+  }
   
   let daily = [];
   if (breakdown === 'true') {
@@ -355,7 +364,64 @@ export const getAllAdsStats = asyncHandler(async (req, res) => {
   const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const end = endDate ? new Date(endDate) : new Date();
   
-  const stats = await AdStatsDaily.getAllAdsStats(start, end);
+  let stats = await AdStatsDaily.getAllAdsStats(start, end);
+  if (!stats || stats.length === 0) {
+    stats = await AdEvent.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: start, $lte: end }
+        }
+      },
+      {
+        $group: {
+          _id: { adId: '$adId', type: '$type' },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.adId',
+          impressions: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.type', 'impression'] }, '$count', 0]
+            }
+          },
+          clicks: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.type', 'click'] }, '$count', 0]
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'ads',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'ad'
+        }
+      },
+      { $unwind: '$ad' },
+      {
+        $project: {
+          adId: '$_id',
+          name: '$ad.name',
+          status: '$ad.status',
+          placement: '$ad.placement',
+          impressions: 1,
+          clicks: 1,
+          ctr: {
+            $cond: [
+              { $gt: ['$impressions', 0] },
+              { $round: [{ $multiply: [{ $divide: ['$clicks', '$impressions'] }, 100] }, 2] },
+              0
+            ]
+          }
+        }
+      },
+      { $sort: { impressions: -1 } }
+    ]);
+  }
   
   return successResponse(res, { stats });
 });

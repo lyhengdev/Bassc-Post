@@ -56,7 +56,7 @@ export default function Footer() {
     return (
         <footer className="bg-dark-900 text-dark-300 mt-auto">
             <div className="container-custom py-12 lg:py-16">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
                     {/* Brand */}
                     <div className="sm:col-span-2 lg:col-span-2">
                         <Link to="/" className="flex items-center gap-2 pb-5">

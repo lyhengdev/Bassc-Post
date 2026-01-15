@@ -27,6 +27,8 @@ router.get('/:id/related', validateObjectId(), articleController.getRelatedArtic
 router.use(authenticate);
 
 router.get('/my', isWriter, articleController.getMyArticles);
+router.get('/admin', isAdmin, articleController.getAllArticlesAdmin);
+router.get('/:id/insights', isWriter, validateObjectId(), articleController.getArticleInsights);
 router.post('/', isWriter, createArticleValidator, validate, articleController.createArticle);
 router.get('/id/:id', validateObjectId('id'), articleController.getArticleById);
 router.put('/:id', validateObjectId(), updateArticleValidator, validate, articleController.updateArticle);

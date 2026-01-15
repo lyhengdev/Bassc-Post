@@ -5,7 +5,9 @@ import { cn } from '../../utils';
 
 export default function MobileNav() {
   const location = useLocation();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const canAccessDashboard = isAuthenticated && ['admin', 'editor', 'writer'].includes(user?.role);
+  const accountHref = isAuthenticated ? (canAccessDashboard ? '/dashboard' : '/account') : '/login';
 
   // Don't show on dashboard pages
   if (location.pathname.startsWith('/dashboard')) {
@@ -18,10 +20,9 @@ export default function MobileNav() {
   }
 
   const navItems = [
-    { href: '/', icon: Home, label: 'Home' },
-    { href: '/articles', icon: Newspaper, label: 'News' },
-    { href: '/categories', icon: Grid3X3, label: 'Topics' },
-    { href: isAuthenticated ? '/dashboard' : '/login', icon: User, label: isAuthenticated ? 'Account' : 'Sign In' },
+    { href: '/', icon: Home, label: 'Discover' },
+    { href: '/articles', icon: Newspaper, label: 'Articles' },
+    { href: '/categories', icon: Grid3X3, label: 'Categories' },
   ];
 
   return (
@@ -35,7 +36,7 @@ export default function MobileNav() {
               cn(
                 'flex flex-col items-center justify-center py-1 px-4 transition-colors',
                 isActive 
-                  ? 'text-red-600 dark:text-red-500' 
+                  ? 'text-primary-600 dark:text-primary-400' 
                   : 'text-dark-500 dark:text-dark-400'
               )
             }

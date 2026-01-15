@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
@@ -18,7 +19,7 @@ export function useHomepageAds(device = 'desktop') {
       const { data } = await api.get('/ads/homepage', {
         params: { device }
       });
-      return data.ads;
+      return data.data?.ads || {};
     },
     staleTime: 60 * 1000, // 1 minute
     cacheTime: 5 * 60 * 1000, // 5 minutes
@@ -37,7 +38,7 @@ export function useArticleAds(articleId, options = {}) {
       const { data } = await api.get(`/ads/article/${articleId}`, {
         params: { device, categoryId, totalParagraphs }
       });
-      return data.ads;
+      return data.data?.ads || {};
     },
     enabled: !!articleId,
     staleTime: 60 * 1000,
@@ -53,19 +54,27 @@ export function useSelectAds(placement, options = {}) {
     device = 'desktop',
     sectionIndex,
     paragraphIndex,
+    placementId,
+    adId,
+    categoryId,
+    articleId,
     limit = 3,
     enabled = true
   } = options;
   
   return useQuery({
-    queryKey: ['ads', 'select', placement, pageType, device, sectionIndex, paragraphIndex],
+    queryKey: ['ads', 'select', placement, pageType, device, sectionIndex, paragraphIndex, placementId, adId, categoryId, articleId],
     queryFn: async () => {
       const params = { placement, pageType, device, limit };
       if (sectionIndex !== undefined) params.sectionIndex = sectionIndex;
       if (paragraphIndex !== undefined) params.paragraphIndex = paragraphIndex;
+      if (placementId) params.placementId = placementId;
+      if (adId) params.adId = adId;
+      if (categoryId) params.categoryId = categoryId;
+      if (articleId) params.articleId = articleId;
       
       const { data } = await api.get('/ads/select', { params });
-      return data.ads;
+      return data.data?.ads || [];
     },
     enabled,
     staleTime: 60 * 1000,
@@ -126,7 +135,7 @@ export function useAdminAd(adId) {
     queryKey: ['admin', 'ad', adId],
     queryFn: async () => {
       const { data } = await api.get(`/ads/${adId}`);
-      return data.ad;
+      return data.data?.ad;
     },
     enabled: !!adId,
   });
@@ -284,9 +293,6 @@ export function useDeviceType() {
   
   return device;
 }
-
-// Need to import useState and useEffect
-import { useState, useEffect } from 'react';
 
 export default {
   // Public

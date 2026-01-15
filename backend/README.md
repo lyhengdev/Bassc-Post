@@ -105,7 +105,7 @@ npm run dev
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `NODE_ENV` | Environment | `development` |
-| `PORT` | Server port | `5000` |
+| `PORT` | Server port | `8888` |
 | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/bassac_media_center` |
 | `JWT_SECRET` | JWT signing secret | Required |
 | `JWT_EXPIRES_IN` | Access token expiry | `7d` |

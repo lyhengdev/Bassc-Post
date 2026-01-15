@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Zap, Calendar, Clock, Eye, Facebook, Twitter, Linkedin, ArrowLeft, Search, Eye as EyeIcon, EyeOff, TrendingUp, Star, Mail, Newspaper, MessageCircle, ThumbsUp, Reply, Send, Trash2, User } from 'lucide-react';
+import { ArrowRight, Zap, Calendar, Clock, Eye, Facebook, Twitter, Linkedin, ArrowLeft, Search, Eye as EyeIcon, EyeOff, TrendingUp, Star, Mail, MessageCircle, ThumbsUp, Reply, Send, Trash2, User, Camera } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useFeaturedArticles, useLatestArticles, useCategories, useArticles, useArticleBySlug, useArticlesByCategory, useRelatedArticles, useLogin, useRegister, useSubmitContact, usePublicSettings, useArticleComments, useCreateComment, useLikeComment, useDeleteComment, useSubscribeNewsletter } from '../../hooks/useApi';
-import { articlesAPI } from '../../services/api';
+import { useFeaturedArticles, useLatestArticles, useCategories, useArticles, useArticleBySlug, useArticlesByCategory, useRelatedArticles, useLogin, useRegister, useSubmitContact, usePublicSettings, useArticleComments, useCreateComment, useLikeComment, useDeleteComment, useSubscribeNewsletter, useUpdateProfile } from '../../hooks/useApi';
+import { useArticleAds, useHomepageAds, useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
+import { articlesAPI, usersAPI } from '../../services/api';
 import { ArticleCard, FeaturedArticle, ArticleContent } from '../../components/article/index.jsx';
-import { Button, Avatar, Badge, ContentLoader, ArticleListSkeleton, Input, Textarea, ConfirmModal } from '../../components/common/index.jsx';
-import { formatDate, calculateReadTime, cn, formatRelativeTime } from '../../utils';
+import { Button, Avatar, Badge, ContentLoader, ArticleListSkeleton, Input, Textarea, ConfirmModal, Modal } from '../../components/common/index.jsx';
+import { BodyAd } from '../../components/ads/index.js';
+import { formatDate, calculateReadTime, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
 import { useAuthStore } from '../../stores/authStore';
-import { MobileAdsSection } from '../../components/ads/AdsManager.jsx';
 
 // Dynamic Section Components - Kiripost Style
 
@@ -21,11 +22,11 @@ function HeroSection({ settings }) {
 
     if (isLoading) {
         return (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7">
+            <div className="grid grid-cols-12 gap-4 sm:gap-6">
+                <div className="col-span-7">
                     <div className="aspect-[4/3] skeleton rounded-lg" />
                 </div>
-                <div className="lg:col-span-5 space-y-6">
+                <div className="col-span-5 space-y-4 sm:space-y-6">
                     <div className="aspect-[16/10] skeleton rounded-lg" />
                     <div className="aspect-[16/10] skeleton rounded-lg" />
                 </div>
@@ -45,12 +46,12 @@ function HeroSection({ settings }) {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-12 gap-4 sm:gap-6">
             {/* Main Featured Article */}
-            <div className="lg:col-span-7">
+            <div className="col-span-7">
                 <article>
                     <Link to={`/article/${mainFeatured.slug}`} className="block group">
-                        <div className="aspect-[4/3] rounded-lg overflow-hidden mb-3">
+                        <div className="aspect-[4/3] rounded-lg overflow-hidden mb-2 sm:mb-3">
                             <img
                                 src={mainFeatured.featuredImage || `https://picsum.photos/seed/${mainFeatured.slug}/800/600`}
                                 alt={mainFeatured.title}
@@ -58,28 +59,28 @@ function HeroSection({ settings }) {
                             />
                         </div>
                     </Link>
-                    <p className="text-dark-500 text-sm mb-2 line-clamp-1 italic">
+                    <p className="text-dark-500 text-xs sm:text-sm mb-2 line-clamp-1 italic">
                         {mainFeatured.excerpt?.substring(0, 100)}...
                     </p>
                     {mainFeatured.category && (
-                        <Link to={`/category/${mainFeatured.category.slug}`} className="text-dark-500 text-xs font-semibold uppercase tracking-wider hover:text-primary-600">
+                        <Link to={`/category/${mainFeatured.category.slug}`} className="text-dark-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wider hover:text-primary-600">
                             {mainFeatured.category.name}
                         </Link>
                     )}
                     <Link to={`/article/${mainFeatured.slug}`}>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-dark-900 dark:text-white mt-1 mb-3 leading-tight hover:text-primary-600 transition-colors">
+                        <h2 className="text-base sm:text-2xl lg:text-3xl font-bold text-dark-900 dark:text-white mt-1 mb-2 sm:mb-3 leading-tight hover:text-primary-600 transition-colors line-clamp-3">
                             {mainFeatured.title}
                         </h2>
                     </Link>
-                    <p className="text-dark-600 dark:text-dark-400 leading-relaxed line-clamp-3 mb-3">
+                    <p className="text-dark-600 dark:text-dark-400 text-xs sm:text-base leading-relaxed line-clamp-3 mb-2 sm:mb-3">
                         {mainFeatured.excerpt}
                     </p>
-                    <span className="text-dark-400 text-sm">{formatRelativeTime(mainFeatured.publishedAt)}</span>
+                    <span className="text-dark-400 text-xs sm:text-sm">{formatRelativeTime(mainFeatured.publishedAt)}</span>
                 </article>
             </div>
 
             {/* Side Articles */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="col-span-5 space-y-4 sm:space-y-6">
                 {sideFeatured.map((article) => (
                     <article key={article._id}>
                         <Link to={`/article/${article.slug}`} className="block group">
@@ -92,16 +93,132 @@ function HeroSection({ settings }) {
                             </div>
                         </Link>
                         {article.category && (
-                            <Link to={`/category/${article.category.slug}`} className="text-xs font-semibold uppercase tracking-wider hover:underline" style={{ color: article.category.color || '#6B7280' }}>
+                            <Link
+                                to={`/category/${article.category.slug}`}
+                                className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider hover:underline"
+                                style={{ color: article.category.color || getCategoryAccent(article.category.name) }}
+                            >
                                 {article.category.name}
                             </Link>
                         )}
                         <Link to={`/article/${article.slug}`}>
-                            <h3 className="font-bold text-dark-900 dark:text-white mt-1 mb-1 leading-snug hover:text-primary-600 transition-colors line-clamp-2">
+                            <h3 className="font-semibold sm:font-bold text-sm sm:text-base text-dark-900 dark:text-white mt-1 mb-1 leading-snug hover:text-primary-600 transition-colors line-clamp-2">
                                 {article.title}
                             </h3>
                         </Link>
-                        <span className="text-dark-400 text-sm">{formatRelativeTime(article.publishedAt)}</span>
+                        <span className="text-dark-400 text-xs sm:text-sm">{formatRelativeTime(article.publishedAt)}</span>
+                    </article>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ==================== MIXED LEAD + LIST LAYOUT ====================
+function MixedLeadList({ articles, isLoading, emptyMessage, listTitle }) {
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-7">
+                        <div className="aspect-[16/10] skeleton rounded-lg" />
+                    </div>
+                    <div className="col-span-5 space-y-3">
+                        <div className="h-3 skeleton rounded w-1/3" />
+                        <div className="h-6 skeleton rounded" />
+                        <div className="h-4 skeleton rounded w-5/6" />
+                        <div className="h-4 skeleton rounded w-2/3" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="flex gap-4">
+                            <div className="w-[120px] h-[80px] skeleton rounded-lg flex-shrink-0" />
+                            <div className="flex-1 space-y-2">
+                                <div className="h-3 skeleton rounded w-1/3" />
+                                <div className="h-4 skeleton rounded" />
+                                <div className="h-3 skeleton rounded w-1/2" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (!articles?.length) {
+        return <p className="text-dark-500 text-center py-8">{emptyMessage || 'No articles available'}</p>;
+    }
+
+    const [lead, ...rest] = articles;
+
+    return (
+        <div className="space-y-6">
+            <article className="grid grid-cols-12 gap-4">
+                <Link to={`/article/${lead.slug}`} className="col-span-7 block group">
+                    <div className="aspect-[16/10] rounded-lg overflow-hidden">
+                        <img
+                            src={lead.featuredImage || `https://picsum.photos/seed/${lead.slug}/800/500`}
+                            alt={lead.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                    </div>
+                </Link>
+                <div className="col-span-5">
+                    {lead.category && (
+                        <Link
+                            to={`/category/${lead.category.slug}`}
+                            className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider hover:underline"
+                            style={{ color: lead.category.color || '#6B7280' }}
+                        >
+                            {lead.category.name}
+                        </Link>
+                    )}
+                    <Link to={`/article/${lead.slug}`}>
+                        <h3 className="text-base sm:text-xl font-bold text-dark-900 dark:text-white mt-2 leading-snug hover:text-primary-600 transition-colors line-clamp-3">
+                            {lead.title}
+                        </h3>
+                    </Link>
+                    {lead.excerpt && (
+                        <p className="text-dark-600 dark:text-dark-400 text-xs sm:text-sm mt-2 sm:mt-3 line-clamp-3">{lead.excerpt}</p>
+                    )}
+                    <span className="text-dark-400 text-xs sm:text-sm mt-2 sm:mt-3 block">{formatRelativeTime(lead.publishedAt)}</span>
+                </div>
+            </article>
+
+            {listTitle && rest.length > 0 && (
+                <div className="text-xs uppercase tracking-widest text-dark-500">{listTitle}</div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+                {rest.map((article) => (
+                    <article key={article._id} className="flex gap-4 group">
+                        <Link to={`/article/${article.slug}`} className="flex-shrink-0">
+                            <img
+                                src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/240/160`}
+                                alt={article.title}
+                                className="w-24 h-16 sm:w-[120px] sm:h-[80px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
+                            />
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                            {article.category && (
+                                <Link
+                                    to={`/category/${article.category.slug}`}
+                                    className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider hover:underline"
+                                    style={{ color: article.category.color || '#6B7280' }}
+                                >
+                                    {article.category.name}
+                                </Link>
+                            )}
+                            <Link to={`/article/${article.slug}`}>
+                                <h4 className="font-semibold text-sm sm:text-base text-dark-900 dark:text-white leading-snug line-clamp-2 hover:text-primary-600 transition-colors mt-1">
+                                    {article.title}
+                                </h4>
+                            </Link>
+                            {article.excerpt && (
+                                <p className="text-dark-500 text-[11px] sm:text-xs mt-1 line-clamp-2">{article.excerpt}</p>
+                            )}
+                            <span className="text-dark-400 text-[10px] sm:text-xs mt-1 block">{formatRelativeTime(article.publishedAt)}</span>
+                        </div>
                     </article>
                 ))}
             </div>
@@ -113,16 +230,12 @@ function HeroSection({ settings }) {
 function FeaturedSection({ section }) {
     const { data: featured, isLoading } = useFeaturedArticles(section.settings?.limit || 4);
 
-    if (isLoading) return <ArticleListSkeleton count={section.settings?.limit || 4} />;
-
-    if (!featured?.length) {
-        return <p className="text-dark-500 text-center py-8">No featured articles. Mark articles as featured in the dashboard.</p>;
-    }
-
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featured.map((a, i) => <ArticleCard key={a._id} article={a} index={i} />)}
-        </div>
+        <MixedLeadList
+            articles={featured || []}
+            isLoading={isLoading}
+            emptyMessage="No featured articles. Mark articles as featured in the dashboard."
+        />
     );
 }
 
@@ -131,164 +244,57 @@ function BreakingNewsSection({ section }) {
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 4, isBreaking: true });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) return <ArticleListSkeleton count={section.settings?.limit || 4} />;
-
-    if (!articles.length) {
-        return <p className="text-dark-500 text-center py-8">No breaking news in the dashboard.</p>;
-    }
-
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {articles.map((a, i) => <ArticleCard key={a._id} article={a} index={i} />)}
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No breaking news in the dashboard."
+        />
     );
 }
 
-// ==================== LATEST SECTION (2-Column List) ====================
+// ==================== LATEST SECTION ====================
 function LatestSection({ section }) {
     const { data: latest, isLoading } = useLatestArticles(section.settings?.limit || 8);
 
-    if (isLoading) {
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[...Array(6)].map((_, i) => (
-                    <div key={i} className="flex gap-4">
-                        <div className="w-[140px] h-[100px] skeleton rounded-lg flex-shrink-0" />
-                        <div className="flex-1 space-y-2">
-                            <div className="h-3 skeleton rounded w-1/4" />
-                            <div className="h-5 skeleton rounded" />
-                            <div className="h-3 skeleton rounded w-1/3" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    }
-
-    if (!latest?.length) {
-        return <p className="text-dark-500 text-center py-8">No articles published yet</p>;
-    }
-
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            {latest.map((article) => (
-                <article key={article._id} className="flex gap-4 group">
-                    <Link to={`/article/${article.slug}`} className="flex-shrink-0">
-                        <img
-                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/140`}
-                            alt={article.title}
-                            className="w-[140px] h-[100px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-                        />
-                    </Link>
-                    <div className="flex-1 min-w-0">
-                        {article.category && (
-                            <Link to={`/category/${article.category.slug}`} className="text-xs font-semibold uppercase tracking-wider hover:underline" style={{ color: article.category.color || '#6B7280' }}>
-                                {article.category.name}
-                            </Link>
-                        )}
-                        <Link to={`/article/${article.slug}`}>
-                            <h3 className="font-semibold text-dark-900 dark:text-white leading-snug line-clamp-2 hover:text-primary-600 transition-colors mt-0.5">
-                                {article.title}
-                            </h3>
-                        </Link>
-                        <span className="text-dark-400 text-sm mt-2 block">{formatRelativeTime(article.publishedAt)}</span>
-                    </div>
-                </article>
-            ))}
-        </div>
+        <MixedLeadList
+            articles={latest || []}
+            isLoading={isLoading}
+            emptyMessage="No articles published yet"
+        />
     );
 }
 
 // ==================== CATEGORY GRID SECTION ====================
 function CategoryGridSection({ section }) {
-    const { data: categories, isLoading } = useCategories();
-
-    if (isLoading) {
-        return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[...Array(6)].map((_, i) => <div key={i} className="h-32 skeleton rounded-2xl" />)}
-        </div>;
-    }
-
-    if (!categories?.length) {
-        return <p className="text-dark-500 text-center py-8">No categories yet</p>;
-    }
+    const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 6 });
+    const articles = data?.data?.articles || [];
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((c) => (
-                <Link
-                    key={c._id}
-                    to={`/category/${c.slug}`}
-                    className="group p-6 rounded-2xl text-center transition-all hover:scale-105"
-                    style={{ backgroundColor: `${c.color}15` }}
-                >
-                    <div className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: c.color }}>
-                        <span className="text-white font-bold text-xl">{c.name.charAt(0)}</span>
-                    </div>
-                    <p className="font-medium text-dark-900 dark:text-white">{c.name}</p>
-                    <p className="text-sm text-dark-500">{c.articleCount || 0} articles</p>
-                </Link>
-            ))}
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No articles published yet"
+        />
     );
 }
 
-// ==================== TRENDING SECTION (Horizontal Scroll) ====================
+// ==================== TRENDING SECTION ====================
 function TrendingSection({ section }) {
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 6, sort: '-viewCount' });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) {
-        return <div className="flex gap-6 overflow-x-auto no-scrollbar">
-            {[...Array(4)].map((_, i) => <div key={i} className="w-[280px] h-24 skeleton rounded-lg flex-shrink-0" />)}
-        </div>;
-    }
-
-    if (!articles.length) {
-        return <p className="text-dark-500 text-center py-8">No trending articles</p>;
-    }
-
     return (
-        <div className="relative">
-            <div className="flex gap-6 overflow-x-auto no-scrollbar pb-2" id="trending-scroll">
-                {articles.map((article) => (
-                    <article key={article._id} className="flex-shrink-0 w-[280px] group">
-                        <div className="flex gap-4">
-                            <Link to={`/article/${article.slug}`} className="flex-shrink-0">
-                                <img
-                                    src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/130`}
-                                    alt={article.title}
-                                    className="w-[120px] h-[80px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-                                />
-                            </Link>
-                            <div className="flex-1 min-w-0">
-                                {article.category && (
-                                    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: article.category.color || '#6B7280' }}>
-                                        {article.category.name}
-                                    </span>
-                                )}
-                                <Link to={`/article/${article.slug}`}>
-                                    <h3 className="font-semibold text-dark-900 dark:text-white text-sm leading-snug line-clamp-2 hover:text-primary-600 transition-colors mt-0.5">
-                                        {article.title}
-                                    </h3>
-                                </Link>
-                                <span className="text-dark-400 text-xs mt-1 block">{formatRelativeTime(article.publishedAt)}</span>
-                            </div>
-                        </div>
-                    </article>
-                ))}
-            </div>
-            <button 
-                onClick={() => document.getElementById('trending-scroll')?.scrollBy({ left: 300, behavior: 'smooth' })}
-                className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-primary-700 transition-colors z-10"
-            >
-                <ArrowRight className="w-5 h-5" />
-            </button>
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No trending articles"
+        />
     );
 }
 
-// ==================== NEWS LIST SECTION (Vertical List) ====================
+// ==================== NEWS LIST SECTION ====================
 function NewsListSection({ section }) {
     const { data, isLoading } = useArticles({ 
         page: 1, 
@@ -297,46 +303,12 @@ function NewsListSection({ section }) {
     });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) {
-        return <div className="space-y-4">
-            {[...Array(6)].map((_, i) => <div key={i} className="h-24 skeleton rounded-lg" />)}
-        </div>;
-    }
-
     return (
-        <div className="space-y-4">
-            {articles.map((article) => (
-                <Link 
-                    key={article._id} 
-                    to={`/article/${article.slug}`}
-                    className="flex gap-4 p-4 rounded-xl bg-white dark:bg-dark-800 hover:shadow-lg transition-all border border-dark-100 dark:border-dark-700"
-                >
-                    <img 
-                        src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/150`}
-                        alt={article.title}
-                        className="w-24 h-24 sm:w-32 sm:h-24 object-cover rounded-lg flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                        {article.category && (
-                            <Badge className="badge-primary mb-2 text-xs">{article.category.name}</Badge>
-                        )}
-                        <h3 className="font-semibold text-dark-900 dark:text-white line-clamp-2 mb-2 text-sm sm:text-base">
-                            {article.title}
-                        </h3>
-                        <div className="flex items-center gap-3 text-xs text-dark-400">
-                            <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(article.publishedAt)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                                <Eye className="w-3 h-3" />
-                                {article.viewCount || 0}
-                            </span>
-                        </div>
-                    </div>
-                </Link>
-            ))}
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No articles published yet"
+        />
     );
 }
 
@@ -348,54 +320,13 @@ function GridWithSidebarSection({ section }) {
     });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) {
-        return <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[...Array(4)].map((_, i) => <div key={i} className="h-64 skeleton rounded-xl" />)}
-            </div>
-            <div className="space-y-4">
-                {[...Array(3)].map((_, i) => <div key={i} className="h-32 skeleton rounded-xl" />)}
-            </div>
-        </div>;
-    }
-
-    const mainArticles = articles.slice(0, 4);
-    const sideArticles = articles.slice(4, 7);
-
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Grid */}
-            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {mainArticles.map((article) => (
-                    <ArticleCard key={article._id} article={article} />
-                ))}
-            </div>
-            {/* Sidebar */}
-            <div className="space-y-4">
-                <h3 className="font-bold text-dark-900 dark:text-white border-b border-dark-200 dark:border-dark-700 pb-2">
-                    {section.settings?.sidebarTitle || 'More Stories'}
-                </h3>
-                {sideArticles.map((article) => (
-                    <Link 
-                        key={article._id}
-                        to={`/article/${article.slug}`}
-                        className="flex gap-3 group"
-                    >
-                        <img 
-                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/100/100`}
-                            alt={article.title}
-                            className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-dark-900 dark:text-white text-sm line-clamp-2 group-hover:text-primary-600 transition-colors">
-                                {article.title}
-                            </h4>
-                            <p className="text-xs text-dark-400 mt-1">{formatDate(article.publishedAt)}</p>
-                        </div>
-                    </Link>
-                ))}
-            </div>
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No articles published yet"
+            listTitle={section.settings?.sidebarTitle || 'More Stories'}
+        />
     );
 }
 
@@ -404,69 +335,19 @@ function MagazineLayoutSection({ section }) {
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 5 });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) {
-        return <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-96 skeleton rounded-xl" />
-            <div className="space-y-4">
-                {[...Array(4)].map((_, i) => <div key={i} className="h-20 skeleton rounded-lg" />)}
-            </div>
-        </div>;
-    }
-
-    const featuredArticle = articles[0];
-    const listArticles = articles.slice(1, 5);
-
-    if (!featuredArticle) return null;
-
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Featured Large */}
-            <Link to={`/article/${featuredArticle.slug}`} className="group relative rounded-2xl overflow-hidden aspect-[4/3] lg:aspect-auto lg:h-full">
-                <img 
-                    src={featuredArticle.featuredImage || `https://picsum.photos/seed/${featuredArticle.slug}/800/600`}
-                    alt={featuredArticle.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                    {featuredArticle.category && (
-                        <Badge className="badge-primary mb-3">{featuredArticle.category.name}</Badge>
-                    )}
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 line-clamp-3">
-                        {featuredArticle.title}
-                    </h2>
-                    <p className="text-white/80 text-sm line-clamp-2 hidden sm:block">{featuredArticle.excerpt}</p>
-                </div>
-            </Link>
-            {/* List */}
-            <div className="space-y-4">
-                {listArticles.map((article, i) => (
-                    <Link 
-                        key={article._id}
-                        to={`/article/${article.slug}`}
-                        className="flex gap-4 p-3 rounded-xl hover:bg-dark-50 dark:hover:bg-dark-800 transition-colors border-b border-dark-100 dark:border-dark-700 last:border-0"
-                    >
-                        <span className="text-2xl font-bold text-primary-500 w-8">{i + 2}</span>
-                        <div className="flex-1 min-w-0">
-                            {article.category && (
-                                <span className="text-xs text-primary-600 font-medium">{article.category.name}</span>
-                            )}
-                            <h3 className="font-semibold text-dark-900 dark:text-white line-clamp-2 text-sm sm:text-base">
-                                {article.title}
-                            </h3>
-                            <p className="text-xs text-dark-400 mt-1">{formatDate(article.publishedAt)}</p>
-                        </div>
-                    </Link>
-                ))}
-            </div>
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No articles published yet"
+        />
     );
 }
 
 // ==================== CATEGORY TABS SECTION ====================
 function CategoryTabsSection({ section }) {
     const { data: categoriesData } = useCategories();
-    const categories = categoriesData?.data?.slice(0, 5) || [];
+    const categories = categoriesData?.slice(0, 5) || [];
     const [activeTab, setActiveTab] = useState(0);
     
     const { data, isLoading } = useArticles({ 
@@ -497,54 +378,76 @@ function CategoryTabsSection({ section }) {
                     </button>
                 ))}
             </div>
-            {/* Articles Grid */}
-            {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[...Array(4)].map((_, i) => <div key={i} className="h-64 skeleton rounded-xl" />)}
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {articles.map((article) => (
-                        <ArticleCard key={article._id} article={article} variant="compact" />
-                    ))}
-                </div>
-            )}
+            <MixedLeadList
+                articles={articles}
+                isLoading={isLoading}
+                emptyMessage="No articles published yet"
+            />
         </div>
     );
 }
 
 // ==================== AD BANNER SECTION ====================
 function AdBannerSection({ section }) {
-    const position = section.settings?.position || 'horizontal'; // horizontal, left, right
-    const imageUrl = section.settings?.imageUrl;
-    const linkUrl = section.settings?.linkUrl || '#';
-    const altText = section.settings?.altText || 'Advertisement';
+    const device = useDeviceType();
+    const { mutate: trackAdEvent } = useTrackAdEvent();
+    const placement = section.settings?.placement || 'custom';
+    const placementId = section.settings?.placementId || section.id;
+    const adId = section.settings?.adId;
+    const { data: ads } = useSelectAds(placement, {
+        pageType: 'homepage',
+        device,
+        placementId: placement === 'custom' ? placementId : undefined,
+        adId: adId || undefined,
+        limit: 1,
+    });
 
-    if (!imageUrl && !section.settings?.customHtml) {
-        // Placeholder ad
+    const ad = ads?.[0];
+    const fallbackImage = section.settings?.fallbackImageUrl;
+    const fallbackLink = section.settings?.fallbackLinkUrl || '#';
+    const showLabel = section.settings?.showLabel ?? true;
+    const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
+
+    if (ad) {
         return (
-            <div className={cn(
-                'bg-dark-100 dark:bg-dark-800 rounded-xl flex items-center justify-center text-dark-400 text-sm',
-                position === 'horizontal' ? 'h-24 sm:h-32' : 'h-64 sm:h-96'
-            )}>
-                <span>Advertisement</span>
+            <div className="my-6">
+                <BodyAd
+                    ad={ad}
+                    onImpression={(adData) => trackAdEvent({
+                        adId: adData._id,
+                        type: 'impression',
+                        pageType: 'homepage',
+                        pageUrl,
+                        device,
+                        placement: adData.placement
+                    })}
+                    onClick={(adData) => trackAdEvent({
+                        adId: adData._id,
+                        type: 'click',
+                        pageType: 'homepage',
+                        pageUrl,
+                        device,
+                        placement: adData.placement
+                    })}
+                />
             </div>
         );
     }
 
-    if (section.settings?.customHtml) {
-        return <div dangerouslySetInnerHTML={{ __html: section.settings.customHtml }} />;
+    if (!fallbackImage) {
+        return (
+            <div className="bg-dark-100 dark:bg-dark-800 rounded-xl flex items-center justify-center text-dark-400 text-sm h-24 sm:h-32">
+                <span>{showLabel ? 'Advertisement' : 'Ad Slot'}</span>
+            </div>
+        );
     }
 
     return (
-        <a href={linkUrl} target="_blank" rel="noopener noreferrer sponsored" className="block">
+        <a href={fallbackLink} target="_blank" rel="noopener noreferrer sponsored" className="block">
             <img 
-                src={imageUrl} 
-                alt={altText}
-                className={cn(
-                    'w-full object-cover rounded-xl',
-                    position === 'horizontal' ? 'h-24 sm:h-32' : 'h-auto'
-                )}
+                src={fallbackImage} 
+                alt="Advertisement"
+                className="w-full object-cover rounded-xl h-24 sm:h-32"
             />
         </a>
     );
@@ -559,33 +462,12 @@ function VideoSection({ section }) {
     });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) {
-        return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="aspect-video skeleton rounded-xl" />)}
-        </div>;
-    }
-
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {articles.map((article) => (
-                <Link key={article._id} to={`/article/${article.slug}`} className="group relative aspect-video rounded-xl overflow-hidden">
-                    <img 
-                        src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/400/225`}
-                        alt={article.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                            <ArrowRight className="w-5 h-5 text-primary-600 -rotate-45" />
-                        </div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className="text-white font-medium text-sm line-clamp-2">{article.title}</h3>
-                    </div>
-                </Link>
-            ))}
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No videos published yet"
+        />
     );
 }
 
@@ -598,39 +480,12 @@ function EditorPicksSection({ section }) {
     });
     const articles = data?.data?.articles || [];
 
-    if (isLoading) {
-        return <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => <div key={i} className="h-80 skeleton rounded-xl" />)}
-        </div>;
-    }
-
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {articles.map((article) => (
-                <Link key={article._id} to={`/article/${article.slug}`} className="group">
-                    <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4">
-                        <img 
-                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/400/300`}
-                            alt={article.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <div className="absolute top-3 left-3">
-                            <Badge className="bg-amber-500 text-white">Editor's Pick</Badge>
-                        </div>
-                    </div>
-                    <h3 className="font-bold text-dark-900 dark:text-white text-lg line-clamp-2 group-hover:text-primary-600 transition-colors">
-                        {article.title}
-                    </h3>
-                    <p className="text-dark-500 text-sm mt-2 line-clamp-2">{article.excerpt}</p>
-                    {article.author && (
-                        <div className="flex items-center gap-2 mt-3">
-                            <Avatar src={article.author.avatar} name={article.author.firstName} size="xs" />
-                            <span className="text-sm text-dark-500">{article.author.firstName} {article.author.lastName}</span>
-                        </div>
-                    )}
-                </Link>
-            ))}
-        </div>
+        <MixedLeadList
+            articles={articles}
+            isLoading={isLoading}
+            emptyMessage="No editor picks available"
+        />
     );
 }
 
@@ -691,61 +546,15 @@ function CustomHtmlSection({ section }) {
 // ==================== CATEGORY SPOTLIGHT SECTION ====================
 function CategorySpotlightSection({ section }) {
   const categorySlug = section.settings?.categorySlug || '';
-  const { data } = useArticlesByCategory(categorySlug, { page: 1, limit: section.settings?.limit || 4 });
+  const { data, isLoading } = useArticlesByCategory(categorySlug, { page: 1, limit: section.settings?.limit || 4 });
   const articles = data?.data?.articles || [];
 
-  if (!articles.length) return null;
-
-  const mainArticle = articles[0];
-  const sideArticles = articles.slice(1, 4);
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Main Article */}
-      <div className="lg:col-span-7">
-        <article>
-          <Link to={`/article/${mainArticle.slug}`} className="block group">
-            <div className="aspect-[16/10] rounded-lg overflow-hidden mb-3">
-              <img
-                src={mainArticle.featuredImage || `https://picsum.photos/seed/${mainArticle.slug}/700/440`}
-                alt={mainArticle.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-          </Link>
-          <Link to={`/article/${mainArticle.slug}`}>
-            <h3 className="text-xl font-bold text-dark-900 dark:text-white leading-snug hover:text-primary-600 transition-colors line-clamp-2">
-              {mainArticle.title}
-            </h3>
-          </Link>
-          <p className="text-dark-500 text-sm mt-2 line-clamp-2">{mainArticle.excerpt}</p>
-          <span className="text-dark-400 text-sm mt-2 block">{formatRelativeTime(mainArticle.publishedAt)}</span>
-        </article>
-      </div>
-
-      {/* Side Articles */}
-      <div className="lg:col-span-5 space-y-4">
-        {sideArticles.map((article) => (
-          <article key={article._id} className="flex gap-4 group">
-            <Link to={`/article/${article.slug}`} className="flex-shrink-0">
-              <img
-                src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/180/120`}
-                alt={article.title}
-                className="w-[120px] h-[80px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-              />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link to={`/article/${article.slug}`}>
-                <h4 className="font-semibold text-dark-900 dark:text-white text-sm leading-snug line-clamp-2 hover:text-primary-600 transition-colors">
-                  {article.title}
-                </h4>
-              </Link>
-              <span className="text-dark-400 text-xs mt-1 block">{formatRelativeTime(article.publishedAt)}</span>
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
+    <MixedLeadList
+      articles={articles}
+      isLoading={isLoading}
+      emptyMessage="No articles in this category yet"
+    />
   );
 }
 
@@ -882,22 +691,119 @@ function DynamicSection({ section }) {
   }
 }
 
+const SidebarAdSlot = ({ ad, pageType, pageUrl, device, trackAdEvent }) => (
+  <>
+    <div className="text-[10px] text-dark-400 mb-1">Ad</div>
+    <div className="bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
+      {ad ? (
+        <div className="p-2">
+          <BodyAd
+            ad={ad}
+            onImpression={(adData) => trackAdEvent({
+              adId: adData._id,
+              type: 'impression',
+              pageType,
+              pageUrl,
+              device,
+              placement: adData.placement
+            })}
+            onClick={(adData) => trackAdEvent({
+              adId: adData._id,
+              type: 'click',
+              pageType,
+              pageUrl,
+              device,
+              placement: adData.placement
+            })}
+          />
+        </div>
+      ) : (
+        <div className="aspect-[300/600] flex items-center justify-center text-dark-400 text-sm">
+          <div className="text-center p-4">
+            <p className="font-medium mb-2">Advertisement</p>
+            <p className="text-xs">300 x 600</p>
+          </div>
+        </div>
+      )}
+    </div>
+  </>
+);
+
 // ==================== HOME PAGE ====================
 export function HomePage() {
   const { data: publicSettings } = usePublicSettings();
   const { data: featured, isLoading: featuredLoading } = useFeaturedArticles(4);
   const { data: latest, isLoading: latestLoading } = useLatestArticles(8);
-  const { data: trending } = useArticles({ page: 1, limit: 6, sort: '-viewCount' });
+  const { data: trending, isLoading: trendingLoading } = useArticles({ page: 1, limit: 6, sort: '-viewCount' });
   const { data: categories } = useCategories();
+  const device = useDeviceType();
+  const { data: homepageAds } = useHomepageAds(device);
+  const { data: popupAds } = useSelectAds('popup', {
+    pageType: 'homepage',
+    device,
+    limit: 1
+  });
+  const { data: rightHeroAds } = useSelectAds('custom', {
+    pageType: 'homepage',
+    device,
+    placementId: 'right_hero',
+    limit: 1
+  });
+  const { mutate: trackAdEvent } = useTrackAdEvent();
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const trendingArticles = trending?.data?.articles || [];
   const mainFeatured = featured?.[0];
   const sideFeatured = featured?.slice(1, 3) || [];
   const latestNews = latest || [];
+  const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
+  const afterHeroAds = homepageAds?.after_hero || [];
+  const betweenSectionsAds = homepageAds?.between_sections || {};
+  const rightHeroAd = rightHeroAds?.[0];
+  const popupAd = popupAds?.[0];
+  const isDev = import.meta?.env?.DEV;
+  const betweenSectionsSummary = Object.keys(betweenSectionsAds || {})
+    .map((key) => `${key}:${betweenSectionsAds[key]?.length || 0}`)
+    .join(', ') || 'none';
+
+  useEffect(() => {
+    if (popupAd) {
+      setIsPopupOpen(true);
+    }
+  }, [popupAd]);
+
+  const renderAdGroup = (ads) => {
+    if (!ads?.length) return null;
+    return (
+      <div className="my-8 space-y-6">
+        {ads.map((ad) => (
+          <BodyAd
+            key={ad._id}
+            ad={ad}
+            onImpression={(adData) => trackAdEvent({
+              adId: adData._id,
+              type: 'impression',
+              pageType: 'homepage',
+              pageUrl,
+              device,
+              placement: adData.placement
+            })}
+            onClick={(adData) => trackAdEvent({
+              adId: adData._id,
+              type: 'click',
+              pageType: 'homepage',
+              pageUrl,
+              device,
+              placement: adData.placement
+            })}
+          />
+        ))}
+      </div>
+    );
+  };
 
   // Get homepage sections from settings
   const homepageSections = publicSettings?.homepageSections || [];
-  const sidebarAdsSettings = publicSettings?.sidebarAds;
 
   // If custom sections defined, render them dynamically with sidebar
   if (homepageSections.length > 0) {
@@ -906,6 +812,28 @@ export function HomePage() {
         <Helmet>
           <title>{publicSettings?.seo?.metaTitle || publicSettings?.siteName || 'Bassac Media'}</title>
         </Helmet>
+
+        <PopupAdModal
+          ad={popupAd}
+          isOpen={isPopupOpen}
+          onClose={() => setIsPopupOpen(false)}
+          onImpression={(adData) => trackAdEvent({
+            adId: adData._id,
+            type: 'impression',
+            pageType: 'homepage',
+            pageUrl,
+            device,
+            placement: adData.placement
+          })}
+          onClick={(adData) => trackAdEvent({
+            adId: adData._id,
+            type: 'click',
+            pageType: 'homepage',
+            pageUrl,
+            device,
+            placement: adData.placement
+          })}
+        />
         
         <div className="container-custom py-6 lg:py-8">
           <div className="flex gap-6 lg:gap-8">
@@ -914,9 +842,11 @@ export function HomePage() {
               {homepageSections
                 .filter(s => s.enabled)
                 .sort((a, b) => a.order - b.order)
-                .map((section) => (
+                .map((section, index) => (
                   <div key={section.id} className="mb-10">
                     <DynamicSection section={section} />
+                    {section.type === 'hero' && renderAdGroup(afterHeroAds)}
+                    {renderAdGroup(betweenSectionsAds[index])}
                   </div>
                 ))
               }
@@ -925,21 +855,13 @@ export function HomePage() {
             {/* Right Sidebar - Ad */}
             <aside className="hidden lg:block w-[300px] flex-shrink-0">
               <div className="sticky top-24">
-                <div className="text-[10px] text-dark-400 mb-1">Ad</div>
-                <div className="bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
-                  {sidebarAdsSettings?.enabled && sidebarAdsSettings?.imageUrl ? (
-                    <a href={sidebarAdsSettings.linkUrl || '#'} target="_blank" rel="noopener noreferrer sponsored">
-                      <img src={sidebarAdsSettings.imageUrl} alt="Advertisement" className="w-full h-auto" />
-                    </a>
-                  ) : (
-                    <div className="aspect-[300/600] flex items-center justify-center text-dark-400 text-sm">
-                      <div className="text-center p-4">
-                        <p className="font-medium mb-2">Advertisement</p>
-                        <p className="text-xs">300 x 600</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SidebarAdSlot
+                  ad={rightHeroAd}
+                  pageType="homepage"
+                  pageUrl={pageUrl}
+                  device={device}
+                  trackAdEvent={trackAdEvent}
+                />
                 
                 {/* Newsletter */}
                 <div className="mt-6 bg-primary-600 rounded-lg p-5 text-white">
@@ -958,6 +880,14 @@ export function HomePage() {
             </aside>
           </div>
         </div>
+        {isDev && (
+          <div className="fixed bottom-4 left-4 z-50 max-w-xs rounded-lg bg-black/80 text-white text-xs px-3 py-2">
+            <div className="font-semibold mb-1">Ads debug</div>
+            <div>right_hero: {rightHeroAd?._id || 'none'}</div>
+            <div>after_hero: {afterHeroAds?.length || 0}</div>
+            <div>between_sections: {betweenSectionsSummary}</div>
+          </div>
+        )}
       </>
     );
   }
@@ -969,6 +899,28 @@ export function HomePage() {
         <title>{publicSettings?.siteName || 'Bassac Media'} - Latest News & Updates</title>
       </Helmet>
 
+      <PopupAdModal
+        ad={popupAd}
+        isOpen={isPopupOpen}
+        onClose={() => setIsPopupOpen(false)}
+        onImpression={(adData) => trackAdEvent({
+          adId: adData._id,
+          type: 'impression',
+          pageType: 'homepage',
+          pageUrl,
+          device,
+          placement: adData.placement
+        })}
+        onClick={(adData) => trackAdEvent({
+          adId: adData._id,
+          type: 'click',
+          pageType: 'homepage',
+          pageUrl,
+          device,
+          placement: adData.placement
+        })}
+      />
+
       <div className="container-custom py-6 lg:py-8">
         <div className="flex gap-6 lg:gap-8">
           {/* Main Content Area */}
@@ -976,9 +928,9 @@ export function HomePage() {
             
             {/* Hero Section */}
             <section className="mb-10">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="grid grid-cols-12 gap-4 sm:gap-6">
                 {/* Main Featured Article */}
-                <div className="lg:col-span-7">
+                <div className="col-span-7">
                   {featuredLoading ? (
                     <div className="space-y-3">
                       <div className="aspect-[4/3] skeleton rounded-lg" />
@@ -996,23 +948,23 @@ export function HomePage() {
                           />
                         </div>
                       </Link>
-                      <p className="text-dark-500 text-sm mb-2 line-clamp-1 italic">
+                      <p className="text-dark-500 text-xs sm:text-sm mb-2 line-clamp-1 italic">
                         {mainFeatured.excerpt?.substring(0, 100)}...
                       </p>
                       {mainFeatured.category && (
-                        <Link to={`/category/${mainFeatured.category.slug}`} className="text-dark-500 text-xs font-semibold uppercase tracking-wider hover:text-primary-600">
+                        <Link to={`/category/${mainFeatured.category.slug}`} className="text-dark-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wider hover:text-primary-600">
                           {mainFeatured.category.name}
                         </Link>
                       )}
                       <Link to={`/article/${mainFeatured.slug}`}>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-dark-900 dark:text-white mt-1 mb-3 leading-tight hover:text-primary-600 transition-colors">
+                        <h2 className="text-base sm:text-2xl lg:text-3xl font-bold text-dark-900 dark:text-white mt-1 mb-2 sm:mb-3 leading-tight hover:text-primary-600 transition-colors line-clamp-3">
                           {mainFeatured.title}
                         </h2>
                       </Link>
-                      <p className="text-dark-600 dark:text-dark-400 leading-relaxed line-clamp-3 mb-3">
+                      <p className="text-dark-600 dark:text-dark-400 text-xs sm:text-base leading-relaxed line-clamp-3 mb-2 sm:mb-3">
                         {mainFeatured.excerpt}
                       </p>
-                      <span className="text-dark-400 text-sm">{formatRelativeTime(mainFeatured.publishedAt)}</span>
+                      <span className="text-dark-400 text-xs sm:text-sm">{formatRelativeTime(mainFeatured.publishedAt)}</span>
                     </article>
                   ) : (
                     <div className="aspect-[4/3] rounded-lg bg-dark-100 dark:bg-dark-800 flex items-center justify-center">
@@ -1022,7 +974,7 @@ export function HomePage() {
                 </div>
 
                 {/* Side Articles */}
-                <div className="lg:col-span-5 space-y-6">
+                <div className="col-span-5 space-y-4 sm:space-y-6">
                   {featuredLoading ? (
                     [...Array(2)].map((_, i) => (
                       <div key={i} className="space-y-2">
@@ -1042,114 +994,59 @@ export function HomePage() {
                         </div>
                       </Link>
                       {article.category && (
-                        <Link to={`/category/${article.category.slug}`} className="text-xs font-semibold uppercase tracking-wider hover:underline" style={{ color: article.category.color || '#6B7280' }}>
+                        <Link
+                          to={`/category/${article.category.slug}`}
+                          className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider hover:underline"
+                          style={{ color: article.category.color || getCategoryAccent(article.category.name) }}
+                        >
                           {article.category.name}
                         </Link>
                       )}
                       <Link to={`/article/${article.slug}`}>
-                        <h3 className="font-bold text-dark-900 dark:text-white mt-1 mb-1 leading-snug hover:text-primary-600 transition-colors line-clamp-2">
+                        <h3 className="font-semibold sm:font-bold text-sm sm:text-base text-dark-900 dark:text-white mt-1 mb-1 leading-snug hover:text-primary-600 transition-colors line-clamp-2">
                           {article.title}
                         </h3>
                       </Link>
-                      <span className="text-dark-400 text-sm">{formatRelativeTime(article.publishedAt)}</span>
+                      <span className="text-dark-400 text-xs sm:text-sm">{formatRelativeTime(article.publishedAt)}</span>
                     </article>
                   ))}
                 </div>
               </div>
             </section>
 
+            {renderAdGroup(afterHeroAds)}
+            {renderAdGroup(betweenSectionsAds[0])}
+
             {/* Trending Section */}
-            {trendingArticles.length > 0 && (
+            {(trendingLoading || trendingArticles.length > 0) && (
               <section className="mb-10">
                 <h2 className="text-xl font-bold text-primary-600 mb-5 uppercase tracking-wide">Trending</h2>
-                <div className="relative">
-                  <div className="flex gap-6 overflow-x-auto no-scrollbar pb-2" id="trending-scroll">
-                    {trendingArticles.map((article) => (
-                      <article key={article._id} className="flex-shrink-0 w-[280px] group">
-                        <div className="flex gap-4">
-                          <Link to={`/article/${article.slug}`} className="flex-shrink-0">
-                            <img
-                              src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/130`}
-                              alt={article.title}
-                              className="w-[120px] h-[80px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-                            />
-                          </Link>
-                          <div className="flex-1 min-w-0">
-                            {article.category && (
-                              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: article.category.color || '#6B7280' }}>
-                                {article.category.name}
-                              </span>
-                            )}
-                            <Link to={`/article/${article.slug}`}>
-                              <h3 className="font-semibold text-dark-900 dark:text-white text-sm leading-snug line-clamp-2 hover:text-primary-600 transition-colors mt-0.5">
-                                {article.title}
-                              </h3>
-                            </Link>
-                            <span className="text-dark-400 text-xs mt-1 block">{formatRelativeTime(article.publishedAt)}</span>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                  <button 
-                    onClick={() => document.getElementById('trending-scroll')?.scrollBy({ left: 300, behavior: 'smooth' })}
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-primary-700 transition-colors z-10"
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </div>
+                <MixedLeadList
+                  articles={trendingArticles}
+                  isLoading={trendingLoading}
+                  emptyMessage="No trending articles"
+                />
               </section>
             )}
+
+            {renderAdGroup(betweenSectionsAds[1])}
 
             {/* Latest News Section */}
             <section className="mb-10">
               <h2 className="text-xl font-bold text-primary-600 mb-5 uppercase tracking-wide">Latest News</h2>
-              {latestLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="flex gap-4">
-                      <div className="w-[140px] h-[100px] skeleton rounded-lg flex-shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3 skeleton rounded w-1/4" />
-                        <div className="h-5 skeleton rounded" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  {latestNews.map((article) => (
-                    <article key={article._id} className="flex gap-4 group">
-                      <Link to={`/article/${article.slug}`} className="flex-shrink-0">
-                        <img
-                          src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/140`}
-                          alt={article.title}
-                          className="w-[140px] h-[100px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-                        />
-                      </Link>
-                      <div className="flex-1 min-w-0">
-                        {article.category && (
-                          <Link to={`/category/${article.category.slug}`} className="text-xs font-semibold uppercase tracking-wider hover:underline" style={{ color: article.category.color || '#6B7280' }}>
-                            {article.category.name}
-                          </Link>
-                        )}
-                        <Link to={`/article/${article.slug}`}>
-                          <h3 className="font-semibold text-dark-900 dark:text-white leading-snug line-clamp-2 hover:text-primary-600 transition-colors mt-0.5">
-                            {article.title}
-                          </h3>
-                        </Link>
-                        <span className="text-dark-400 text-sm mt-2 block">{formatRelativeTime(article.publishedAt)}</span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+              <MixedLeadList
+                articles={latestNews}
+                isLoading={latestLoading}
+                emptyMessage="No articles published yet"
+              />
               <div className="text-center mt-8">
                 <Link to="/articles" className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-primary-600 text-primary-600 font-medium rounded-lg hover:bg-primary-600 hover:text-white transition-colors">
                   View All News <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </section>
+
+            {renderAdGroup(betweenSectionsAds[2])}
 
             {/* Category Sections */}
             {categories?.slice(0, 2).map((category) => (
@@ -1160,21 +1057,13 @@ export function HomePage() {
           {/* Right Sidebar - Ad */}
           <aside className="hidden lg:block w-[300px] flex-shrink-0">
             <div className="sticky top-24">
-              <div className="text-[10px] text-dark-400 mb-1">Ad</div>
-              <div className="bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
-                {sidebarAdsSettings?.enabled && sidebarAdsSettings?.imageUrl ? (
-                  <a href={sidebarAdsSettings.linkUrl || '#'} target="_blank" rel="noopener noreferrer sponsored">
-                    <img src={sidebarAdsSettings.imageUrl} alt="Advertisement" className="w-full h-auto" />
-                  </a>
-                ) : (
-                  <div className="aspect-[300/600] flex items-center justify-center text-dark-400 text-sm">
-                    <div className="text-center p-4">
-                      <p className="font-medium mb-2">Advertisement</p>
-                      <p className="text-xs">300 x 600</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SidebarAdSlot
+                ad={rightHeroAd}
+                pageType="homepage"
+                pageUrl={pageUrl}
+                device={device}
+                trackAdEvent={trackAdEvent}
+              />
               
               <div className="mt-6 bg-primary-600 rounded-lg p-5 text-white">
                 <h3 className="font-bold mb-2">Stay Updated</h3>
@@ -1192,75 +1081,40 @@ export function HomePage() {
           </aside>
         </div>
       </div>
+      {isDev && (
+        <div className="fixed bottom-4 left-4 z-50 max-w-xs rounded-lg bg-black/80 text-white text-xs px-3 py-2">
+          <div className="font-semibold mb-1">Ads debug</div>
+          <div>right_hero: {rightHeroAd?._id || 'none'}</div>
+          <div>after_hero: {afterHeroAds?.length || 0}</div>
+          <div>between_sections: {betweenSectionsSummary}</div>
+        </div>
+      )}
     </>
   );
 }
 
 // Category Section for Homepage
 function HomeCategorySection({ category }) {
-  const { data } = useArticlesByCategory(category.slug, { page: 1, limit: 4 });
+  const { data, isLoading } = useArticlesByCategory(category.slug, { page: 1, limit: 4 });
   const articles = data?.data?.articles || [];
-
-  if (!articles.length) return null;
-
-  const mainArticle = articles[0];
-  const sideArticles = articles.slice(1, 4);
 
   return (
     <section className="mb-10 pt-8 border-t border-dark-200 dark:border-dark-700">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl font-bold uppercase tracking-wide" style={{ color: category.color }}>
-          {category.name}
-        </h2>
+        <div className="inline-flex items-center gap-3 rounded-full border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 px-4 py-2 shadow-sm">
+          <h2 className="text-lg sm:text-xl font-bold uppercase tracking-wide" style={{ color: category.color || getCategoryAccent(category.name) }}>
+            {category.name}
+          </h2>
+        </div>
         <Link to={`/category/${category.slug}`} className="text-dark-400 hover:text-primary-600 text-sm font-medium flex items-center gap-1">
           More <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7">
-          <article>
-            <Link to={`/article/${mainArticle.slug}`} className="block group">
-              <div className="aspect-[16/10] rounded-lg overflow-hidden mb-3">
-                <img
-                  src={mainArticle.featuredImage || `https://picsum.photos/seed/${mainArticle.slug}/700/440`}
-                  alt={mainArticle.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            </Link>
-            <Link to={`/article/${mainArticle.slug}`}>
-              <h3 className="text-xl font-bold text-dark-900 dark:text-white leading-snug hover:text-primary-600 transition-colors line-clamp-2">
-                {mainArticle.title}
-              </h3>
-            </Link>
-            <p className="text-dark-500 text-sm mt-2 line-clamp-2">{mainArticle.excerpt}</p>
-            <span className="text-dark-400 text-sm mt-2 block">{formatRelativeTime(mainArticle.publishedAt)}</span>
-          </article>
-        </div>
-
-        <div className="lg:col-span-5 space-y-4">
-          {sideArticles.map((article) => (
-            <article key={article._id} className="flex gap-4 group">
-              <Link to={`/article/${article.slug}`} className="flex-shrink-0">
-                <img
-                  src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/180/120`}
-                  alt={article.title}
-                  className="w-[120px] h-[80px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-                />
-              </Link>
-              <div className="flex-1 min-w-0">
-                <Link to={`/article/${article.slug}`}>
-                  <h4 className="font-semibold text-dark-900 dark:text-white text-sm leading-snug line-clamp-2 hover:text-primary-600 transition-colors">
-                    {article.title}
-                  </h4>
-                </Link>
-                <span className="text-dark-400 text-xs mt-1 block">{formatRelativeTime(article.publishedAt)}</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
+      <MixedLeadList
+        articles={articles}
+        isLoading={isLoading}
+        emptyMessage={`No articles in ${category.name} yet`}
+      />
     </section>
   );
 }
@@ -1286,10 +1140,10 @@ function ArticleCardNews({ article }) {
         {article.category && (
           <Link to={`/category/${article.category.slug}`}>
             <span 
-              className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3"
+              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mb-3"
               style={{ 
-                backgroundColor: `${article.category.color}15`, 
-                color: article.category.color 
+                backgroundColor: `${article.category.color || getCategoryAccent(article.category.name)}15`, 
+                color: article.category.color || getCategoryAccent(article.category.name)
               }}
             >
               {article.category.name}
@@ -1335,6 +1189,128 @@ function ArticleCardNews({ article }) {
   );
 }
 
+function NewsListWithExcerpt({ articles, isLoading, emptyMessage, imageSize = 'md' }) {
+  const imageClassName = imageSize === 'sm'
+    ? 'w-20 h-16'
+    : 'w-28 h-20';
+  const titleClassName = imageSize === 'sm' ? 'text-sm' : 'text-base';
+  const excerptClassName = imageSize === 'sm' ? 'text-xs' : 'text-sm';
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex gap-3">
+            <div className={`${imageClassName} skeleton rounded-lg flex-shrink-0`} />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 skeleton rounded w-1/2" />
+              <div className="h-4 skeleton rounded" />
+              <div className="h-3 skeleton rounded w-3/4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!articles?.length) {
+    return <p className="text-dark-500 text-sm">{emptyMessage || 'No articles found'}</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {articles.map((article) => (
+        <article key={article._id} className="flex gap-3 group">
+          <Link to={`/article/${article.slug}`} className="flex-shrink-0">
+            <img
+              src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/240/160`}
+              alt={article.title}
+              className={`${imageClassName} object-cover rounded-lg group-hover:opacity-90 transition-opacity`}
+            />
+          </Link>
+          <div className="flex-1 min-w-0">
+            {article.category && (
+              <Link
+                to={`/category/${article.category.slug}`}
+                className="text-[10px] font-semibold uppercase tracking-wider hover:underline"
+                style={{ color: article.category.color || '#6B7280' }}
+              >
+                {article.category.name}
+              </Link>
+            )}
+            <Link to={`/article/${article.slug}`}>
+              <h4 className={`font-semibold text-dark-900 dark:text-white leading-snug line-clamp-2 hover:text-primary-600 transition-colors mt-1 ${titleClassName}`}>
+                {article.title}
+              </h4>
+            </Link>
+            {article.excerpt && (
+              <p className={`text-dark-500 mt-1 line-clamp-2 ${excerptClassName}`}>
+                {article.excerpt}
+              </p>
+            )}
+            <span className="text-dark-400 text-xs mt-1 block">{formatRelativeTime(article.publishedAt)}</span>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function PopupAdModal({ ad, isOpen, onClose, onImpression, onClick }) {
+  if (!ad) return null;
+  const [remaining, setRemaining] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    if (!ad.autoCloseSeconds || ad.autoCloseSeconds <= 0) return undefined;
+
+    setRemaining(ad.autoCloseSeconds);
+    const intervalId = setInterval(() => {
+      setRemaining((prev) => {
+        if (prev === null) return prev;
+        if (prev <= 1) {
+          onClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [ad.autoCloseSeconds, isOpen, onClose]);
+
+  return (
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center',
+        isOpen ? 'pointer-events-auto' : 'pointer-events-none opacity-0'
+      )}
+      aria-hidden={!isOpen}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md sm:max-w-lg mx-4">
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+          {typeof remaining === 'number' && remaining > 0 && (
+            <span className="rounded-full bg-white/90 text-dark-900 text-xs font-semibold px-3 py-1 shadow">
+              Closing in {remaining}s
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-white/90 text-dark-900 text-xs font-semibold px-3 py-1 shadow hover:bg-white"
+          >
+            Close
+          </button>
+        </div>
+        <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-dark-900">
+          <BodyAd ad={ad} onImpression={onImpression} onClick={onClick} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ==================== ARTICLES PAGE ====================
 export function ArticlesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1350,8 +1326,23 @@ export function ArticlesPage() {
     q: searchQuery || undefined
   });
   const { data: categories } = useCategories();
-  const { data: publicSettings } = usePublicSettings();
-  const sidebarAdsSettings = publicSettings?.sidebarAds;
+  const device = useDeviceType();
+  const { data: searchAds } = useSelectAds('in_search', {
+    pageType: 'search',
+    device,
+    limit: 1,
+    enabled: !!searchQuery
+  });
+  const { data: rightSidebarAds } = useSelectAds('custom', {
+    pageType: 'articles',
+    device,
+    placementId: 'right_sidebar',
+    limit: 1
+  });
+  const { mutate: trackAdEvent } = useTrackAdEvent();
+  const rightSidebarAd = rightSidebarAds?.[0];
+  const searchAd = searchAds?.[0];
+  const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -1431,9 +1422,33 @@ export function ArticlesPage() {
               </div>
             )}
 
+            {searchAd && (
+              <div className="mb-6">
+                <BodyAd
+                  ad={searchAd}
+                  onImpression={(adData) => trackAdEvent({
+                    adId: adData._id,
+                    type: 'impression',
+                    pageType: 'search',
+                    pageUrl,
+                    device,
+                    placement: adData.placement
+                  })}
+                  onClick={(adData) => trackAdEvent({
+                    adId: adData._id,
+                    type: 'click',
+                    pageType: 'search',
+                    pageUrl,
+                    device,
+                    placement: adData.placement
+                  })}
+                />
+              </div>
+            )}
+
             {/* Articles Grid */}
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                 {[...Array(9)].map((_, i) => (
                   <div key={i} className="bg-white dark:bg-dark-900 rounded-2xl overflow-hidden shadow-sm">
                     <div className="aspect-[16/10] skeleton" />
@@ -1447,7 +1462,7 @@ export function ArticlesPage() {
               </div>
             ) : data?.data?.length > 0 ? (
               <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                   {data.data.map((article) => (
                     <ArticleCardNews key={article._id} article={article} />
                   ))}
@@ -1507,21 +1522,13 @@ export function ArticlesPage() {
           {/* Right Sidebar - Ad */}
           <aside className="hidden lg:block w-[300px] flex-shrink-0">
             <div className="sticky top-24">
-              <div className="text-[10px] text-dark-400 mb-1">Ad</div>
-              <div className="bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
-                {sidebarAdsSettings?.enabled && sidebarAdsSettings?.imageUrl ? (
-                  <a href={sidebarAdsSettings.linkUrl || '#'} target="_blank" rel="noopener noreferrer sponsored">
-                    <img src={sidebarAdsSettings.imageUrl} alt="Advertisement" className="w-full h-auto" />
-                  </a>
-                ) : (
-                  <div className="aspect-[300/600] flex items-center justify-center text-dark-400 text-sm">
-                    <div className="text-center p-4">
-                      <p className="font-medium mb-2">Advertisement</p>
-                      <p className="text-xs">300 x 600</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <SidebarAdSlot
+                ad={rightSidebarAd}
+                pageType="articles"
+                pageUrl={pageUrl}
+                device={device}
+                trackAdEvent={trackAdEvent}
+              />
             </div>
           </aside>
         </div>
@@ -1547,44 +1554,31 @@ export function CategoriesListPage() {
           </h1>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="h-32 skeleton rounded-2xl" />
               ))}
             </div>
           ) : categories?.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {categories.map((category) => (
                 <Link
                   key={category._id}
                   to={`/category/${category.slug}`}
-                  className="group relative overflow-hidden rounded-2xl bg-white dark:bg-dark-900 p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all active:scale-[0.98]"
+                  className="group rounded-2xl bg-white dark:bg-dark-900 shadow-sm hover:shadow-lg transition-all active:scale-[0.98] border border-dark-100 dark:border-dark-800"
                 >
-                  {/* Background Gradient */}
-                  <div 
-                    className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity"
-                    style={{ backgroundColor: category.color }}
+                  <div
+                    className="h-2 w-full"
+                    style={{ backgroundColor: category.color || getCategoryAccent(category.name) }}
                   />
-                  
-                  {/* Icon */}
-                  <div 
-                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mb-3 sm:mb-4"
-                    style={{ backgroundColor: category.color }}
-                  >
-                    <span className="text-white font-bold text-xl sm:text-2xl">
-                      {category.name.charAt(0)}
-                    </span>
+                  <div className="p-4 sm:p-5">
+                    <h3 className="font-semibold text-dark-900 dark:text-white text-sm sm:text-base mb-1">
+                      {category.name}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-dark-500">
+                      {category.articleCount || 0} articles
+                    </p>
                   </div>
-                  
-                  {/* Name */}
-                  <h3 className="font-semibold text-dark-900 dark:text-white text-sm sm:text-base mb-1">
-                    {category.name}
-                  </h3>
-                  
-                  {/* Count */}
-                  <p className="text-xs sm:text-sm text-dark-500">
-                    {category.articleCount || 0} articles
-                  </p>
                 </Link>
               ))}
             </div>
@@ -1604,6 +1598,8 @@ export function CategoryPage() {
     const { slug } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const page = Number(searchParams.get('page') || 1);
+    const device = useDeviceType();
+    const { mutate: trackAdEvent } = useTrackAdEvent();
 
     const { data, isLoading } = useArticlesByCategory(slug, {
         page,
@@ -1613,6 +1609,15 @@ export function CategoryPage() {
     const articles = data?.data?.articles || [];
     const category = data?.data?.category;
     const pagination = data?.pagination;
+    const { data: categoryAds } = useSelectAds('in_category', {
+        pageType: 'category',
+        device,
+        categoryId: category?._id,
+        limit: 1,
+        enabled: !!category?._id
+    });
+    const categoryAd = categoryAds?.[0];
+    const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
 
     const handlePageChange = (newPage) => {
         const params = new URLSearchParams(searchParams);
@@ -1632,20 +1637,53 @@ export function CategoryPage() {
                     <Link to="/articles" className="inline-flex items-center gap-2 text-dark-500 hover:text-dark-700 mb-4">
                         ← Back to Articles
                     </Link>
-
-                    <h1 className="font-display text-3xl font-bold text-dark-900 dark:text-white">
-                        {category?.name || slug.replace(/-/g, ' ')}
-                    </h1>
-                    {category?.description && (
-                        <p className="text-dark-500 mt-2">{category.description}</p>
-                    )}
+                    <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 p-5 sm:p-6">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest"
+                          style={{ color: category?.color || getCategoryAccent(category?.name || slug.replace(/-/g, ' ')) }}
+                        >
+                          <span
+                            className="w-8 h-1 rounded-full"
+                            style={{ backgroundColor: category?.color || getCategoryAccent(category?.name || slug.replace(/-/g, ' ')) }}
+                          />
+                          Category
+                        </div>
+                        <h1 className="font-display text-3xl font-bold text-dark-900 dark:text-white mt-2">
+                            {category?.name || slug.replace(/-/g, ' ')}
+                        </h1>
+                        {category?.description && (
+                            <p className="text-dark-500 mt-2">{category.description}</p>
+                        )}
+                    </div>
                 </div>
 
                 {isLoading ? (
                     <ArticleListSkeleton count={12} />
                 ) : articles.length > 0 ? (
                     <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {categoryAd && (
+                            <div className="mb-8">
+                                <BodyAd
+                                    ad={categoryAd}
+                                    onImpression={(adData) => trackAdEvent({
+                                        adId: adData._id,
+                                        type: 'impression',
+                                        pageType: 'category',
+                                        pageUrl,
+                                        device,
+                                        placement: adData.placement
+                                    })}
+                                    onClick={(adData) => trackAdEvent({
+                                        adId: adData._id,
+                                        type: 'click',
+                                        pageType: 'category',
+                                        pageUrl,
+                                        device,
+                                        placement: adData.placement
+                                    })}
+                                />
+                            </div>
+                        )}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                             {articles.map((a) => (
                                 <ArticleCard key={a._id} article={a} />
                             ))}
@@ -1798,7 +1836,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
         className="text-sm min-h-[80px]"
       />
       {!isAuthenticated && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+        <div className="grid grid-cols-2 gap-3 mt-2">
           <Input
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
@@ -1928,7 +1966,7 @@ function CommentsSection({ articleId }) {
           className="mb-3"
         />
         {!isAuthenticated && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <Input
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
@@ -2028,7 +2066,16 @@ export function ArticlePage() {
   const { slug } = useParams();
   const { data: article, isLoading, error } = useArticleBySlug(slug);
   const { data: related, isLoading: isLoadingRelated } = useRelatedArticles(article?._id, 3);
+  const { data: moreNews, isLoading: isLoadingMoreNews } = useLatestArticles(6);
   const { data: settings } = usePublicSettings();
+  const device = useDeviceType();
+  const { mutate: trackAdEvent } = useTrackAdEvent();
+  const paragraphCount = article?.content?.blocks?.filter((block) => block.type === 'paragraph').length || 0;
+  const { data: articleAds } = useArticleAds(article?._id, {
+    device,
+    categoryId: article?.category?._id,
+    totalParagraphs: paragraphCount
+  });
 
   useEffect(() => {
     if (article?._id) {
@@ -2052,9 +2099,17 @@ export function ArticlePage() {
   // featuredImage is a string URL, not an object
   const imageUrl = featuredImage || `https://picsum.photos/seed/${slug}/1200/600`;
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const moreNewsArticles = (moreNews || []).filter((item) => item._id !== article._id);
   
-  // Get in-article ad settings
-  const inArticleAd = settings?.inArticleAd;
+  const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
+  const trackAd = (adData, type) => trackAdEvent({
+    adId: adData._id,
+    type,
+    pageType: 'articles',
+    pageUrl,
+    device,
+    placement: adData.placement
+  });
   
   // SEO data
   const authorName = author ? `${author.firstName} ${author.lastName}` : '';
@@ -2154,7 +2209,9 @@ export function ArticlePage() {
                 </Link>
                 {category && (
                   <Link to={`/category/${category.slug}`}>
-                    <Badge className="mb-4 bg-white/20 text-white backdrop-blur-sm">{category.name}</Badge>
+                    <span className="inline-flex items-center mb-4 rounded-full bg-white/20 text-white px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                      {category.name}
+                    </span>
                   </Link>
                 )}
                 <h1 className="font-display text-3xl lg:text-5xl font-bold text-white mb-4">{title}</h1>
@@ -2175,10 +2232,28 @@ export function ArticlePage() {
         </header>
 
         <div className="container-custom py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            <div className="lg:col-span-8">
+          <div className="grid grid-cols-12 gap-12">
+            <div className="col-span-7 lg:col-span-8">
               {excerpt && <p className="text-xl text-dark-600 dark:text-dark-300 mb-8 leading-relaxed">{excerpt}</p>}
-              <ArticleContent content={content} inArticleAd={inArticleAd} />
+              <ArticleContent
+                content={content}
+                inArticleAds={articleAds?.in_article}
+                onAdImpression={(adData) => trackAd(adData, 'impression')}
+                onAdClick={(adData) => trackAd(adData, 'click')}
+              />
+
+              {articleAds?.after_article?.length > 0 && (
+                <div className="my-10 space-y-6">
+                  {articleAds.after_article.map((ad) => (
+                    <BodyAd
+                      key={ad._id}
+                      ad={ad}
+                      onImpression={(adData) => trackAd(adData, 'impression')}
+                      onClick={(adData) => trackAd(adData, 'click')}
+                    />
+                  ))}
+                </div>
+              )}
 
               {tags?.length > 0 && (
                 <div className="mt-10 pt-6 border-t border-dark-200 dark:border-dark-800 flex flex-wrap gap-2">
@@ -2197,11 +2272,39 @@ export function ArticlePage() {
                 <a href={`https://linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800"><Linkedin className="w-5 h-5 text-[#0A66C2]" /></a>
               </div>
 
+              {articleAds?.before_comments?.length > 0 && (
+                <div className="my-10 space-y-6">
+                  {articleAds.before_comments.map((ad) => (
+                    <BodyAd
+                      key={ad._id}
+                      ad={ad}
+                      onImpression={(adData) => trackAd(adData, 'impression')}
+                      onClick={(adData) => trackAd(adData, 'click')}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Comments Section */}
               <CommentsSection articleId={article._id} />
+
+              {/* More News Section */}
+              <section className="mt-10 pt-8 border-t border-dark-200 dark:border-dark-800">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-semibold text-dark-900 dark:text-white">More News</h3>
+                  <Link to="/articles" className="text-dark-400 hover:text-primary-600 text-sm font-medium flex items-center gap-1">
+                    View all <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <NewsListWithExcerpt
+                  articles={moreNewsArticles}
+                  isLoading={isLoadingMoreNews}
+                  emptyMessage="No additional news available"
+                />
+              </section>
             </div>
 
-            <aside className="lg:col-span-4">
+            <aside className="col-span-5 lg:col-span-4">
               {author && (
                 <div className="card p-6 mb-6">
                   <h3 className="text-sm font-semibold text-dark-500 uppercase mb-4">About the Author</h3>
@@ -2219,22 +2322,12 @@ export function ArticlePage() {
               {/* Related Articles */}
               <div className="card p-6">
                 <h3 className="text-sm font-semibold text-dark-500 uppercase mb-4">Related Articles</h3>
-                {isLoadingRelated ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-dark-200 dark:bg-dark-700 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-dark-200 dark:bg-dark-700 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : related?.length > 0 ? (
-                  <div className="space-y-4">
-                    {related.map((a) => <ArticleCard key={a._id} article={a} variant="compact" />)}
-                  </div>
-                ) : (
-                  <p className="text-dark-500 text-sm">No related articles found</p>
-                )}
+                <NewsListWithExcerpt
+                  articles={related || []}
+                  isLoading={isLoadingRelated}
+                  emptyMessage="No related articles found"
+                  imageSize="sm"
+                />
               </div>
             </aside>
           </div>
@@ -2455,7 +2548,7 @@ export function ContactPage() {
           <p className="text-dark-500 text-center mb-8">Have a question? We'd love to hear from you.</p>
 
           <form onSubmit={handleSubmit} className="card p-8 space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input label="Name" placeholder="Your name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               <Input label="Email" type="email" placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
             </div>
@@ -2488,6 +2581,141 @@ export function AboutPage() {
           </div>
           <div className="mt-8 text-center">
             <Link to="/register"><Button size="lg">Become a Writer</Button></Link>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ==================== ACCOUNT PAGE (Public Layout) ====================
+export function AccountPage() {
+  const { user, setUser } = useAuthStore();
+  const { mutate: updateProfile, isPending } = useUpdateProfile();
+  const [form, setForm] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    bio: user?.bio || '',
+  });
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be less than 5MB');
+        return;
+      }
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', avatarFile);
+      const response = await usersAPI.uploadAvatar(formData);
+      const avatar = response?.data?.data?.avatar;
+      if (avatar) {
+        setUser({ ...user, avatar });
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        toast.success('Profile picture updated!');
+      } else {
+        toast.error('Upload failed');
+      }
+    } catch (error) {
+      toast.error('Upload failed');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    updateProfile(form);
+  };
+
+  return (
+    <>
+      <Helmet><title>Account - Bassac Media Center</title></Helmet>
+      <div className="container-custom py-10">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Account</h1>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="card p-6 text-center">
+              <div className="relative inline-block mb-4">
+                <Avatar
+                  src={avatarPreview || user?.avatar}
+                  name={user?.fullName}
+                  size="xl"
+                  className="mx-auto"
+                />
+                <label
+                  htmlFor="account-avatar-upload"
+                  className="absolute bottom-0 right-0 p-2 bg-primary-600 hover:bg-primary-700 text-white rounded-full cursor-pointer transition-colors shadow-lg"
+                >
+                  <Camera className="w-4 h-4" />
+                  <input
+                    id="account-avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {avatarFile && (
+                <div className="mb-4 space-y-2">
+                  <p className="text-sm text-dark-500 truncate">{avatarFile.name}</p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      size="sm"
+                      onClick={handleAvatarUpload}
+                      isLoading={isUploadingAvatar}
+                    >
+                      Upload
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setAvatarFile(null);
+                        setAvatarPreview(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <h2 className="text-xl font-semibold text-dark-900 dark:text-white">{user?.fullName}</h2>
+              <p className="text-dark-500">{user?.email}</p>
+              <p className="text-sm text-primary-600 capitalize mt-1">{user?.role}</p>
+            </div>
+            <div className="card p-6">
+              <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Edit Profile</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+                  <Input label="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+                </div>
+                <Textarea label="Bio" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Tell us about yourself..." />
+                <Button type="submit" isLoading={isPending}>Save Changes</Button>
+              </form>
+            </div>
           </div>
         </div>
       </div>
@@ -3127,11 +3355,11 @@ export function DynamicPage() {
         <div className={cn('py-12', getLayoutClasses())}>
           {page.template === 'sidebar-left' || page.template === 'sidebar-right' ? (
             <div className={cn(
-              'grid grid-cols-1 lg:grid-cols-4 gap-8',
+              'grid grid-cols-12 gap-8',
               page.template === 'sidebar-left' && 'lg:flex-row-reverse'
             )}>
               <div className={cn(
-                'lg:col-span-3',
+                'col-span-8 lg:col-span-3',
                 page.template === 'sidebar-left' && 'lg:order-2'
               )}>
                 <div className="prose dark:prose-invert max-w-none">
@@ -3139,7 +3367,7 @@ export function DynamicPage() {
                 </div>
               </div>
               <aside className={cn(
-                'lg:col-span-1',
+                'col-span-4 lg:col-span-1',
                 page.template === 'sidebar-left' && 'lg:order-1'
               )}>
                 <div className="sticky top-24 space-y-6">

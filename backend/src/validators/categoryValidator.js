@@ -16,6 +16,15 @@ export const createCategoryValidator = [
     .optional()
     .matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
     .withMessage('Invalid hex color format'),
+  body('image')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === '') return true;
+      if (typeof value !== 'string') return false;
+      if (value.startsWith('/')) return true;
+      return /^https?:\/\//.test(value);
+    })
+    .withMessage('Image must be a URL or a relative path'),
   body('parent')
     .optional()
     .isMongoId()
@@ -54,6 +63,15 @@ export const updateCategoryValidator = [
     .optional()
     .matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
     .withMessage('Invalid hex color format'),
+  body('image')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === '') return true;
+      if (typeof value !== 'string') return false;
+      if (value.startsWith('/')) return true;
+      return /^https?:\/\//.test(value);
+    })
+    .withMessage('Image must be a URL or a relative path'),
   body('parent')
     .optional()
     .custom((value) => {

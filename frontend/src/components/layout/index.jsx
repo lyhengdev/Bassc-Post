@@ -6,17 +6,23 @@ import Footer from './Footer';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import { useAuthStore, useThemeStore } from '../../stores/authStore';
-import { Avatar } from '../common/index.jsx';
+import { Avatar, Spinner } from '../common/index.jsx';
 import { NotificationDropdown } from '../common/NotificationDropdown.jsx';
-import AdsManager from '../ads/AdsManager.jsx';
 import { usePublicSettings } from '../../hooks/useApi';
+import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
+import { BodyAd } from '../ads/index.js';
 import { cn } from '../../utils';
+import { useIsFetching } from '@tanstack/react-query';
 
 // ==================== PUBLIC LAYOUT ====================
 export function PublicLayout() {
   const { data: settings } = usePublicSettings();
-  const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
+  const location = useLocation();
+  const device = useDeviceType();
+  const { mutate: trackAdEvent } = useTrackAdEvent();
+  const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
+  const isFetching = useIsFetching() > 0;
   
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -26,23 +32,43 @@ export function PublicLayout() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Determine current page type
-  const currentPage = location.pathname === '/' 
-    ? 'homepage' 
-    : location.pathname.startsWith('/article/') 
-    ? 'articles' 
-    : location.pathname.startsWith('/category/')
-    ? 'category'
-    : 'all';
-
   // Get floating banner settings for layout adjustments
   const floatingBanner = settings?.floatingBanner;
   const hasTopBanner = floatingBanner?.enabled && floatingBanner?.position === 'top';
   const hasBottomBanner = floatingBanner?.enabled && floatingBanner?.position === 'bottom';
   const bannerHeight = { small: 48, medium: 64, large: 80 }[floatingBanner?.height || 'medium'];
+  const isSettingsBannerActive = settings && (hasTopBanner || hasBottomBanner);
+  const searchParams = new URLSearchParams(location.search);
+  const pageType = location.pathname === '/'
+    ? 'homepage'
+    : location.pathname.startsWith('/article')
+      ? 'articles'
+      : location.pathname.startsWith('/category')
+        ? 'category'
+        : location.pathname.startsWith('/articles') && searchParams.get('q')
+          ? 'search'
+          : location.pathname.startsWith('/articles')
+            ? 'articles'
+            : 'all';
+  const { data: floatingAds } = useSelectAds('floating_banner', {
+    pageType,
+    device,
+    limit: 1
+  });
+  const floatingAd = floatingAds?.[0];
+  const pageUrl = location.pathname;
+
+  useEffect(() => {
+    setIsFloatingDismissed(false);
+  }, [floatingAd?._id, location.pathname]);
 
   return (
     <div className="min-h-screen flex flex-col">
+      {isFetching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-dark-900/60 pointer-events-none">
+          <Spinner size="lg" />
+        </div>
+      )}
       {/* Top Floating Banner - Above Header */}
       {settings && hasTopBanner && (
         <TopFloatingBanner settings={floatingBanner} />
@@ -69,11 +95,30 @@ export function PublicLayout() {
           <BottomFloatingBanner settings={floatingBanner} />
         </div>
       )}
-      
-      {/* Other Ads managed by AdsManager (except floating banner) */}
-      {settings && (
-        <AdsManager settings={{...settings, floatingBanner: { enabled: false }}} currentPage={currentPage} />
+
+      {!isSettingsBannerActive && floatingAd && !isFloatingDismissed && (
+        <FloatingAdBanner
+          ad={floatingAd}
+          onClose={() => setIsFloatingDismissed(true)}
+          onImpression={(adData) => trackAdEvent({
+            adId: adData._id,
+            type: 'impression',
+            pageType,
+            pageUrl,
+            device,
+            placement: adData.placement
+          })}
+          onClick={(adData) => trackAdEvent({
+            adId: adData._id,
+            type: 'click',
+            pageType,
+            pageUrl,
+            device,
+            placement: adData.placement
+          })}
+        />
       )}
+      
     </div>
   );
 }
@@ -198,14 +243,37 @@ function BottomFloatingBanner({ settings }) {
   );
 }
 
+function FloatingAdBanner({ ad, onClose, onImpression, onClick }) {
+  return (
+    <div className="fixed bottom-4 left-0 right-0 z-50 px-4">
+      <div className="relative mx-auto max-w-4xl rounded-xl bg-white dark:bg-dark-900 shadow-xl border border-dark-200 dark:border-dark-700 p-3">
+        <button
+          onClick={onClose}
+          className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white dark:bg-dark-900 shadow flex items-center justify-center text-dark-500 hover:text-dark-700"
+          aria-label="Close ad"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <BodyAd ad={ad} onImpression={onImpression} onClick={onClick} />
+      </div>
+    </div>
+  );
+}
+
 // ==================== DASHBOARD LAYOUT ====================
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
+  const isFetching = useIsFetching() > 0;
 
   return (
     <div className="min-h-screen bg-dark-50 dark:bg-dark-950">
+      {isFetching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-dark-900/60 pointer-events-none">
+          <Spinner size="lg" />
+        </div>
+      )}
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
