@@ -116,6 +116,7 @@ npm run dev
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (when using cloudinary) | Optional |
 | `CLOUDINARY_API_KEY` | Cloudinary API key (when using cloudinary) | Optional |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret (when using cloudinary) | Optional |
+| `CLOUDINARY_URL` | Cloudinary URL (`cloudinary://<api_key>:<api_secret>@<cloud_name>`) | Optional |
 
 ## 🔌 API Endpoints
 

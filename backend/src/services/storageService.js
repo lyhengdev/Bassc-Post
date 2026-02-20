@@ -11,6 +11,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const backendRoot = path.resolve(__dirname, '../..');
 
+const parseCloudinaryUrl = (rawUrl = '') => {
+    const value = (rawUrl || '').trim();
+    if (!value) return null;
+
+    try {
+        const parsed = new URL(value);
+        if (parsed.protocol !== 'cloudinary:') {
+            return null;
+        }
+
+        const cloudName = (parsed.hostname || '').trim();
+        const apiKey = decodeURIComponent(parsed.username || '').trim();
+        const apiSecret = decodeURIComponent(parsed.password || '').trim();
+
+        if (!cloudName || !apiKey || !apiSecret) {
+            return null;
+        }
+
+        return { cloudName, apiKey, apiSecret };
+    } catch {
+        return null;
+    }
+};
+
 class StorageService {
     constructor() {
         this.localFallback = process.env.STORAGE_FALLBACK_TO_LOCAL !== 'false';
@@ -27,11 +51,7 @@ class StorageService {
         const requested = (process.env.STORAGE_PROVIDER || config.storage?.provider || 'local')
             .toLowerCase()
             .trim();
-        const hasCloudinaryCredentials = Boolean(
-            process.env.CLOUDINARY_CLOUD_NAME &&
-            process.env.CLOUDINARY_API_KEY &&
-            process.env.CLOUDINARY_API_SECRET
-        );
+        const hasCloudinaryCredentials = Boolean(this.getCloudinaryCredentials());
 
         if (requested === 'cloudinary') {
             return 'cloudinary';
@@ -58,22 +78,19 @@ class StorageService {
 
     initCloudinary() {
         try {
-            // Validate credentials exist
-            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-            const apiKey = process.env.CLOUDINARY_API_KEY;
-            const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-            if (!cloudName || !apiKey || !apiSecret) {
+            const credentials = this.getCloudinaryCredentials();
+            if (!credentials) {
                 console.warn('⚠️ Cloudinary credentials incomplete, falling back to local storage');
-                console.warn('   Required: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET');
+                console.warn('   Required: CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET');
+                console.warn('   Or set CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>');
                 this.provider = 'local';
                 return;
             }
 
             cloudinary.config({
-                cloud_name: cloudName,
-                api_key: apiKey,
-                api_secret: apiSecret,
+                cloud_name: credentials.cloudName,
+                api_key: credentials.apiKey,
+                api_secret: credentials.apiSecret,
             });
             console.log('✅ Cloudinary storage initialized');
         } catch (error) {
@@ -253,6 +270,18 @@ class StorageService {
 
     getProvider() {
         return this.provider;
+    }
+
+    getCloudinaryCredentials() {
+        const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
+        const apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
+        const apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
+
+        if (cloudName && apiKey && apiSecret) {
+            return { cloudName, apiKey, apiSecret };
+        }
+
+        return parseCloudinaryUrl(process.env.CLOUDINARY_URL);
     }
 }
 

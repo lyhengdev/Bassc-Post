@@ -49,8 +49,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Work around Workbox terser early-exit issue during SW bundling.
-        mode: 'development',
+        mode: 'production',
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,woff2}'],
         navigateFallback: '/offline.html',
@@ -66,7 +65,11 @@ export default defineConfig({
         ],
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => request.destination === 'image',
+            // Cache remote/static images, but don't cache same-origin /uploads media
+            // because those paths can become invalid after storage provider changes.
+            urlPattern: ({ request, url }) =>
+              request.destination === 'image' &&
+              !(url.origin === self.location.origin && url.pathname.startsWith('/uploads/')),
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
