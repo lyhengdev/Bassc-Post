@@ -1,18 +1,59 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
 import config from '../config/index.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const backendRoot = path.resolve(__dirname, '../..');
+
 class StorageService {
     constructor() {
-        this.provider = process.env.STORAGE_PROVIDER || 'local';
+        this.localFallback = process.env.STORAGE_FALLBACK_TO_LOCAL !== 'false';
+        this.provider = this.resolveProvider();
 
         if (this.provider === 'cloudinary') {
             this.initCloudinary();
         }
+
+        console.log(`📦 Storage provider: ${this.provider}`);
+    }
+
+    resolveProvider() {
+        const requested = (process.env.STORAGE_PROVIDER || config.storage?.provider || 'local')
+            .toLowerCase()
+            .trim();
+        const hasCloudinaryCredentials = Boolean(
+            process.env.CLOUDINARY_CLOUD_NAME &&
+            process.env.CLOUDINARY_API_KEY &&
+            process.env.CLOUDINARY_API_SECRET
+        );
+
+        if (requested === 'cloudinary') {
+            return 'cloudinary';
+        }
+
+        if (requested === 'local') {
+            if (!process.env.STORAGE_PROVIDER && hasCloudinaryCredentials) {
+                console.log('ℹ️ Cloudinary credentials detected; auto-selecting cloudinary. Set STORAGE_PROVIDER=local to force local uploads.');
+                return 'cloudinary';
+            }
+            return 'local';
+        }
+
+        console.warn(`⚠️ Unknown STORAGE_PROVIDER "${requested}", falling back to local storage`);
+        return 'local';
+    }
+
+    getLocalUploadRoot() {
+        if (path.isAbsolute(config.upload.path)) {
+            return config.upload.path;
+        }
+        return path.resolve(backendRoot, config.upload.path);
     }
 
     initCloudinary() {
@@ -46,7 +87,14 @@ class StorageService {
         const filename = `${uuidv4()}${path.extname(file.originalname)}`;
 
         if (this.provider === 'cloudinary') {
-            return this.uploadToCloudinary(file, filename, folder);
+            try {
+                return await this.uploadToCloudinary(file, filename, folder);
+            } catch (error) {
+                if (!this.localFallback) {
+                    throw error;
+                }
+                console.warn(`⚠️ Cloudinary upload failed, falling back to local storage: ${error.message}`);
+            }
         }
 
         return this.uploadToLocal(file, filename, folder);
@@ -116,7 +164,7 @@ class StorageService {
     }
 
     async uploadToLocal(file, filename, folder) {
-        const uploadDir = path.join(config.upload.path, folder);
+        const uploadDir = path.join(this.getLocalUploadRoot(), folder);
 
         // Create directory if not exists
         if (!fs.existsSync(uploadDir)) {
@@ -161,10 +209,11 @@ class StorageService {
         };
     }
 
-    async delete(storageKey) {
+    async delete(storageKey, providerOverride = this.provider) {
         if (!storageKey) return;
+        const provider = (providerOverride || this.provider || 'local').toLowerCase();
 
-        if (this.provider === 'cloudinary' && !storageKey.startsWith('/')) {
+        if (provider === 'cloudinary' && !storageKey.startsWith('/')) {
             try {
                 await cloudinary.uploader.destroy(storageKey);
             } catch (error) {
@@ -173,7 +222,7 @@ class StorageService {
         } else {
             // Local delete
             const normalizedKey = storageKey.startsWith('/') ? storageKey.slice(1) : storageKey;
-            const filepath = path.join(config.upload.path, normalizedKey);
+            const filepath = path.join(this.getLocalUploadRoot(), normalizedKey);
             if (fs.existsSync(filepath)) {
                 fs.unlinkSync(filepath);
             }

@@ -96,7 +96,7 @@ function MixedLeadList({
                 <Link to={`/article/${lead.slug}`} className="col-span-7 block group">
                     <div className={cn(leadAspectClass, 'rounded-lg overflow-hidden')}>
                         <img loading="lazy"
-                            src={lead.featuredImage || `https://picsum.photos/seed/${lead.slug}/800/500`}
+                            src={buildMediaUrl(lead.featuredImage) || `https://picsum.photos/seed/${lead.slug}/800/500`}
                             alt={lead.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -132,7 +132,7 @@ function MixedLeadList({
                     <article key={article._id} className="flex gap-4 group">
                         <Link to={`/article/${article.slug}`} className="flex-shrink-0">
                             <img loading="lazy"
-                                src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/240/160`}
+                                src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/240/160`}
                                 alt={article.title}
                                 className="w-24 h-16 sm:w-[120px] sm:h-[80px] object-cover rounded-lg group-hover:opacity-90 transition-opacity"
                             />
@@ -232,7 +232,7 @@ function FeaturedSection({ section }) {
                     <div className="aspect-[16/9] overflow-hidden">
                         <img
                             loading="lazy"
-                            src={lead.featuredImage || `https://picsum.photos/seed/${lead.slug}/1200/700`}
+                            src={buildMediaUrl(lead.featuredImage) || `https://picsum.photos/seed/${lead.slug}/1200/700`}
                             alt={lead.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
@@ -261,7 +261,7 @@ function FeaturedSection({ section }) {
                     >
                         <img
                             loading="lazy"
-                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/600/400`}
+                            src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/600/400`}
                             alt={article.title}
                             className="w-24 h-20 sm:w-28 sm:h-24 object-cover rounded-xl flex-shrink-0"
                         />
@@ -377,7 +377,7 @@ function BreakingNewsSection({ section, extraArticles = [], excludeArticles = []
             <div className="flex items-center gap-3 ">
               <img
                 loading="lazy"
-                src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/120/120`}
                 alt={article.title}
                 className="min-w-16 min-h-16 max-h-16 rounded-lg object-cover"
               />
@@ -440,7 +440,7 @@ function BreakingHeroSection({ section }) {
                             <div className="aspect-[16/9] overflow-hidden h-full w-full">
                                 <img
                                     loading="lazy"
-                                    src={mainBreaking.featuredImage || `https://picsum.photos/seed/${mainBreaking.slug}/1400/800`}
+                                    src={buildMediaUrl(mainBreaking.featuredImage) || `https://picsum.photos/seed/${mainBreaking.slug}/1400/800`}
                                     alt={mainBreaking.title}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                                 />
@@ -473,7 +473,7 @@ function BreakingHeroSection({ section }) {
                             <Link to={`/article/${article.slug}`} className="block flex-shrink-0">
                                 <img
                                     loading="lazy"
-                                    src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/240/240`}
+                                    src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/240/240`}
                                     alt={article.title}
                                     className="w-20 h-20 object-cover rounded-xl"
                                 />
@@ -571,7 +571,7 @@ function LatestSection({ section, excludeArticleIds = [], onArticlesResolved }) 
                         <div className="aspect-[16/9] rounded-xl overflow-hidden mb-3">
                             <img
                                 loading="lazy"
-                                src={lead.featuredImage || `https://picsum.photos/seed/${lead.slug}/900/500`}
+                                src={buildMediaUrl(lead.featuredImage) || `https://picsum.photos/seed/${lead.slug}/900/500`}
                                 alt={lead.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
@@ -602,7 +602,7 @@ function LatestSection({ section, excludeArticleIds = [], onArticlesResolved }) 
                             <Link to={`/article/${article.slug}`} className="flex-shrink-0">
                                 <img
                                     loading="lazy"
-                                    src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/140`}
+                                    src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/200/140`}
                                     alt={article.title}
                                     className="w-28 h-16 object-cover rounded-lg"
                                 />
@@ -690,7 +690,7 @@ function CategoryGridSection({ section }) {
                                     {index === 0 && (
                                         <img
                                             loading="lazy"
-                                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                                            src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/120/120`}
                                             alt={article.title}
                                             className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                                         />
@@ -740,7 +740,7 @@ function TrendingSection({ section }) {
                         <div className="aspect-[16/7]">
                             <img
                                 loading="lazy"
-                                src={lead.featuredImage || `https://picsum.photos/seed/${lead.slug}/900/500`}
+                                src={buildMediaUrl(lead.featuredImage) || `https://picsum.photos/seed/${lead.slug}/900/500`}
                                 alt={lead.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
@@ -761,7 +761,7 @@ function TrendingSection({ section }) {
                         <span className="text-sm lg:text-base font-bold text-dark-400 w-6">#{index + 2}</span>
                         <img
                             loading="lazy"
-                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                            src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/120/120`}
                             alt={article.title}
                             className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover flex-shrink-0"
                         />
@@ -976,7 +976,7 @@ function AdBannerSection({ section }) {
     return (
         <a href={fallbackLink} target="_blank" rel="noopener noreferrer sponsored" className="block">
             <img loading="lazy"
-                src={fallbackImage}
+                src={buildMediaUrl(fallbackImage)}
                 alt="Advertisement"
                 className="w-full object-cover rounded-xl h-24 sm:h-32"
             />
@@ -1039,7 +1039,7 @@ function EditorPicksSection({ section }) {
                     <div className="aspect-[4/3] rounded-xl overflow-hidden mb-3">
                         <img
                             loading="lazy"
-                            src={lead.featuredImage || `https://picsum.photos/seed/${lead.slug}/900/700`}
+                            src={buildMediaUrl(lead.featuredImage) || `https://picsum.photos/seed/${lead.slug}/900/700`}
                             alt={lead.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -1057,7 +1057,7 @@ function EditorPicksSection({ section }) {
                     <Link key={article._id} to={`/article/${article.slug}`} className="flex gap-3">
                         <img
                             loading="lazy"
-                            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/200/200`}
+                            src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/200/200`}
                             alt={article.title}
                             className="w-16 h-16 rounded-lg object-cover"
                         />
@@ -1174,7 +1174,7 @@ function CategorySpotlightSection({ section }) {
             <div className="aspect-[16/10] rounded-xl overflow-hidden mb-2">
               <img
                 loading="lazy"
-                src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/600/400`}
+                src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/600/400`}
                 alt={article.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
@@ -1708,7 +1708,7 @@ function ArticleCardNews({ article }) {
       <Link to={`/article/${article.slug}`} className="block flex-shrink-0 sm:flex-shrink">
         <div className="relative w-24 h-24 sm:w-auto sm:h-auto sm:aspect-[16/10] overflow-hidden rounded-md">
           <img loading="lazy"
-            src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/600/375`}
+            src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/600/375`}
             alt={article.title}
             className="w-full h-full object-cover object-center bg-dark-100 dark:bg-dark-800 group-hover:scale-105 transition-transform duration-300"
           />
@@ -1802,7 +1802,7 @@ function NewsListWithExcerpt({ articles, isLoading, emptyMessage, imageSize = 'm
         <article key={article._id} className="flex gap-3 group">
           <Link to={`/article/${article.slug}`} className="flex-shrink-0">
             <img loading="lazy"
-              src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/240/160`}
+              src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/240/160`}
               alt={article.title}
               className={`${imageClassName} object-cover rounded-lg group-hover:opacity-90 transition-opacity`}
             />
@@ -2696,7 +2696,7 @@ function CommentItem({ comment, isReply = false, onLike, onDelete, onReplyClick,
     <div className={cn('group', isReply && 'ml-8 sm:ml-12 mt-4')}>
       <div className="flex gap-3 sm:gap-4">
         <Avatar
-          src={comment.author?.avatar}
+          src={buildMediaUrl(comment.author?.avatar)}
           name={authorName}
           size="sm"
         />
@@ -3119,7 +3119,7 @@ export function ArticlePage() {
 
   const { title, excerpt, content, featuredImage, category, author, publishedAt, viewCount, wordCount, tags } = article;
   // featuredImage is a string URL, not an object
-  const imageUrl = featuredImage || `https://picsum.photos/seed/${slug}/1200/600`;
+  const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1200/600`;
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const shareUrl = siteUrl ? `${siteUrl}/share/${slug}` : '';
   const moreNewsArticles = (moreNews || []).filter((item) => item._id !== article._id);
@@ -3788,7 +3788,7 @@ export function AboutPage() {
                   {!shouldUseDefaultLogo ? (
                     <img
                       loading="lazy"
-                      src={siteLogo}
+                      src={buildMediaUrl(siteLogo)}
                       alt={siteName}
                       className="h-10 sm:h-12 w-auto mb-5"
                     />
@@ -3964,7 +3964,7 @@ export function AboutPage() {
                   <Link to={`/article/${article.slug}`} className="block">
                     <img
                       loading="lazy"
-                      src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/720/460`}
+                      src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/720/460`}
                       alt={article.title}
                       className="h-40 w-full object-cover"
                     />
@@ -4115,7 +4115,7 @@ export function AccountPage() {
             <div className="card p-6 text-center">
               <div className="relative inline-block mb-4">
                 <Avatar
-                  src={avatarPreview || user?.avatar}
+                  src={buildMediaUrl(avatarPreview || user?.avatar)}
                   name={user?.fullName}
                   size="xl"
                   className="mx-auto"
@@ -4226,7 +4226,7 @@ export function PreviewPage() {
   }
 
   const { title, excerpt, content, featuredImage, tags } = previewData;
-  const imageUrl = featuredImage || 'https://picsum.photos/seed/preview/1200/600';
+  const imageUrl = buildMediaUrl(featuredImage) || 'https://picsum.photos/seed/preview/1200/600';
 
   return (
     <div className="min-h-screen bg-white dark:bg-dark-950">
@@ -4327,7 +4327,7 @@ export function PreviewByIdPage() {
   }
 
   const { title, excerpt, content, featuredImage, author, createdAt, publishedAt, status } = article;
-  const imageUrl = featuredImage || `https://picsum.photos/seed/${id}/1200/600`;
+  const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${id}/1200/600`;
   const authorName = author?.fullName || `${author?.firstName || ''} ${author?.lastName || ''}`.trim() || 'Unknown';
   const displayDate = publishedAt || createdAt;
 

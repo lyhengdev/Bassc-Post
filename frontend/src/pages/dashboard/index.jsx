@@ -6,7 +6,7 @@ import { useDashboardSummary, useAnalyticsViews, useAnalyticsArticles, useAnalyt
 import { usersAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { Button, ContentLoader, StatusBadge, Avatar, Modal, Input, Textarea, EmptyState, ConfirmModal, AlertModal, Skeleton } from '../../components/common/index.jsx';
-import { formatNumber, formatRelativeTime } from '../../utils';
+import { formatNumber, formatRelativeTime, buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 
 // Dashboard Loading Skeleton
@@ -816,7 +816,7 @@ export function MyArticlesPage() {
                             className="block w-12 h-12 flex-shrink-0"
                           >
                             <img
-                              src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                              src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/120/120`}
                               alt={article.title}
                               className="w-12 h-12 rounded-lg object-cover"
                               loading="lazy"
@@ -875,7 +875,7 @@ export function MyArticlesPage() {
                     className="flex items-start gap-3 flex-1"
                   >
                     <img
-                      src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/120/120`}
+                      src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/120/120`}
                       alt={article.title}
                       className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                       loading="lazy"
@@ -1017,7 +1017,7 @@ export function PendingArticlesPage() {
                         className="block w-16 h-16 flex-shrink-0"
                       >
                         <img
-                          src={article.featuredImage || `https://picsum.photos/seed/${article.slug}/160/160`}
+                          src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/160/160`}
                           alt={article.title}
                           className="w-16 h-16 rounded-lg object-cover"
                           loading="lazy"

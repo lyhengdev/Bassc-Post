@@ -11,7 +11,7 @@ import { NotificationDropdown } from '../common/NotificationDropdown.jsx';
 import { usePublicSettings } from '../../hooks/useApi';
 import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
 import { BodyAd, PopupAdModal } from '../ads/index.js';
-import { cn } from '../../utils';
+import { cn, buildMediaUrl } from '../../utils';
 import { useIsFetching } from '@tanstack/react-query';
 
 function useGlobalLoaderVisibility() {
@@ -246,6 +246,7 @@ function TopFloatingBanner({ settings }) {
   
   const heights = { small: 'h-12', medium: 'h-16', large: 'h-20' };
   const imageUrl = isMobile && settings.mobileImageUrl ? settings.mobileImageUrl : settings.imageUrl;
+  const resolvedImageUrl = buildMediaUrl(imageUrl);
 
   return (
     <div
@@ -253,14 +254,14 @@ function TopFloatingBanner({ settings }) {
       style={{ backgroundColor: settings.backgroundColor || '#1e40af' }}
     >
       <div className={cn('container-custom flex items-center justify-between', heights[settings.height || 'medium'])}>
-        {imageUrl ? (
+        {resolvedImageUrl ? (
           <a 
             href={settings.linkUrl || '#'} 
             target="_blank" 
             rel="noopener noreferrer sponsored"
             className="flex-1 h-full flex items-center justify-center"
           >
-            <img loading="lazy" src={imageUrl} alt="Ad" className="h-full max-w-full object-contain" />
+            <img loading="lazy" src={resolvedImageUrl} alt="Ad" className="h-full max-w-full object-contain" />
           </a>
         ) : settings.content ? (
           <a 
@@ -306,6 +307,7 @@ function BottomFloatingBanner({ settings }) {
   
   const heights = { small: 'h-12', medium: 'h-16', large: 'h-20' };
   const imageUrl = isMobile && settings.mobileImageUrl ? settings.mobileImageUrl : settings.imageUrl;
+  const resolvedImageUrl = buildMediaUrl(imageUrl);
 
   return (
     <div
@@ -313,14 +315,14 @@ function BottomFloatingBanner({ settings }) {
       style={{ backgroundColor: settings.backgroundColor || '#1e40af' }}
     >
       <div className={cn('container-custom flex items-center justify-between', heights[settings.height || 'medium'])}>
-        {imageUrl ? (
+        {resolvedImageUrl ? (
           <a 
             href={settings.linkUrl || '#'} 
             target="_blank" 
             rel="noopener noreferrer sponsored"
             className="flex-1 h-full flex items-center justify-center"
           >
-            <img loading="lazy" src={imageUrl} alt="Ad" className="h-full max-w-full object-contain" />
+            <img loading="lazy" src={resolvedImageUrl} alt="Ad" className="h-full max-w-full object-contain" />
           </a>
         ) : settings.content ? (
           <a 

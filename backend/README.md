@@ -112,6 +112,10 @@ npm run dev
 | `OPENAI_API_KEY` | OpenAI API key | Optional |
 | `SMTP_HOST` | Email server host | Optional |
 | `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:5173` |
+| `STORAGE_PROVIDER` | File storage backend (`local` or `cloudinary`) | `local` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (when using cloudinary) | Optional |
+| `CLOUDINARY_API_KEY` | Cloudinary API key (when using cloudinary) | Optional |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret (when using cloudinary) | Optional |
 
 ## 🔌 API Endpoints
 

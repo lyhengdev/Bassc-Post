@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Clock, Eye, TrendingUp } from 'lucide-react';
-import { formatRelativeTime, formatDate, cn, getCategoryAccent } from '../../utils';
+import { formatRelativeTime, formatDate, cn, getCategoryAccent, buildMediaUrl } from '../../utils';
 
 /**
  * Modern News Card Component
@@ -30,12 +30,12 @@ export function ArticleCard({ article, variant = 'standard', className, showImag
         <Link to={`/article/${slug}`} className="block">
           {/* Image with Overlay */}
           <div className="relative aspect-[16/9] rounded-xl overflow-hidden mb-4 image-overlay-gradient">
-            <img
-              src={featuredImage || `https://picsum.photos/seed/${slug}/800/450`}
-              alt={title}
-              loading={priority ? 'eager' : 'lazy'}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+              <img
+                src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/800/450`}
+                alt={title}
+                loading={priority ? 'eager' : 'lazy'}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
             
             {/* Category Badge on Image */}
             {category && (
@@ -105,7 +105,7 @@ export function ArticleCard({ article, variant = 'standard', className, showImag
           <Link to={`/article/${slug}`} className="flex-shrink-0">
             <div className="w-32 md:w-40 aspect-[4/3] rounded-lg overflow-hidden">
               <img
-                src={featuredImage || `https://picsum.photos/seed/${slug}/400/300`}
+                src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/400/300`}
                 alt={title}
                 loading="lazy"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -154,7 +154,7 @@ export function ArticleCard({ article, variant = 'standard', className, showImag
         <Link to={`/article/${slug}`} className="flex-shrink-0">
           <div className="w-20 h-20 rounded-lg overflow-hidden">
             <img
-              src={featuredImage || `https://picsum.photos/seed/${slug}/200/200`}
+              src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/200/200`}
               alt={title}
               loading="lazy"
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -194,7 +194,7 @@ export function ArticleCard({ article, variant = 'standard', className, showImag
         <Link to={`/article/${slug}`} className="block">
           <div className="aspect-[16/10] rounded-lg overflow-hidden bg-dark-100 dark:bg-dark-800">
             <img
-              src={featuredImage || `https://picsum.photos/seed/${slug}/600/400`}
+              src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/600/400`}
               alt={title}
               loading="lazy"
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

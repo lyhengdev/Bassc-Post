@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Clock, Eye, User } from 'lucide-react';
-import { cn, formatRelativeTime, formatDate, truncate, getCategoryAccent } from '../../utils';
+import { cn, formatRelativeTime, formatDate, truncate, getCategoryAccent, buildMediaUrl } from '../../utils';
 import { Badge } from '../common/index.jsx';
 import { BodyAd } from '../ads/index.js';
 
@@ -18,7 +18,7 @@ export function ArticleCard({ article, variant = 'default', index = 0, priority 
   } = article;
 
   // featuredImage is a string URL, not an object
-  const imageUrl = featuredImage || `https://picsum.photos/seed/${slug}/800/600`;
+  const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/800/600`;
 
   const isFeatured = variant === 'featured';
   const isCompact = variant === 'compact';
@@ -152,7 +152,7 @@ export function FeaturedArticle({ article }) {
     article;
 
   // featuredImage is a string URL, not an object
-  const imageUrl = featuredImage || `https://picsum.photos/seed/${slug}/1200/800`;
+  const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1200/800`;
 
   return (
     <article className="relative rounded-2xl sm:rounded-3xl overflow-hidden group">
@@ -286,7 +286,7 @@ function Block({ block }) {
       return (
         <figure className="my-8">
           <img loading="lazy"
-            src={data.file?.url || data.url}
+            src={buildMediaUrl(data.file?.url || data.url)}
             alt={data.caption || ''}
             className={cn(
               'rounded-xl',

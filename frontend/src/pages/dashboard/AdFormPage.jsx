@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { buildMediaUrl } from '../../utils';
 
 /**
  * COMPLETE AD FORM - CREATE/EDIT
@@ -324,7 +325,7 @@ export function AdFormPage() {
                     {imagePreview ? (
                       <div className="relative">
                         <img loading="lazy"
-                          src={imagePreview}
+                          src={buildMediaUrl(imagePreview)}
                           alt="Preview"
                           className="w-full h-48 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
                         />
@@ -368,7 +369,7 @@ export function AdFormPage() {
                     {mobilePreview ? (
                       <div className="relative">
                         <img loading="lazy"
-                          src={mobilePreview}
+                          src={buildMediaUrl(mobilePreview)}
                           alt="Mobile Preview"
                           className="w-64 h-48 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
                         />
@@ -669,7 +670,7 @@ export function AdFormPage() {
                   </button>
                 </div>
                 <img loading="lazy"
-                  src={imagePreview}
+                  src={buildMediaUrl(imagePreview)}
                   alt="Ad Preview"
                   className="w-full rounded-lg"
                   style={{

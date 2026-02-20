@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { cn } from '../../utils';
+import { cn, buildMediaUrl } from '../../utils';
 
 /**
  * BodyAd Component - Renders a single body advertisement
@@ -88,10 +88,13 @@ export function BodyAd({
   const baseImageUrl = isSidebarOrPopup && ad.sidebarImageUrl
     ? ad.sidebarImageUrl
     : ((isMobile && ad.mobileImageUrl) ? ad.mobileImageUrl : ad.imageUrl);
-  const slideImages = Array.isArray(ad.imageUrls) && ad.imageUrls.length > 0
+  const rawSlideImages = Array.isArray(ad.imageUrls) && ad.imageUrls.length > 0
     && !(isSidebarOrPopup && ad.sidebarImageUrl)
     ? ad.imageUrls
     : (baseImageUrl ? [baseImageUrl] : []);
+  const slideImages = rawSlideImages
+    .map((url) => buildMediaUrl(url))
+    .filter(Boolean);
   const slideIntervalMs = ad.slideIntervalMs || 3000;
 
   useEffect(() => {
@@ -217,7 +220,7 @@ export function BodyAd({
       case 'video':
         return (
           <video
-            src={ad.videoUrl}
+            src={buildMediaUrl(ad.videoUrl)}
             autoPlay
             muted
             loop

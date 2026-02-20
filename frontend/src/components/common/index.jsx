@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn, getInitials } from '../../utils';
+import { cn, getInitials, buildMediaUrl } from '../../utils';
 import { Loader2 } from 'lucide-react';
 
 // ==================== BUTTON ====================
@@ -108,10 +108,12 @@ export function Avatar({ src, alt, name, size = 'md', className }) {
     xl: 'w-16 h-16 text-2xl',
   };
 
-  if (src) {
+  const resolvedSrc = buildMediaUrl(src);
+
+  if (resolvedSrc) {
     return (
       <img loading="lazy"
-        src={src}
+        src={resolvedSrc}
         alt={alt || name || 'Avatar'}
         className={cn('rounded-full object-cover', sizes[size], className)}
       />

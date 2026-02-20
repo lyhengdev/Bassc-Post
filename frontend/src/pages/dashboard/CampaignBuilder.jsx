@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import PlacementPicker from '../../components/campaigns/PlacementPicker';
 import { uploadAPI } from '../../services/api';
+import { buildMediaUrl } from '../../utils';
 
 const DEFAULT_CAMPAIGN = {
   name: '',
@@ -139,7 +140,11 @@ export default function CampaignBuilder() {
       formData.append('folder', 'campaigns');
 
       const response = await uploadAPI.upload(formData);
-      const imageUrl = response.data.url;
+      const media = response.data?.data?.media || response.data?.media || response.data;
+      const imageUrl = media?.url || media?.path;
+      if (!imageUrl) {
+        throw new Error('Upload succeeded but no URL was returned');
+      }
 
       const updatedAds = [...campaign.ads];
       if (isMobile) {
@@ -486,7 +491,7 @@ export default function CampaignBuilder() {
                               className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
                             {ad.imageUrl && (
-                              <img loading="lazy" src={ad.imageUrl} alt="Preview" className="mt-2 h-20 rounded" />
+                              <img loading="lazy" src={buildMediaUrl(ad.imageUrl)} alt="Preview" className="mt-2 h-20 rounded" />
                             )}
                           </div>
 

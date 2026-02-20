@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Clock, Eye, TrendingUp, ArrowRight } from 'lucide-react';
-import { formatRelativeTime, cn, getCategoryAccent } from '../../utils';
+import { formatRelativeTime, cn, getCategoryAccent, buildMediaUrl } from '../../utils';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { HeroSkeleton } from '../common/Skeleton';
 
@@ -77,7 +77,7 @@ function MainFeaturedArticle({ article }) {
       <Link to={`/article/${slug}`} className="block flex-1">
         <div className="relative aspect-[4/3] rounded-2xl overflow-hidden image-overlay-gradient">
           <img
-            src={featuredImage || `https://picsum.photos/seed/${slug}/1200/900`}
+            src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1200/900`}
             alt={title}
             loading="eager" // Main image loads immediately
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -135,7 +135,7 @@ function MainFeaturedArticle({ article }) {
             >
               {author.avatar && (
                 <img loading="lazy"
-                  src={author.avatar}
+                  src={buildMediaUrl(author.avatar)}
                   alt={author.name}
                   className="w-6 h-6 rounded-full"
                 />
@@ -175,7 +175,7 @@ function SideFeaturedArticle({ article, index }) {
       <Link to={`/article/${slug}`} className="block">
         <div className="relative aspect-[16/10] rounded-xl overflow-hidden mb-3">
           <img
-            src={featuredImage || `https://picsum.photos/seed/${slug}/800/500`}
+            src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/800/500`}
             alt={title}
             loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -230,7 +230,7 @@ export function HeroSplitSection({ article }) {
     <article className="relative h-[500px] md:h-[600px] rounded-2xl overflow-hidden group fade-in">
       {/* Background Image */}
       <img
-        src={featuredImage || `https://picsum.photos/seed/${slug}/1600/900`}
+        src={buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1600/900`}
         alt={title}
         loading="eager"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
@@ -266,7 +266,7 @@ export function HeroSplitSection({ article }) {
             {author && (
               <span className="font-semibold flex items-center gap-2">
                 {author.avatar && (
-                  <img loading="lazy" src={author.avatar} alt={author.name} className="w-8 h-8 rounded-full border-2 border-white/50" />
+                  <img loading="lazy" src={buildMediaUrl(author.avatar)} alt={author.name} className="w-8 h-8 rounded-full border-2 border-white/50" />
                 )}
                 {author.name}
               </span>

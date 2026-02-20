@@ -3,6 +3,7 @@ import {Facebook, Twitter, Instagram, Youtube, Linkedin, Github, Mail, MapPin, P
 import { useCategories, usePublicSettings } from '../../hooks/useApi';
 import { BodyAd } from '../ads/index.js';
 import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
+import { buildMediaUrl } from '../../utils';
 
 const SOCIAL_ICONS = {
   facebook: Facebook,
@@ -193,7 +194,7 @@ export default function Footer() {
                                   || strippedLogo.endsWith('logo_v1.png');
 
                                 if (!shouldUseDefaultLogo) {
-                                    return <img loading="lazy" src={siteLogo} alt={siteName} className="h-10 w-auto" />;
+                                    return <img loading="lazy" src={buildMediaUrl(siteLogo)} alt={siteName} className="h-10 w-auto" />;
                                 }
 
                                 return (

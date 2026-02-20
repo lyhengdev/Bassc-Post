@@ -5,6 +5,7 @@ import { Save, Send, Eye, Image as ImageIcon, X, ArrowLeft, BarChart3 } from 'lu
 import { useCreateArticle, useUpdateArticle, useArticleById, useCategories, useUploadMedia } from '../../hooks/useApi';
 import { Button, Input, ContentLoader } from '../../components/common/index.jsx';
 import EditorComponent from '../../components/common/EditorJS';
+import { buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 
 export function ArticleEditorPage() {
@@ -300,7 +301,7 @@ export function ArticleEditorPage() {
             ) : imagePreview ? (
               <div className="relative group">
                 <img loading="lazy"
-                  src={imagePreview}
+                  src={buildMediaUrl(imagePreview)}
                   alt="Featured"
                   className="w-full h-48 sm:h-64 object-cover rounded-lg"
                 />

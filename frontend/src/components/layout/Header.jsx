@@ -12,7 +12,7 @@ import {useAuthStore, useThemeStore} from '../../stores/authStore';
 import {useLogout, useCategories, usePublicSettings} from '../../hooks/useApi';
 import {Button, Avatar} from '../common/index.jsx';
 import {NotificationDropdown} from '../common/NotificationDropdown.jsx';
-import {cn} from '../../utils';
+import {cn, buildMediaUrl} from '../../utils';
 
 export default function Header() {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -202,7 +202,7 @@ export default function Header() {
                                   || strippedLogo.endsWith('logo_v1.png');
 
                                 if (!shouldUseDefaultLogo) {
-                                    return <img loading="lazy" src={siteLogo} alt={siteName} className="h-8 md:h-10 w-auto" />;
+                                    return <img loading="lazy" src={buildMediaUrl(siteLogo)} alt={siteName} className="h-8 md:h-10 w-auto" />;
                                 }
 
                                 return (

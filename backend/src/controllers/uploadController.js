@@ -302,7 +302,7 @@ export const deleteMedia = asyncHandler(async (req, res) => {
   }
 
   try {
-    await storageService.delete(media.storageKey);
+    await storageService.delete(media.storageKey, media.storageProvider);
   } catch (error) {
     console.error('Error deleting file from storage:', error);
   }

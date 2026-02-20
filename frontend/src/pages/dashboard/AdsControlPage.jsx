@@ -26,6 +26,7 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { buildMediaUrl } from '../../utils';
 
 // ==================== MAIN COMPONENT ====================
 
@@ -683,7 +684,7 @@ function AdCard({ ad, collectionId, onRefresh }) {
         {ad.imageUrl && (
           <div className="w-20 h-20 flex-shrink-0">
             <img loading="lazy"
-              src={ad.imageUrl}
+              src={buildMediaUrl(ad.imageUrl)}
               alt={ad.name}
               className="w-full h-full object-cover rounded-lg"
             />

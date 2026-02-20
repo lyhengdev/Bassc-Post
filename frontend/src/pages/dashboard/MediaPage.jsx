@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Upload, Image as ImageIcon, Trash2, Search, Grid, List, ExternalLink } from 'lucide-react';
 import { useMedia, useUploadMedia, useDeleteMedia } from '../../hooks/useApi';
 import { Button, Input, ContentLoader, EmptyState, Modal, ConfirmModal } from '../../components/common/index.jsx';
-import { formatBytes, formatRelativeTime } from '../../utils';
+import { formatBytes, formatRelativeTime, buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 
 export function MediaPage() {
@@ -18,6 +18,21 @@ export function MediaPage() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
+  const [failedImageIds, setFailedImageIds] = useState(() => new Set());
+
+  const markImageFailed = (fileId) => {
+    setFailedImageIds((prev) => {
+      if (!fileId || prev.has(fileId)) return prev;
+      const next = new Set(prev);
+      next.add(fileId);
+      return next;
+    });
+  };
+
+  const canRenderImage = (file) => {
+    const isImage = (file.mimeType || file.mimetype)?.startsWith('image/');
+    return isImage && file.url && !failedImageIds.has(file._id);
+  };
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -131,6 +146,7 @@ export function MediaPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredMedia.map((file) => {
               const articleLink = getArticleLink(file);
+              const showImage = canRenderImage(file);
               return (
                 <div key={file._id} className="card p-3 group relative">
                 <div
@@ -138,16 +154,12 @@ export function MediaPage() {
                   style={articleLink ? undefined : { borderWidth: '2.5px' }}
                   onClick={() => setPreviewImage(file)}
                 >
-                  {(file.mimeType || file.mimetype)?.startsWith('image/') ? (
+                  {showImage ? (
                     <img loading="lazy"
-                      src={file.url}
+                      src={buildMediaUrl(file.url)}
                       alt={file.originalName}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '';
-                        e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-dark-400"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg></div>';
-                      }}
+                      onError={() => markImageFailed(file._id)}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -207,6 +219,7 @@ export function MediaPage() {
                 <tbody className="divide-y divide-dark-100 dark:divide-dark-800">
                   {filteredMedia.map((file) => {
                     const articleLink = getArticleLink(file);
+                    const showImage = canRenderImage(file);
                     return (
                       <tr key={file._id} className="hover:bg-dark-50 dark:hover:bg-dark-800/50">
                       <td className="px-6 py-4">
@@ -214,8 +227,14 @@ export function MediaPage() {
                           className={`w-12 h-12 bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden ${articleLink ? '' : 'border border-red-300'}`}
                           style={articleLink ? undefined : { borderWidth: '2.5px' }}
                         >
-                          {(file.mimeType || file.mimetype)?.startsWith('image/') ? (
-                            <img loading="lazy" src={file.url} alt={file.originalName} className="w-full h-full object-cover" />
+                          {showImage ? (
+                            <img
+                              loading="lazy"
+                              src={buildMediaUrl(file.url)}
+                              alt={file.originalName}
+                              className="w-full h-full object-cover"
+                              onError={() => markImageFailed(file._id)}
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <ImageIcon className="w-6 h-6 text-dark-400" />
@@ -367,7 +386,7 @@ export function MediaPage() {
         >
           <div className="space-y-4">
             <img loading="lazy"
-              src={previewImage.url}
+              src={buildMediaUrl(previewImage.url)}
               alt={previewImage.originalName}
               className="w-full rounded-lg"
             />

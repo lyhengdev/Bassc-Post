@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useSiteSettings, useUpdateSettings, useUpdateBranding, useUpdateSEO, useToggleFeature } from '../../hooks/useApi';
 import { Button, Input, Textarea, ContentLoader, Modal } from '../../components/common/index.jsx';
+import { buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 
 const SOCIAL_PLATFORMS = [
@@ -254,7 +255,7 @@ export function SiteSettingsPage() {
                 <div className="border-2 border-dashed border-dark-200 dark:border-dark-700 rounded-lg p-4 text-center">
                   {form.siteLogo ? (
                     <div className="relative inline-block">
-                      <img loading="lazy" src={form.siteLogo} alt="Logo" className="h-16 mx-auto" />
+                      <img loading="lazy" src={buildMediaUrl(form.siteLogo)} alt="Logo" className="h-16 mx-auto" />
                       <button
                         onClick={() => setForm({ ...form, siteLogo: '' })}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"
@@ -278,7 +279,7 @@ export function SiteSettingsPage() {
                 <div className="border-2 border-dashed border-dark-200 dark:border-dark-700 rounded-lg p-4 text-center">
                   {form.siteFavicon ? (
                     <div className="relative inline-block">
-                      <img loading="lazy" src={form.siteFavicon} alt="Favicon" className="h-8 mx-auto" />
+                      <img loading="lazy" src={buildMediaUrl(form.siteFavicon)} alt="Favicon" className="h-8 mx-auto" />
                       <button
                         onClick={() => setForm({ ...form, siteFavicon: '' })}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"

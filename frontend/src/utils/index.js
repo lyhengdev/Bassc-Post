@@ -54,6 +54,7 @@ export function buildApiUrl(path = '') {
 export function buildMediaUrl(path = '') {
   if (!path) return '';
   if (/^(https?:)?\/\//i.test(path)) return path;
+  if (/^(data|blob):/i.test(path)) return path;
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const apiBase = getApiBaseUrl();

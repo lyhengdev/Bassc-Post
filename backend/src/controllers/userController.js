@@ -10,6 +10,42 @@ import {
 } from '../utils/apiResponse.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
+const extractCloudinaryPublicId = (url) => {
+  try {
+    const { pathname } = new URL(url);
+    const uploadSegment = '/upload/';
+    const uploadIndex = pathname.indexOf(uploadSegment);
+    if (uploadIndex === -1) return null;
+
+    let publicIdWithExt = pathname.slice(uploadIndex + uploadSegment.length);
+    publicIdWithExt = publicIdWithExt.replace(/^v\d+\//, '');
+    return publicIdWithExt.replace(/\.[^/.]+$/, '');
+  } catch {
+    return null;
+  }
+};
+
+const deleteAvatarFromStorage = async (avatarUrl) => {
+  if (!avatarUrl) return;
+
+  if (avatarUrl.includes('cloudinary.com')) {
+    const publicId = extractCloudinaryPublicId(avatarUrl);
+    if (publicId) {
+      await storageService.delete(publicId, 'cloudinary');
+    }
+    return;
+  }
+
+  const uploadsSegment = '/uploads/';
+  const localIndex = avatarUrl.indexOf(uploadsSegment);
+  if (localIndex !== -1) {
+    const storageKey = avatarUrl.slice(localIndex + uploadsSegment.length);
+    if (storageKey) {
+      await storageService.delete(storageKey, 'local');
+    }
+  }
+};
+
 /**
  * Get all users (admin)
  * GET /api/users
@@ -161,22 +197,7 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
   // Delete old avatar if exists
   if (user.avatar) {
     try {
-      // Check if it's a Cloudinary URL or local URL
-      if (user.avatar.includes('cloudinary.com')) {
-        // Extract public_id from Cloudinary URL
-        // Format: https://res.cloudinary.com/xxx/image/upload/v123/folder/filename.jpg
-        const parts = user.avatar.split('/');
-        const filenameWithExt = parts[parts.length - 1];
-        const folder = parts[parts.length - 2];
-        const publicId = `${folder}/${filenameWithExt.split('.')[0]}`;
-        await storageService.delete(publicId);
-      } else if (user.avatar.includes('/uploads/')) {
-        // Local storage
-        const urlParts = user.avatar.split('/uploads/');
-        if (urlParts[1]) {
-          await storageService.delete(urlParts[1]);
-        }
-      }
+      await deleteAvatarFromStorage(user.avatar);
     } catch (error) {
       console.error('Error deleting old avatar:', error);
     }
@@ -209,21 +230,7 @@ export const deleteAvatar = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Check if it's a Cloudinary URL or local URL
-    if (user.avatar.includes('cloudinary.com')) {
-      // Extract public_id from Cloudinary URL
-      const parts = user.avatar.split('/');
-      const filenameWithExt = parts[parts.length - 1];
-      const folder = parts[parts.length - 2];
-      const publicId = `${folder}/${filenameWithExt.split('.')[0]}`;
-      await storageService.delete(publicId);
-    } else if (user.avatar.includes('/uploads/')) {
-      // Local storage
-      const urlParts = user.avatar.split('/uploads/');
-      if (urlParts[1]) {
-        await storageService.delete(urlParts[1]);
-      }
-    }
+    await deleteAvatarFromStorage(user.avatar);
   } catch (error) {
     console.error('Error deleting avatar:', error);
   }
