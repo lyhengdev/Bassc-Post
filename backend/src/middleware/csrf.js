@@ -95,6 +95,11 @@ function isExcludedPath(path, method) {
   });
 }
 
+function hasBearerAuth(req) {
+  const authHeader = req.get('authorization') || '';
+  return authHeader.startsWith('Bearer ');
+}
+
 /**
  * CSRF Token Generator Middleware
  * Generates and sets CSRF token cookie
@@ -125,6 +130,12 @@ export function csrfTokenGenerator(req, res, next) {
 export function csrfProtection(req, res, next) {
   // Skip if method doesn't require protection
   if (!CONFIG.protectedMethods.includes(req.method)) {
+    return next();
+  }
+
+  // JWT-authenticated API requests are not vulnerable to browser CSRF
+  // because attacker sites cannot read/send victim Bearer tokens.
+  if (hasBearerAuth(req)) {
     return next();
   }
   

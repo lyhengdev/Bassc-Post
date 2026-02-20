@@ -128,6 +128,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Root endpoint (platform probes and manual browser checks)
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Bassac Media Center API is running',
+    health: '/health',
+    apiHealth: '/api/health',
+  });
+});
+
 // Error handling
 app.use(notFound);
 app.use(errorHandler);
