@@ -1,0 +1,25 @@
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies
+**/node_modules/
+
+# Builds
+frontend/dist/
+
+# Local env
+**/.env
+**/.env.*
+!.env.example
+
+# Coverage
+coverage/
+**/coverage/
+
+# Optional: local uploads often shouldn't be committed
+# backend/uploads/
+

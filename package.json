@@ -1,0 +1,17 @@
+{
+  "name": "bassac-post",
+  "private": true,
+  "scripts": {
+    "install:backend": "npm --prefix backend install",
+    "install:frontend": "npm --prefix frontend install",
+    "install": "npm run install:backend && npm run install:frontend",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "preview:frontend": "npm --prefix frontend run preview",
+    "test:backend": "npm --prefix backend test",
+    "clean": "node scripts/clean.mjs",
+    "clean:deps": "node scripts/clean.mjs deps",
+    "clean:build": "node scripts/clean.mjs build"
+  }
+}

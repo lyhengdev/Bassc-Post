@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bassac-cms
+  labels:
+    name: bassac-cms
+    environment: production

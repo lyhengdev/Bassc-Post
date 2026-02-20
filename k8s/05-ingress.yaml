@@ -1,0 +1,116 @@
+---
+# Ingress Controller (NGINX)
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-controller
+  namespace: bassac-cms
+  labels:
+    app: ingress-nginx
+spec:
+  type: LoadBalancer
+  selector:
+    app: ingress-nginx
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
+
+---
+# Ingress Resource
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bassac-ingress
+  namespace: bassac-cms
+  annotations:
+    # NGINX annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-connections: "100"
+    
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    
+    # CORS (if needed)
+    # nginx.ingress.kubernetes.io/enable-cors: "true"
+    # nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    
+    # SSL/TLS (uncomment for HTTPS)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Load balancing
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$binary_remote_addr"
+    nginx.ingress.kubernetes.io/load-balance: "ewma"
+spec:
+  ingressClassName: nginx
+  
+  # TLS configuration (uncomment for HTTPS)
+  # tls:
+  # - hosts:
+  #   - your-domain.com
+  #   - www.your-domain.com
+  #   secretName: bassac-tls
+  
+  rules:
+  # Main domain
+  - host: your-domain.com
+    http:
+      paths:
+      # Backend API
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8888
+      
+      # Frontend application
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000
+  
+  # WWW redirect (optional)
+  # - host: www.your-domain.com
+  #   http:
+  #     paths:
+  #     - path: /
+  #       pathType: Prefix
+  #       backend:
+  #         service:
+  #           name: frontend
+  #           port:
+  #             number: 3000
+
+---
+# Certificate (using cert-manager for Let's Encrypt)
+# Uncomment this section if using HTTPS with cert-manager
+# apiVersion: cert-manager.io/v1
+# kind: Certificate
+# metadata:
+#   name: bassac-tls
+#   namespace: bassac-cms
+# spec:
+#   secretName: bassac-tls
+#   issuerRef:
+#     name: letsencrypt-prod
+#     kind: ClusterIssuer
+#   dnsNames:
+#   - your-domain.com
+#   - www.your-domain.com
