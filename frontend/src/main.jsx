@@ -43,21 +43,9 @@ const toastOptions = {
 };
 
 const updateSW = registerSW({
+  immediate: true,
   onNeedRefresh() {
-    toast.custom((t) => (
-      <div className="flex items-center gap-3 rounded-lg bg-dark-900 text-white px-4 py-3 shadow-lg">
-        <span className="text-sm">Update available</span>
-        <button
-          className="px-3 py-1 text-xs font-semibold bg-primary-600 rounded"
-          onClick={() => {
-            updateSW(true);
-            toast.dismiss(t.id);
-          }}
-        >
-          Reload
-        </button>
-      </div>
-    ), { duration: Infinity });
+    updateSW(true);
   },
   onOfflineReady() {
     toast.success('App ready to work offline');

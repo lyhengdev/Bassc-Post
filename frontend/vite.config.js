@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: [
         'favicon.svg',
         'favicon-16x16.png',
@@ -52,7 +52,9 @@ export default defineConfig({
         mode: 'production',
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,woff2}'],
-        navigateFallback: '/offline.html',
+        // SPA navigations must fall back to index.html so deep links
+        // like /article/:slug or /share/:slug don't render the offline page.
+        navigateFallback: '/index.html',
         navigateFallbackDenylist: [
           /^\/api\//,
           /^\/share\//,
