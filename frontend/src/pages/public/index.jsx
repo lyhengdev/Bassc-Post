@@ -3121,20 +3121,32 @@ export function ArticlePage() {
   // featuredImage is a string URL, not an object
   const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1200/600`;
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const shareBaseFromEnv = (import.meta.env.VITE_SHARE_URL_BASE || '').trim().replace(/\/+$/, '');
-  let shareBaseUrl = shareBaseFromEnv;
-  if (!shareBaseUrl) {
-    const apiBase = (import.meta.env.VITE_API_URL || '').trim();
-    if (/^https?:\/\//i.test(apiBase)) {
-      try {
-        shareBaseUrl = new URL(apiBase).origin;
-      } catch {
-        shareBaseUrl = '';
-      }
+  const normalizeShareBase = (value = '') =>
+    String(value)
+      .trim()
+      .replace(/\/+$/, '')
+      .replace(/\/share(?:\/:slug)?$/i, '');
+
+  const resolveOrigin = (value = '') => {
+    const input = String(value || '').trim();
+    if (!input) return '';
+    try {
+      if (siteUrl) return new URL(input, siteUrl).origin;
+      return new URL(input).origin;
+    } catch {
+      return '';
     }
+  };
+
+  const apiOrigin = resolveOrigin(import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || '');
+  let shareBaseUrl = normalizeShareBase(import.meta.env.VITE_SHARE_URL_BASE || '');
+
+  // If frontend and API are split-origin, force share links to API origin so crawlers hit server-rendered OG HTML.
+  if (shareBaseUrl && siteUrl && shareBaseUrl === siteUrl && apiOrigin && apiOrigin !== siteUrl) {
+    shareBaseUrl = apiOrigin;
   }
   if (!shareBaseUrl) {
-    shareBaseUrl = siteUrl;
+    shareBaseUrl = apiOrigin || siteUrl;
   }
   const shareUrl = shareBaseUrl ? `${shareBaseUrl}/share/${encodeURIComponent(slug)}` : '';
   const moreNewsArticles = (moreNews || []).filter((item) => item._id !== article._id);
