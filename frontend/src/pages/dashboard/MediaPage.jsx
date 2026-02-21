@@ -87,7 +87,7 @@ export function MediaPage() {
 
   return (
     <>
-      <Helmet><title>Media Library - Bassac Media Center</title></Helmet>
+      <Helmet><title>Media Library - Bassac Post</title></Helmet>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>

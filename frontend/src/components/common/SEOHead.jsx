@@ -16,7 +16,7 @@ export function SEOHead({
   author,
   section,
   tags = [],
-  siteName = 'Bassac Media Center',
+  siteName = 'Bassac Post',
   twitterHandle = '@bassacmedia',
   locale = 'en_US',
   noIndex = false,

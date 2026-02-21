@@ -164,7 +164,7 @@ export function SiteSettingsPage() {
 
   return (
     <>
-      <Helmet><title>Site Settings - Bassac Media Center</title></Helmet>
+      <Helmet><title>Site Settings - Bassac Post</title></Helmet>
       
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Site Settings</h1>
@@ -198,7 +198,7 @@ export function SiteSettingsPage() {
               label="Site Name"
               value={form.siteName}
               onChange={(e) => setForm({ ...form, siteName: e.target.value })}
-              placeholder="Bassac Media Center"
+              placeholder="Bassac Post"
             />
             <Input
               label="Tagline"
@@ -279,7 +279,7 @@ export function SiteSettingsPage() {
                 <div className="border-2 border-dashed border-dark-200 dark:border-dark-700 rounded-lg p-4 text-center">
                   {form.siteFavicon ? (
                     <div className="relative inline-block">
-                      <img loading="lazy" src={buildMediaUrl(form.siteFavicon)} alt="Favicon" className="h-8 mx-auto" />
+                      <img loading="lazy" src={buildMediaUrl(form.siteFavicon)} alt="Favicon" className="h-8 w-8 object-contain mx-auto" />
                       <button
                         onClick={() => setForm({ ...form, siteFavicon: '' })}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"
@@ -371,7 +371,7 @@ export function SiteSettingsPage() {
               label="Default Meta Title"
               value={form.seo.metaTitle || ''}
               onChange={(e) => setForm({ ...form, seo: { ...form.seo, metaTitle: e.target.value } })}
-              placeholder="Bassac Media Center - News & Insights"
+              placeholder="Bassac Post - News & Insights"
               maxLength={70}
             />
             <p className="text-xs text-dark-500 -mt-2">{(form.seo.metaTitle || '').length}/70 characters</p>

@@ -27,7 +27,7 @@ export default function Header() {
     const {data: categories} = useCategories();
     const {data: settings} = usePublicSettings();
 
-    const siteName = settings?.siteName || 'Bassac Media';
+    const siteName = settings?.siteName || 'Bassac Post';
     const siteLogo = settings?.siteLogo;
     const headerSettings = settings?.headerSettings || {};
     const features = settings?.features || {};

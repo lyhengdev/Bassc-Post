@@ -134,7 +134,7 @@ export default function SearchPage() {
   return (
     <>
       <Helmet>
-        <title>Search{query ? ` - ${query}` : ''} - Bassac Media</title>
+        <title>Search{query ? ` - ${query}` : ''} - Bassac Post</title>
       </Helmet>
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

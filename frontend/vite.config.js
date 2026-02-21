@@ -21,9 +21,9 @@ export default defineConfig({
         'offline.html',
       ],
       manifest: {
-        name: 'Bassac Media Center',
-        short_name: 'Bassac Media',
-        description: 'News and media coverage from Bassac Media Center.',
+        name: 'Bassac Post',
+        short_name: 'Bassac Post',
+        description: 'News and media coverage from Bassac Post.',
         start_url: '/',
         scope: '/',
         display: 'standalone',

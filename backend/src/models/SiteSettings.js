@@ -102,7 +102,7 @@ const socialLinkSchema = new mongoose.Schema({
 
 const siteSettingsSchema = new mongoose.Schema({
   // Basic Site Info
-  siteName: { type: String, default: 'Bassac Media Center' },
+  siteName: { type: String, default: 'Bassac Post' },
   siteTagline: { type: String, default: 'Your trusted source for news and insights' },
   siteDescription: { type: String, default: '' },
   siteLogo: { type: String, default: '' },
@@ -171,7 +171,7 @@ const siteSettingsSchema = new mongoose.Schema({
   // Footer Settings
   footerSettings: {
     layout: { type: String, enum: ['default', 'minimal', 'centered'], default: 'default' },
-    copyrightText: { type: String, default: '© {year} Bassac Media Center. All rights reserved.' },
+    copyrightText: { type: String, default: '© {year} Bassac Post. All rights reserved.' },
     showSocialLinks: { type: Boolean, default: true },
     showNewsletter: { type: Boolean, default: true },
     columns: { type: Number, default: 4 }
@@ -320,7 +320,28 @@ siteSettingsSchema.statics.getSettings = async function() {
   let settings = await this.findOne();
   if (!settings) {
     settings = await this.create({});
+    return settings;
   }
+
+  // One-time runtime normalization for legacy branding values.
+  let shouldSave = false;
+  if (settings.siteName === 'Bassac Media Center' || settings.siteName === 'Bassac Media') {
+    settings.siteName = 'Bassac Post';
+    shouldSave = true;
+  }
+  if (
+    settings.footerSettings?.copyrightText
+    && /Bassac Media Center|Bassac Media/.test(settings.footerSettings.copyrightText)
+  ) {
+    settings.footerSettings.copyrightText = settings.footerSettings.copyrightText
+      .replace(/Bassac Media Center/g, 'Bassac Post')
+      .replace(/Bassac Media/g, 'Bassac Post');
+    shouldSave = true;
+  }
+  if (shouldSave) {
+    await settings.save();
+  }
+
   return settings;
 };
 

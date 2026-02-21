@@ -258,7 +258,7 @@ const useNotificationStore = create((set, get) => ({
     try {
       const browserNotif = new Notification(notification.title, {
         body: notification.message,
-        icon: '/favicon-32x32.png',
+        icon: '/favicon-logo-512.png',
         tag: notification._id,
         requireInteraction: notification.priority === 'high',
       });

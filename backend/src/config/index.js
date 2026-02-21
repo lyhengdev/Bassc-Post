@@ -30,7 +30,7 @@ const config = {
   
   // Site Info (for SEO & Open Graph)
   siteUrl: process.env.SITE_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
-  siteName: process.env.SITE_NAME || 'Bassac Media Center',
+  siteName: process.env.SITE_NAME || 'Bassac Post',
   siteDescription: process.env.SITE_DESCRIPTION || 'Quality News & Articles',
   
   // MongoDB

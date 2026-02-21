@@ -66,6 +66,32 @@ export function PublicLayout() {
     root.style.setProperty('--brand-secondary', settings.secondaryColor || '#64748b');
     root.style.setProperty('--brand-accent', settings.accentColor || '#f59e0b');
   }, [settings?.primaryColor, settings?.secondaryColor, settings?.accentColor, settings]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const faviconHref = settings?.siteFavicon ? buildMediaUrl(settings.siteFavicon) : '/favicon.svg';
+    const touchIconHref = settings?.siteLogo ? buildMediaUrl(settings.siteLogo) : '/favicon-logo-512.png';
+    const faviconType = faviconHref.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+
+    const upsertHeadLink = ({ rel, href, type, sizes }) => {
+      let link = document.head.querySelector(`link[rel="${rel}"]`);
+      if (!link) {
+        link = document.createElement('link');
+        link.setAttribute('rel', rel);
+        document.head.appendChild(link);
+      }
+      link.setAttribute('href', href);
+      if (type) link.setAttribute('type', type);
+      else link.removeAttribute('type');
+      if (sizes) link.setAttribute('sizes', sizes);
+      else link.removeAttribute('sizes');
+    };
+
+    upsertHeadLink({ rel: 'icon', href: faviconHref, type: faviconType });
+    upsertHeadLink({ rel: 'shortcut icon', href: faviconHref, type: faviconType });
+    upsertHeadLink({ rel: 'apple-touch-icon', href: touchIconHref, sizes: '180x180', type: 'image/png' });
+  }, [settings?.siteFavicon, settings?.siteLogo]);
   
   // Get floating banner settings for layout adjustments
   const floatingBanner = settings?.floatingBanner;

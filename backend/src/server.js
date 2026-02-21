@@ -134,7 +134,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Bassac Media Center API is running',
+    message: 'Bassac Post API is running',
     health: '/health',
     apiHealth: '/api/health',
   });
@@ -228,7 +228,7 @@ const startServer = async () => {
       console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║   🚀 Bassac Media Center API Server                       ║
+║   🚀 Bassac Post API Server                       ║
 ║                                                           ║
 ║   Environment: ${config.env.padEnd(40)}║
 ║   Port: ${String(config.port).padEnd(47)}║

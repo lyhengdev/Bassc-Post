@@ -206,7 +206,7 @@ export function OverlayLoader({
  * ==================== PAGE LOADER ====================
  * Loading state for entire page with branding
  */
-export function PageLoader({ message = 'Loading Bassac Media' }) {
+export function PageLoader({ message = 'Loading Bassac Post' }) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-dark-950">
       <div className="text-center space-y-6 animate-fadeIn">

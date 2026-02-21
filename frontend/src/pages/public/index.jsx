@@ -1491,7 +1491,7 @@ export function HomePage() {
     return (
       <>
         <Helmet>
-          <title>{publicSettings?.seo?.metaTitle || publicSettings?.siteName || 'Bassac Media'}</title>
+          <title>{publicSettings?.seo?.metaTitle || publicSettings?.siteName || 'Bassac Post'}</title>
         </Helmet>
 
         <div className="container-custom py-6 lg:py-8">
@@ -1574,7 +1574,7 @@ export function HomePage() {
   return (
     <>
       <Helmet>
-        <title>{publicSettings?.siteName || 'Bassac Media'} - Latest News & Updates</title>
+        <title>{publicSettings?.siteName || 'Bassac Post'} - Latest News & Updates</title>
       </Helmet>
 
       <div className="container-custom py-6 lg:py-8 text-[15px] sm:text-base">
@@ -1982,7 +1982,7 @@ export function ArticlesPage() {
 
   return (
     <>
-      <Helmet><title>News - Bassac Media</title></Helmet>
+      <Helmet><title>News - Bassac Post</title></Helmet>
 
       <div className="container-custom py-6 lg:py-8 text-[15px] sm:text-base">
         {/* Main Layout: Content + Sidebar Ad */}
@@ -2177,7 +2177,7 @@ export function CategoriesListPage() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('popular'); // popular | az
 
-  const siteName = settings?.siteName || 'Bassac Media';
+  const siteName = settings?.siteName || 'Bassac Post';
   const total = categories?.length || 0;
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -2555,7 +2555,7 @@ export function CategoryPage() {
     return (
         <>
             <Helmet>
-                <title>{category?.name || 'Category'} - Bassac Media Center</title>
+                <title>{category?.name || 'Category'} - Bassac Post</title>
             </Helmet>
 
             <div className="container-custom py-8">
@@ -3125,29 +3125,25 @@ export function ArticlePage() {
     String(value)
       .trim()
       .replace(/\/+$/, '')
-      .replace(/\/share(?:\/:slug)?$/i, '');
+      .replace(/\/share(?:\/:slug)?$/i, '')
+      .replace(/\/api$/i, '');
 
-  const resolveOrigin = (value = '') => {
+  const resolveAbsoluteOrigin = (value = '') => {
     const input = String(value || '').trim();
-    if (!input) return '';
+    if (!/^https?:\/\//i.test(input)) return '';
     try {
-      if (siteUrl) return new URL(input, siteUrl).origin;
       return new URL(input).origin;
     } catch {
       return '';
     }
   };
 
-  const apiOrigin = resolveOrigin(import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || '');
-  let shareBaseUrl = normalizeShareBase(import.meta.env.VITE_SHARE_URL_BASE || '');
-
-  // If frontend and API are split-origin, force share links to API origin so crawlers hit server-rendered OG HTML.
-  if (shareBaseUrl && siteUrl && shareBaseUrl === siteUrl && apiOrigin && apiOrigin !== siteUrl) {
-    shareBaseUrl = apiOrigin;
-  }
-  if (!shareBaseUrl) {
-    shareBaseUrl = apiOrigin || siteUrl;
-  }
+  // Always prefer backend origin for share links so social crawlers hit server-rendered /share/:slug HTML.
+  const backendShareBase =
+    resolveAbsoluteOrigin(import.meta.env.VITE_API_URL || '') ||
+    resolveAbsoluteOrigin(import.meta.env.VITE_SOCKET_URL || '') ||
+    resolveAbsoluteOrigin(normalizeShareBase(import.meta.env.VITE_SHARE_URL_BASE || ''));
+  const shareBaseUrl = backendShareBase || siteUrl;
   const shareUrl = shareBaseUrl ? `${shareBaseUrl}/share/${encodeURIComponent(slug)}` : '';
   const moreNewsArticles = (moreNews || []).filter((item) => item._id !== article._id);
 
@@ -3198,7 +3194,7 @@ export function ArticlePage() {
     <>
       <Helmet>
         {/* Primary Meta Tags */}
-        <title>{article.metaTitle || title} | Bassac Media Center</title>
+        <title>{article.metaTitle || title} | Bassac Post</title>
         <meta name="title" content={article.metaTitle || title} />
         <meta name="description" content={article.metaDescription || excerpt || ''} />
         <meta name="author" content={authorName} />
@@ -3216,7 +3212,7 @@ export function ArticlePage() {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={title} />
-        <meta property="og:site_name" content={settings?.siteName || 'Bassac Media Center'} />
+        <meta property="og:site_name" content={settings?.siteName || 'Bassac Post'} />
         <meta property="og:locale" content="en_US" />
 
         {/* News specific Open Graph */}
@@ -3251,7 +3247,7 @@ export function ArticlePage() {
             },
             'publisher': {
               '@type': 'Organization',
-              'name': settings?.siteName || 'Bassac Media Center',
+              'name': settings?.siteName || 'Bassac Post',
               'logo': {
                 '@type': 'ImageObject',
                 'url': `${siteUrl}/LogoV1.png`,
@@ -3489,14 +3485,14 @@ export function LoginPage() {
 
   return (
     <>
-      <Helmet><title>Sign In - Bassac Media Center</title></Helmet>
+      <Helmet><title>Sign In - Bassac Post</title></Helmet>
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <Link to="/" className="flex items-center gap-2 mb-8 justify-center">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center">
               <span className="text-white font-display font-bold text-2xl">B</span>
             </div>
-            <span className="font-display font-bold text-2xl text-dark-900 dark:text-white">Bassac Media</span>
+            <span className="font-display font-bold text-2xl text-dark-900 dark:text-white">Bassac Post</span>
           </Link>
 
           <div className="card p-8">
@@ -3598,14 +3594,14 @@ export function RegisterPage() {
 
   return (
     <>
-      <Helmet><title>Create Account - Bassac Media Center</title></Helmet>
+      <Helmet><title>Create Account - Bassac Post</title></Helmet>
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <Link to="/" className="flex items-center gap-2 mb-8 justify-center">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center">
               <span className="text-white font-display font-bold text-2xl">B</span>
             </div>
-            <span className="font-display font-bold text-2xl text-dark-900 dark:text-white">Bassac Media</span>
+            <span className="font-display font-bold text-2xl text-dark-900 dark:text-white">Bassac Post</span>
           </Link>
 
           <div className="card p-8">
@@ -3668,7 +3664,7 @@ export function ContactPage() {
 
   return (
     <>
-      <Helmet><title>Contact - Bassac Media Center</title></Helmet>
+      <Helmet><title>Contact - Bassac Post</title></Helmet>
       <div className="container-custom py-12">
         <div className="max-w-2xl mx-auto">
           <h1 className="font-display text-2xl lg:text-2xl font-bold text-dark-900 dark:text-white mb-4 text-center">Contact Us</h1>
@@ -3694,7 +3690,7 @@ export function AboutPage() {
   const { data: settings } = usePublicSettings();
   const { data: latestArticles, isLoading: isLatestLoading } = useLatestArticles(3);
 
-  const siteName = settings?.siteName || 'Bassac Media Center';
+  const siteName = settings?.siteName || 'Bassac Post';
   const siteDescription = settings?.siteDescription || 'Your trusted source for quality news, insightful stories, and in-depth coverage of the issues that matter.';
   const siteEmail = settings?.siteEmail || 'hello@bassacmedia.com';
   const sitePhone = settings?.sitePhone || '+855 12 345 678';
@@ -4134,7 +4130,7 @@ export function AccountPage() {
 
   return (
     <>
-      <Helmet><title>Account - Bassac Media Center</title></Helmet>
+      <Helmet><title>Account - Bassac Post</title></Helmet>
       <div className="container-custom py-10">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Account</h1>
@@ -4446,7 +4442,7 @@ export function VerifyEmailPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Verify Email - Bassac Media</title>
+        <title>Verify Email - Bassac Post</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="card p-8 text-center">
@@ -4518,7 +4514,7 @@ export function NewsletterConfirmPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Confirm Subscription - Bassac Media</title>
+        <title>Confirm Subscription - Bassac Post</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="card p-8 text-center">
@@ -4589,7 +4585,7 @@ export function NewsletterUnsubscribePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Unsubscribe - Bassac Media</title>
+        <title>Unsubscribe - Bassac Post</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="card p-8 text-center">
@@ -4666,12 +4662,12 @@ export function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Forgot Password - Bassac Media</title>
+        <title>Forgot Password - Bassac Post</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <h1 className="text-2xl font-bold text-primary-600">Bassac Media</h1>
+            <h1 className="text-2xl font-bold text-primary-600">Bassac Post</h1>
           </Link>
         </div>
         <div className="card p-8">
@@ -4783,7 +4779,7 @@ export function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
         <Helmet>
-          <title>Reset Password - Bassac Media</title>
+          <title>Reset Password - Bassac Post</title>
         </Helmet>
         <div className="w-full max-w-md">
           <div className="card p-8 text-center">
@@ -4804,12 +4800,12 @@ export function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Reset Password - Bassac Media</title>
+        <title>Reset Password - Bassac Post</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <h1 className="text-2xl font-bold text-primary-600">Bassac Media</h1>
+            <h1 className="text-2xl font-bold text-primary-600">Bassac Post</h1>
           </Link>
         </div>
         <div className="card p-8">

@@ -69,7 +69,7 @@ export function AIAssistantPage() {
 
   return (
     <>
-      <Helmet><title>AI Assistant - Bassac Media Center</title></Helmet>
+      <Helmet><title>AI Assistant - Bassac Post</title></Helmet>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white flex items-center gap-2">

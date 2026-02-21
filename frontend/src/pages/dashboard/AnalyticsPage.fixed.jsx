@@ -84,7 +84,7 @@ export function AnalyticsPage() {
 
   return (
     <>
-      <Helmet><title>Analytics - Bassac Media Center</title></Helmet>
+      <Helmet><title>Analytics - Bassac Post</title></Helmet>
 
       <div className="mb-6 flex items-center justify-between">
         <div>

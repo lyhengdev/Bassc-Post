@@ -111,7 +111,7 @@ export function AnalyticsPage() {
   if (error) {
     return (
       <>
-        <Helmet><title>Analytics - Bassac Media Center</title></Helmet>
+        <Helmet><title>Analytics - Bassac Post</title></Helmet>
         
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-white dark:bg-dark-800 rounded-xl shadow-lg p-8 border border-red-200 dark:border-red-900">
@@ -203,7 +203,7 @@ export function AnalyticsPage() {
 
   return (
     <>
-      <Helmet><title>Analytics - Bassac Media Center</title></Helmet>
+      <Helmet><title>Analytics - Bassac Post</title></Helmet>
 
       <div className="mb-6 flex items-center justify-between">
         <div>

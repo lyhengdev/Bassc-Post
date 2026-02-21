@@ -53,7 +53,7 @@ export default function Footer() {
           {icon: Youtube, href: '#', label: 'YouTube'},
         ];
 
-    const siteName = settings?.siteName || 'Bassac Media Center';
+    const siteName = settings?.siteName || 'Bassac Post';
     const siteDescription = settings?.siteDescription || 'Your trusted source for quality news, insightful articles, and in-depth coverage of the stories that matter.';
     const siteLogo = settings?.siteLogo;
     const siteEmail = settings?.siteEmail || 'hello@bassacmedia.com';

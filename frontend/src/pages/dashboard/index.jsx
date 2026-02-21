@@ -15,7 +15,7 @@ function DashboardSkeleton({ role }) {
   
   return (
     <>
-      <Helmet><title>Dashboard - Bassac Media Center</title></Helmet>
+      <Helmet><title>Dashboard - Bassac Post</title></Helmet>
       
       {/* Header Skeleton */}
       <div className="mb-8">
@@ -409,7 +409,7 @@ export function DashboardHome() {
 
   return (
     <>
-      <Helmet><title>Dashboard - Bassac Media Center</title></Helmet>
+      <Helmet><title>Dashboard - Bassac Post</title></Helmet>
       <div className="mb-8">
         <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-gradient-to-br from-primary-600 via-blue-600 to-slate-900 text-white p-6 md:p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -743,7 +743,7 @@ export function MyArticlesPage() {
 
   return (
     <>
-      <Helmet><title>{isAdmin ? 'All News' : 'My News'} - Bassac Media Center</title></Helmet>
+      <Helmet><title>{isAdmin ? 'All News' : 'My News'} - Bassac Post</title></Helmet>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{isAdmin ? 'All News' : 'My News'}</h1>
@@ -1001,7 +1001,7 @@ export function PendingArticlesPage() {
 
   return (
     <>
-      <Helmet><title>Pending News - Bassac Media Center</title></Helmet>
+      <Helmet><title>Pending News - Bassac Post</title></Helmet>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Pending Review</h1>
         <p className="text-dark-500">News awaiting your approval</p>
@@ -1159,7 +1159,7 @@ export function ProfilePage() {
 
   return (
     <>
-      <Helmet><title>Profile - Bassac Media Center</title></Helmet>
+      <Helmet><title>Profile - Bassac Post</title></Helmet>
       <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Profile</h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card p-6 text-center">

@@ -97,7 +97,7 @@ export function UsersPage() {
 
   return (
     <>
-      <Helmet><title>Users - Bassac Media Center</title></Helmet>
+      <Helmet><title>Users - Bassac Post</title></Helmet>
 
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>

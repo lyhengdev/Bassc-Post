@@ -65,7 +65,7 @@ export function MessagesPage() {
 
   return (
     <>
-      <Helmet><title>Messages - Bassac Media Center</title></Helmet>
+      <Helmet><title>Messages - Bassac Post</title></Helmet>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Contact Messages</h1>

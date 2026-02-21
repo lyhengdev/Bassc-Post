@@ -20,7 +20,7 @@ export function AdInsightsPage() {
   return (
     <>
       <Helmet>
-        <title>Ad Insights - Bassac Media Center</title>
+        <title>Ad Insights - Bassac Post</title>
       </Helmet>
 
       <div className="flex items-center justify-between mb-6">

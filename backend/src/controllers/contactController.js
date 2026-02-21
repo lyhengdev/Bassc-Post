@@ -142,7 +142,7 @@ export const replyToContact = asyncHandler(async (req, res) => {
       subject: `Re: ${message.subject}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Reply from Bassac Media Center</h2>
+          <h2>Reply from Bassac Post</h2>
           <p>Dear ${message.name},</p>
           <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
             ${reply.replace(/\n/g, '<br>')}

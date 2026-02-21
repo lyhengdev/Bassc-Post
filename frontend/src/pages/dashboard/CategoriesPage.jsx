@@ -89,7 +89,7 @@ export function CategoriesPage() {
 
   return (
     <>
-      <Helmet><title>Categories - Bassac Media Center</title></Helmet>
+      <Helmet><title>Categories - Bassac Post</title></Helmet>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
         <div>

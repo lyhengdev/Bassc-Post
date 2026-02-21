@@ -41,7 +41,7 @@ class EmailService {
     this.initialize();
 
     const mailOptions = {
-      from: `Bassac Media Center <${config.email.from}>`,
+      from: `Bassac Post <${config.email.from}>`,
       to,
       subject,
       html,
@@ -76,7 +76,7 @@ class EmailService {
 
     await this.send({
       to: user.email,
-      subject: 'Verify Your Email - Bassac Media Center',
+      subject: 'Verify Your Email - Bassac Post',
       html: `
         <!DOCTYPE html>
         <html>
@@ -93,11 +93,11 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Bassac Media Center</h1>
+              <h1>Bassac Post</h1>
             </div>
             <div class="content">
               <h2>Welcome, ${user.firstName}!</h2>
-              <p>Thank you for registering with Bassac Media Center. Please verify your email address by clicking the button below:</p>
+              <p>Thank you for registering with Bassac Post. Please verify your email address by clicking the button below:</p>
               <p style="text-align: center;">
                 <a href="${verificationUrl}" class="button">Verify Email</a>
               </p>
@@ -107,7 +107,7 @@ class EmailService {
               <p>If you didn't create an account, please ignore this email.</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} Bassac Media Center. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Bassac Post. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -124,7 +124,7 @@ class EmailService {
 
     await this.send({
       to: user.email,
-      subject: 'Reset Your Password - Bassac Media Center',
+      subject: 'Reset Your Password - Bassac Post',
       html: `
         <!DOCTYPE html>
         <html>
@@ -141,7 +141,7 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Bassac Media Center</h1>
+              <h1>Bassac Post</h1>
             </div>
             <div class="content">
               <h2>Password Reset Request</h2>
@@ -156,7 +156,7 @@ class EmailService {
               <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} Bassac Media Center. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Bassac Post. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -194,14 +194,14 @@ class EmailService {
             </div>
             <div class="content">
               <h2>Congratulations, ${user.firstName}!</h2>
-              <p>Great news! Your article "<strong>${article.title}</strong>" has been approved and is now live on Bassac Media Center.</p>
+              <p>Great news! Your article "<strong>${article.title}</strong>" has been approved and is now live on Bassac Post.</p>
               <p style="text-align: center;">
                 <a href="${articleUrl}" class="button">View Your Article</a>
               </p>
               <p>Thank you for contributing to our platform!</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} Bassac Media Center. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Bassac Post. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -249,7 +249,7 @@ class EmailService {
               </p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} Bassac Media Center. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Bassac Post. All rights reserved.</p>
             </div>
           </div>
         </body>

@@ -145,7 +145,7 @@ class NotificationService {
       <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Bassac Media</h1>
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Bassac Post</h1>
           </div>
           <div style="padding: 30px;">
             <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 20px;">${notification.title}</h2>
@@ -155,7 +155,7 @@ class NotificationService {
             ` : ''}
           </div>
           <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-            <p style="color: #9ca3af; font-size: 14px; margin: 0;">You received this email because you have an account on Bassac Media.</p>
+            <p style="color: #9ca3af; font-size: 14px; margin: 0;">You received this email because you have an account on Bassac Post.</p>
           </div>
         </div>
       </body>

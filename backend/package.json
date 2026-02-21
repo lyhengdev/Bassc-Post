@@ -1,7 +1,7 @@
 {
   "name": "bassac-media-center-backend",
   "version": "1.0.0",
-  "description": "Bassac Media Center - Digital Media & Publishing Platform API",
+  "description": "Bassac Post - Digital Media & Publishing Platform API",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -17,7 +17,7 @@
     "cms",
     "api"
   ],
-  "author": "Bassac Media Center",
+  "author": "Bassac Post",
   "license": "MIT",
   "dependencies": {
     "@elastic/elasticsearch": "^9.2.0",

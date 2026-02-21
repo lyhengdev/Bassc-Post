@@ -213,7 +213,7 @@ export function ArticleEditorPage() {
   return (
     <>
       <Helmet>
-        <title>{id ? 'Edit News' : 'New News'} - Bassac Media Center</title>
+        <title>{id ? 'Edit News' : 'New News'} - Bassac Post</title>
       </Helmet>
 
       {/* Header */}

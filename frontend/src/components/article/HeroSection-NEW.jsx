@@ -28,7 +28,7 @@ export function HeroSection({ articles, isLoading }) {
         
         <div className="relative text-center text-white px-6 max-w-3xl">
           <h1 className="text-2xl md:text-2xl lg:text-2xl font-bold mb-6 leading-tight">
-            Welcome to Bassac Media
+            Welcome to Bassac Post
           </h1>
           <p className="text-2xl md:text-2xl text-white/90 mb-8 leading-relaxed">
             Your source for in-depth journalism and quality storytelling

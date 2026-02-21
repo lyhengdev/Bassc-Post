@@ -38,6 +38,26 @@ const getRequestOrigin = (req) => {
   return host ? `${protocol}://${host}` : '';
 };
 
+const SOCIAL_CRAWLER_SIGNATURES = [
+  'facebookexternalhit',
+  'facebot',
+  'twitterbot',
+  'linkedinbot',
+  'slackbot',
+  'discordbot',
+  'telegrambot',
+  'whatsapp',
+  'skypeuripreview',
+  'pinterest',
+  'redditbot',
+];
+
+const isSocialCrawler = (req) => {
+  const ua = String(req.get('user-agent') || '').toLowerCase();
+  if (!ua) return false;
+  return SOCIAL_CRAWLER_SIGNATURES.some((signature) => ua.includes(signature));
+};
+
 router.get('/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -70,6 +90,8 @@ router.get('/:slug', async (req, res) => {
     const imageUrl = imagePath.startsWith('/uploads/')
       ? resolveUrl(imageBaseUrl, imagePath)
       : resolveUrl(siteUrl, imagePath);
+    const sharePath = String(req.originalUrl || req.url || `/share/${article.slug}`).split('?')[0] || `/share/${article.slug}`;
+    const shareUrl = resolveUrl(requestOrigin || siteUrl, sharePath);
     const articleUrl = resolveUrl(siteUrl, `/article/${article.slug}`);
     const authorName = article.author
       ? (article.author.fullName || `${article.author.firstName || ''} ${article.author.lastName || ''}`.trim())
@@ -77,7 +99,7 @@ router.get('/:slug', async (req, res) => {
     const publishedTime = article.publishedAt ? new Date(article.publishedAt).toISOString() : '';
     const modifiedTime = article.updatedAt ? new Date(article.updatedAt).toISOString() : publishedTime;
 
-    const disableRedirect = req.query.preview === '1';
+    const disableRedirect = req.query.preview === '1' || isSocialCrawler(req);
     const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -86,10 +108,11 @@ router.get('/:slug', async (req, res) => {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(title)} | ${escapeHtml(config.siteName || '')}</title>
     <meta name="description" content="${escapeHtml(description)}" />
-    <link rel="canonical" href="${escapeHtml(articleUrl)}" />
+    <link rel="canonical" href="${escapeHtml(shareUrl)}" />
+    <meta name="robots" content="noindex, nofollow" />
 
     <meta property="og:type" content="article" />
-    <meta property="og:url" content="${escapeHtml(articleUrl)}" />
+    <meta property="og:url" content="${escapeHtml(shareUrl)}" />
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:image" content="${escapeHtml(imageUrl)}" />
@@ -104,7 +127,7 @@ router.get('/:slug', async (req, res) => {
     ${authorName ? `<meta property="article:author" content="${escapeHtml(authorName)}" />` : ''}
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="${escapeHtml(articleUrl)}" />
+    <meta name="twitter:url" content="${escapeHtml(shareUrl)}" />
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
@@ -118,6 +141,7 @@ router.get('/:slug', async (req, res) => {
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Vary', 'User-Agent');
     res.send(html);
   } catch (error) {
     console.error('Share page error:', error);
