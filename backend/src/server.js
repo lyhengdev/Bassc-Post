@@ -114,6 +114,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 
 // Share pages (server-rendered Open Graph for social previews)
 app.use('/share', shareRoutes);
+// Backward-compatible share landing (supports legacy /article/:slug links on API origin)
+app.use('/article', shareRoutes);
 
 // API Routes
 app.use('/api', routes);

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams, Link } from 'react-router-dom';
 import { useAuthStore, useThemeStore } from './stores/authStore';
 import useNotificationStore from './stores/notificationStore';
 import { PublicLayout, DashboardLayout } from './components/layout/index.jsx';
@@ -101,6 +101,20 @@ function GuestRoute({ children }) {
   return children;
 }
 
+// Fallback route for hosts that don't proxy /share/* to backend share pages
+function ShareRedirectRoute() {
+  const { slug = '' } = useParams();
+  const safeSlug = (() => {
+    try {
+      return decodeURIComponent(slug);
+    } catch {
+      return slug;
+    }
+  })();
+
+  return <Navigate to={`/article/${safeSlug}`} replace />;
+}
+
 // 404 Page
 function NotFoundPage() {
   return (
@@ -147,22 +161,23 @@ export default function App() {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/articles" element={<ArticlesPage />} />
-          <Route path="/article/:slug" element={<ArticlePage />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/categories" element={<CategoriesListPage />} />
-          <Route path="/newsletter/confirm" element={<NewsletterConfirmPage />} />
-          <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribePage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route
-            path="/account"
-            element={
-              <AccountRoute>
-                <AccountPage />
-              </AccountRoute>
-            }
-          />
-        </Route>
+            <Route path="/article/:slug" element={<ArticlePage />} />
+            <Route path="/share/:slug" element={<ShareRedirectRoute />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/categories" element={<CategoriesListPage />} />
+            <Route path="/newsletter/confirm" element={<NewsletterConfirmPage />} />
+            <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route
+              path="/account"
+              element={
+                <AccountRoute>
+                  <AccountPage />
+                </AccountRoute>
+              }
+            />
+          </Route>
 
           {/* Auth Routes (no layout) */}
           <Route

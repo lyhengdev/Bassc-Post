@@ -6,17 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c6bd4a1f-cf94-4630-b9b3-459250876b8d" name="Changes" comment="--change-authenticate">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/shareRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/shareRoutes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/server.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/SEOHead.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/SEOHead.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/index.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/02-backend.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/02-backend.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/05-ingress.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/05-ingress.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nginx/nginx-lb.conf" beforeDir="false" afterPath="$PROJECT_DIR$/nginx/nginx-lb.conf" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -143,7 +134,7 @@
       <workItem from="1770698554739" duration="9597000" />
       <workItem from="1770711676099" duration="6510000" />
       <workItem from="1771480383958" duration="8203000" />
-      <workItem from="1771638586392" duration="1586000" />
+      <workItem from="1771638586392" duration="3724000" />
     </task>
     <task id="LOCAL-00001" summary="--change-authenticate">
       <option name="closed" value="true" />
