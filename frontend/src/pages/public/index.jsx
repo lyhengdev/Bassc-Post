@@ -20,7 +20,7 @@ const HOME_TYPE = {
     eyebrow: 'text-[11px] sm:text-xs uppercase tracking-[0.24em] text-dark-400',
     sectionTitle: 'text-xl sm:text-2xl lg:text-3xl font-bold text-dark-900 dark:text-white',
     sectionSubtitle: 'text-sm sm:text-base text-dark-500',
-    bigTitle: 'text-2xl sm:text-2xl lg-2xl font-bold text-dark-900 dark:text-white mt-1 leading-snug headline-hover line-clamp-2',
+    bigTitle: 'text-2xl sm:text-2xl lg:text-2xl font-bold text-dark-900 dark:text-white mt-1 leading-snug headline-hover line-clamp-2',
     bigTitleOnDark: 'text-2xl sm:text-2xl lg:text-3xl font-bold text-white mt-1 leading-snug line-clamp-2 drop-shadow',
     body: 'text-sm sm:text-base text-dark-600 dark:text-dark-400',
     meta: 'text-xs sm:text-sm text-dark-400',
@@ -3121,7 +3121,22 @@ export function ArticlePage() {
   // featuredImage is a string URL, not an object
   const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1200/600`;
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const shareUrl = siteUrl ? `${siteUrl}/share/${slug}` : '';
+  const shareBaseFromEnv = (import.meta.env.VITE_SHARE_URL_BASE || '').trim().replace(/\/+$/, '');
+  let shareBaseUrl = shareBaseFromEnv;
+  if (!shareBaseUrl) {
+    const apiBase = (import.meta.env.VITE_API_URL || '').trim();
+    if (/^https?:\/\//i.test(apiBase)) {
+      try {
+        shareBaseUrl = new URL(apiBase).origin;
+      } catch {
+        shareBaseUrl = '';
+      }
+    }
+  }
+  if (!shareBaseUrl) {
+    shareBaseUrl = siteUrl;
+  }
+  const shareUrl = shareBaseUrl ? `${shareBaseUrl}/share/${encodeURIComponent(slug)}` : '';
   const moreNewsArticles = (moreNews || []).filter((item) => item._id !== article._id);
 
   const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';

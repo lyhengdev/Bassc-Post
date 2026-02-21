@@ -20,6 +20,24 @@ const resolveUrl = (baseUrl, pathValue) => {
   return `${baseUrl}${pathValue}`;
 };
 
+const isLocalhostBaseUrl = (value) => {
+  if (!value) return true;
+  try {
+    const { hostname } = new URL(value);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+  } catch {
+    return true;
+  }
+};
+
+const getRequestOrigin = (req) => {
+  const forwardedProto = req.get('x-forwarded-proto');
+  const forwardedHost = req.get('x-forwarded-host');
+  const host = (forwardedHost || req.get('host') || '').split(',')[0].trim();
+  const protocol = (forwardedProto || req.protocol || 'http').split(',')[0].trim();
+  return host ? `${protocol}://${host}` : '';
+};
+
 router.get('/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -36,10 +54,22 @@ router.get('/:slug', async (req, res) => {
       return res.status(404).send('Article not found');
     }
 
-    const siteUrl = normalizeBaseUrl(config.siteUrl);
+    const requestOrigin = normalizeBaseUrl(getRequestOrigin(req));
+    const configuredApiBaseUrl = normalizeBaseUrl(config.apiBaseUrl);
+    const configuredSiteUrl = normalizeBaseUrl(config.siteUrl);
+    const configuredFrontendUrl = normalizeBaseUrl(config.frontendUrl);
+    const siteUrl = !isLocalhostBaseUrl(configuredSiteUrl)
+      ? configuredSiteUrl
+      : (!isLocalhostBaseUrl(configuredFrontendUrl) ? configuredFrontendUrl : requestOrigin || configuredSiteUrl);
+    const imageBaseUrl = !isLocalhostBaseUrl(configuredApiBaseUrl)
+      ? configuredApiBaseUrl
+      : requestOrigin || siteUrl;
     const title = article.metaTitle || article.title || config.siteName || 'Article';
     const description = article.metaDescription || article.excerpt || config.siteDescription || '';
-    const imageUrl = resolveUrl(siteUrl, article.featuredImage || '/og-default.jpg');
+    const imagePath = article.featuredImage || '/LogoV1.png';
+    const imageUrl = imagePath.startsWith('/uploads/')
+      ? resolveUrl(imageBaseUrl, imagePath)
+      : resolveUrl(siteUrl, imagePath);
     const articleUrl = resolveUrl(siteUrl, `/article/${article.slug}`);
     const authorName = article.author
       ? (article.author.fullName || `${article.author.firstName || ''} ${article.author.lastName || ''}`.trim())
@@ -63,6 +93,7 @@ router.get('/:slug', async (req, res) => {
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+    ${imageUrl.startsWith('https://') ? `<meta property="og:image:secure_url" content="${escapeHtml(imageUrl)}" />` : ''}
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${escapeHtml(title)}" />

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore, useThemeStore } from './stores/authStore';
 import useNotificationStore from './stores/notificationStore';
 import { PublicLayout, DashboardLayout } from './components/layout/index.jsx';
@@ -108,9 +108,9 @@ function NotFoundPage() {
       <div className="text-center">
         <h1 className="text-2xl font-bold text-dark-300 mb-4">404</h1>
         <p className="text-dark-500 mb-6">Page not found</p>
-        <a href="/" className="btn btn-primary">
+        <Link to="/" className="btn btn-primary">
           Go Home
-        </a>
+        </Link>
       </div>
     </div>
   );

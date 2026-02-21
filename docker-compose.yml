@@ -104,6 +104,8 @@ services:
       - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary1:27017,mongo-secondary2:27017/bassac_media_center?replicaSet=rs0
       - REDIS_URL=redis://redis-master:6379
       - ELASTICSEARCH_NODE=http://elasticsearch-1:9200
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - SITE_URL=${SITE_URL:-http://localhost}
     depends_on:
       - mongo-primary
       - redis-master
@@ -130,6 +132,8 @@ services:
       - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary1:27017,mongo-secondary2:27017/bassac_media_center?replicaSet=rs0
       - REDIS_URL=redis://redis-master:6379
       - ELASTICSEARCH_NODE=http://elasticsearch-1:9200
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - SITE_URL=${SITE_URL:-http://localhost}
     depends_on:
       - mongo-primary
       - redis-master
@@ -151,6 +155,8 @@ services:
       - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary1:27017,mongo-secondary2:27017/bassac_media_center?replicaSet=rs0
       - REDIS_URL=redis://redis-master:6379
       - ELASTICSEARCH_NODE=http://elasticsearch-1:9200
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - SITE_URL=${SITE_URL:-http://localhost}
     depends_on:
       - mongo-primary
       - redis-master

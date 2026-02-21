@@ -24,7 +24,7 @@ export function SEOHead({
   // Ensure absolute URLs
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const fullUrl = url?.startsWith('http') ? url : `${siteUrl}${url || ''}`;
-  const fullImage = image?.startsWith('http') ? image : `${siteUrl}${image || '/og-default.jpg'}`;
+  const fullImage = image?.startsWith('http') ? image : `${siteUrl}${image || '/LogoV1.png'}`;
   
   // Truncate description for meta tags (160 chars)
   const metaDescription = description?.substring(0, 160) || '';

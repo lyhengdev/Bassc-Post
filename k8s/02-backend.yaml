@@ -11,6 +11,8 @@ data:
   MONGODB_URI: "mongodb://mongo-0.mongo:27017,mongo-1.mongo:27017,mongo-2.mongo:27017/bassac_media_center?replicaSet=rs0"
   REDIS_URL: "redis://redis-master:6379"
   ELASTICSEARCH_NODE: "http://elasticsearch:9200"
+  FRONTEND_URL: "https://your-domain.com"
+  SITE_URL: "https://your-domain.com"
 
 ---
 # Secret for sensitive data

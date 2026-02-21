@@ -76,6 +76,24 @@ spec:
             name: backend
             port:
               number: 8888
+
+      # Share pages for social crawlers (Open Graph)
+      - path: /share
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8888
+
+      # Uploaded media files
+      - path: /uploads
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8888
       
       # Frontend application
       - path: /
