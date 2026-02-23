@@ -1,5 +1,6 @@
 import { User, Article } from '../models/index.js';
 import { parsePaginationParams } from '../utils/helpers.js';
+import { getDefaultAvatarByGender, isDefaultAvatar } from '../utils/userProfile.js';
 import storageService from '../services/storageService.js';
 import {
   successResponse,
@@ -27,6 +28,7 @@ const extractCloudinaryPublicId = (url) => {
 
 const deleteAvatarFromStorage = async (avatarUrl) => {
   if (!avatarUrl) return;
+  if (isDefaultAvatar(avatarUrl)) return;
 
   if (avatarUrl.includes('cloudinary.com')) {
     const publicId = extractCloudinaryPublicId(avatarUrl);
@@ -115,13 +117,31 @@ export const updateUser = asyncHandler(async (req, res) => {
     return notFoundResponse(res, 'User not found');
   }
 
-  const { firstName, lastName, bio, role, status } = req.body;
+  const {
+    firstName,
+    lastName,
+    bio,
+    role,
+    status,
+    gender,
+    birthday,
+  } = req.body;
 
   if (firstName) user.firstName = firstName;
   if (lastName) user.lastName = lastName;
   if (bio !== undefined) user.bio = bio;
   if (role) user.role = role;
   if (status) user.status = status;
+  if (gender) user.gender = gender;
+  if (birthday !== undefined) user.birthday = birthday || null;
+
+  if (user.profileNeedsCompletion || (Array.isArray(user.profileMissingFields) && user.profileMissingFields.length > 0)) {
+    const missing = new Set(Array.isArray(user.profileMissingFields) ? user.profileMissingFields : []);
+    if (gender) missing.delete('gender');
+    if (birthday) missing.delete('birthday');
+    user.profileMissingFields = Array.from(missing);
+    user.profileNeedsCompletion = user.profileMissingFields.length > 0;
+  }
 
   await user.save();
 
@@ -172,11 +192,21 @@ export const deleteUser = asyncHandler(async (req, res) => {
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  const { firstName, lastName, bio } = req.body;
+  const { firstName, lastName, bio, gender, birthday } = req.body;
 
   if (firstName) user.firstName = firstName;
   if (lastName) user.lastName = lastName;
   if (bio !== undefined) user.bio = bio;
+  if (gender) user.gender = gender;
+  if (birthday !== undefined) user.birthday = birthday || null;
+
+  if (user.profileNeedsCompletion || (Array.isArray(user.profileMissingFields) && user.profileMissingFields.length > 0)) {
+    const missing = new Set(Array.isArray(user.profileMissingFields) ? user.profileMissingFields : []);
+    if (gender) missing.delete('gender');
+    if (birthday) missing.delete('birthday');
+    user.profileMissingFields = Array.from(missing);
+    user.profileNeedsCompletion = user.profileMissingFields.length > 0;
+  }
 
   await user.save();
 
@@ -225,9 +255,7 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
 export const deleteAvatar = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  if (!user.avatar) {
-    return badRequestResponse(res, 'No avatar to delete');
-  }
+  const defaultAvatar = getDefaultAvatarByGender(user.gender);
 
   try {
     await deleteAvatarFromStorage(user.avatar);
@@ -235,10 +263,14 @@ export const deleteAvatar = asyncHandler(async (req, res) => {
     console.error('Error deleting avatar:', error);
   }
 
-  user.avatar = null;
+  user.avatar = defaultAvatar;
   await user.save();
 
-  return successResponse(res, null, 'Avatar deleted successfully');
+  return successResponse(
+    res,
+    { avatar: defaultAvatar },
+    'Avatar reset to default successfully'
+  );
 });
 
 /**

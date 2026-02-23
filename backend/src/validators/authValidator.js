@@ -1,4 +1,4 @@
-import { body } from 'express-validator';
+import { body, query, param } from 'express-validator';
 
 export const registerValidator = [
   body('email')
@@ -27,6 +27,26 @@ export const registerValidator = [
     .isLength({ max: 50 })
     .withMessage('Last name cannot exceed 50 characters')
     .escape(),
+  body('gender')
+    .trim()
+    .toLowerCase()
+    .isIn(['male', 'female'])
+    .withMessage('Gender must be male or female'),
+  body('birthday')
+    .notEmpty()
+    .withMessage('Birthday is required')
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage('Birthday must be a valid date')
+    .custom((value) => {
+      const birthday = new Date(value);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (birthday > today) {
+        throw new Error('Birthday cannot be in the future');
+      }
+      return true;
+    })
+    .toDate(),
 ];
 
 export const loginValidator = [
@@ -36,6 +56,29 @@ export const loginValidator = [
     .withMessage('Please enter a valid email address')
     .normalizeEmail(),
   body('password').notEmpty().withMessage('Password is required'),
+];
+
+export const checkEmailValidator = [
+  query('email')
+    .trim()
+    .isEmail()
+    .withMessage('Please enter a valid email address')
+    .normalizeEmail(),
+];
+
+export const socialProviderValidator = [
+  param('provider')
+    .trim()
+    .toLowerCase()
+    .isIn(['google', 'facebook'])
+    .withMessage('Unsupported social provider'),
+];
+
+export const socialExchangeValidator = [
+  body('code')
+    .trim()
+    .notEmpty()
+    .withMessage('Social login code is required'),
 ];
 
 export const forgotPasswordValidator = [
@@ -75,6 +118,9 @@ export const verifyEmailValidator = [
 export default {
   registerValidator,
   loginValidator,
+  checkEmailValidator,
+  socialProviderValidator,
+  socialExchangeValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
   changePasswordValidator,

@@ -123,6 +123,7 @@ export function AboutPage() {
   ];
 
   const latest = latestArticles || [];
+  const aboutLatestTitleClass = 'text-base sm:text-lg lg:text-lg font-semibold text-dark-900 dark:text-white mt-1 leading-snug headline-hover line-clamp-2';
 
   return (
     <>
@@ -347,7 +348,7 @@ export function AboutPage() {
                       className="h-40 w-full object-cover"
                     />
                     <div className="p-4">
-                      <h3 className={cn(HOME_TYPE.cardTitleAll, 'line-clamp-2')}>{article.title}</h3>
+                      <h3 className={cn(aboutLatestTitleClass, 'line-clamp-2')}>{article.title}</h3>
                       <div className="mt-2 flex items-center justify-between text-xs text-dark-400">
                         <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatRelativeTime(article.publishedAt)}</span>
                         <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {article.readTime || `${article.wordCount ? Math.max(1, Math.round(article.wordCount / 200)) : 3} min`}</span>

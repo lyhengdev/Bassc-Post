@@ -19,6 +19,7 @@ import { csrfTokenGenerator, csrfProtection } from './middleware/csrf.js';
 import setupSocketIO from './config/socket.js';
 import cacheService from './services/cacheService.js';
 import logger from './services/loggerService.js';
+import backfillUserProfileFields from './utils/backfillUserProfileFields.js';
 
 // ES Module dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -48,6 +49,11 @@ app.use((req, res, next) => {
   });
   
   next();
+});
+
+// Silence automatic browser favicon probes on API origin
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
 });
 
 // Helmet security headers
@@ -201,6 +207,9 @@ const startServer = async () => {
     // Connect to database
     await connectDB();
     logger.info('Database connected');
+
+    // Backfill legacy user profile columns/default avatars
+    await backfillUserProfileFields();
     
     // Connect to cache (Redis or memory)
     await cacheService.connect();

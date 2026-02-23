@@ -7,6 +7,9 @@ import { loginRateLimiter, checkAccountLockout } from '../middleware/loginLimite
 import { getCsrfToken } from '../middleware/csrf.js';
 import {
   registerValidator,
+  checkEmailValidator,
+  socialProviderValidator,
+  socialExchangeValidator,
   loginValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
@@ -20,6 +23,38 @@ const router = Router();
 router.get('/csrf-token', getCsrfToken);
 
 // Public routes
+router.get(
+  '/check-email',
+  authLimiter,
+  checkEmailValidator,
+  validate,
+  authController.checkEmailAvailability
+);
+
+router.get(
+  '/social/:provider',
+  authLimiter,
+  socialProviderValidator,
+  validate,
+  authController.startSocialAuth
+);
+
+router.get(
+  '/social/:provider/callback',
+  authLimiter,
+  socialProviderValidator,
+  validate,
+  authController.socialAuthCallback
+);
+
+router.post(
+  '/social/exchange',
+  authLimiter,
+  socialExchangeValidator,
+  validate,
+  authController.socialExchange
+);
+
 router.post(
   '/register',
   authLimiter,

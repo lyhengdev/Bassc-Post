@@ -31,6 +31,26 @@ export const updateUserValidator = [
     .optional()
     .isIn(['active', 'inactive', 'suspended'])
     .withMessage('Invalid status'),
+  body('gender')
+    .optional()
+    .trim()
+    .toLowerCase()
+    .isIn(['male', 'female'])
+    .withMessage('Gender must be male or female'),
+  body('birthday')
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage('Birthday must be a valid date')
+    .custom((value) => {
+      const birthday = new Date(value);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (birthday > today) {
+        throw new Error('Birthday cannot be in the future');
+      }
+      return true;
+    })
+    .toDate(),
 ];
 
 export const updateProfileValidator = [
@@ -55,6 +75,26 @@ export const updateProfileValidator = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Bio cannot exceed 500 characters'),
+  body('gender')
+    .optional()
+    .trim()
+    .toLowerCase()
+    .isIn(['male', 'female'])
+    .withMessage('Gender must be male or female'),
+  body('birthday')
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage('Birthday must be a valid date')
+    .custom((value) => {
+      const birthday = new Date(value);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (birthday > today) {
+        throw new Error('Birthday cannot be in the future');
+      }
+      return true;
+    })
+    .toDate(),
 ];
 
 export const listUsersValidator = [

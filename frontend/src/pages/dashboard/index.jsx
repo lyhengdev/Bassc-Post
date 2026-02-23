@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, ExternalLink, Users, Layers, Activity } from 'lucide-react';
+import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, ExternalLink, Users, Layers, Activity, RotateCcw } from 'lucide-react';
 import { useDashboardSummary, useAnalyticsViews, useAnalyticsArticles, useAnalyticsAds, useMyArticles, useAdminArticles, usePendingArticles, useDeleteArticle, useApproveArticle, useRejectArticle, useUpdateProfile } from '../../hooks/useApi';
 import { usersAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
@@ -1086,6 +1086,69 @@ export function PendingArticlesPage() {
   );
 }
 
+const PROFILE_AVATAR_CROP_BOX_SIZE = 288;
+const PROFILE_AVATAR_EXPORT_SIZE = 640;
+
+const createProfileAvatarEditorState = () => ({
+  isOpen: false,
+  src: '',
+  fileName: 'avatar.jpg',
+  naturalWidth: 0,
+  naturalHeight: 0,
+  position: { x: 0, y: 0 },
+  zoom: 1,
+  rotation: 0,
+});
+
+const loadProfileImageFromUrl = (src) => {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Invalid image'));
+    image.src = src;
+  });
+};
+
+const renderProfileAvatarBlob = async ({ src, position, zoom, rotation }) => {
+  const image = await loadProfileImageFromUrl(src);
+  const canvas = document.createElement('canvas');
+  canvas.width = PROFILE_AVATAR_EXPORT_SIZE;
+  canvas.height = PROFILE_AVATAR_EXPORT_SIZE;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Unable to process image');
+  }
+
+  const baseCoverScale = Math.max(
+    PROFILE_AVATAR_CROP_BOX_SIZE / image.naturalWidth,
+    PROFILE_AVATAR_CROP_BOX_SIZE / image.naturalHeight
+  );
+  const outputRatio = PROFILE_AVATAR_EXPORT_SIZE / PROFILE_AVATAR_CROP_BOX_SIZE;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(
+    canvas.width / 2 + position.x * outputRatio,
+    canvas.height / 2 + position.y * outputRatio
+  );
+  ctx.rotate((rotation * Math.PI) / 180);
+  ctx.scale(baseCoverScale * zoom * outputRatio, baseCoverScale * zoom * outputRatio);
+  ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+  ctx.restore();
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Unable to process image'));
+        return;
+      }
+      resolve(blob);
+    }, 'image/jpeg', 0.92);
+  });
+};
+
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
   const { mutate: updateProfile, isPending } = useUpdateProfile();
@@ -1094,9 +1157,10 @@ export function ProfilePage() {
     lastName: '',
     bio: '',
   });
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarEditor, setAvatarEditor] = useState(createProfileAvatarEditorState);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isCropDragging, setIsCropDragging] = useState(false);
+  const dragStateRef = useRef({ active: false, lastX: 0, lastY: 0 });
 
   useEffect(() => {
     if (user) {
@@ -1108,40 +1172,154 @@ export function ProfilePage() {
     }
   }, [user]);
 
+  const cropPreviewImageStyle = useMemo(() => {
+    if (!avatarEditor.naturalWidth || !avatarEditor.naturalHeight) {
+      return {};
+    }
+    const coverScale = Math.max(
+      PROFILE_AVATAR_CROP_BOX_SIZE / avatarEditor.naturalWidth,
+      PROFILE_AVATAR_CROP_BOX_SIZE / avatarEditor.naturalHeight
+    );
+    return {
+      width: `${avatarEditor.naturalWidth * coverScale}px`,
+      height: `${avatarEditor.naturalHeight * coverScale}px`,
+    };
+  }, [avatarEditor.naturalHeight, avatarEditor.naturalWidth]);
+
+  const closeAvatarEditor = () => {
+    dragStateRef.current.active = false;
+    setIsCropDragging(false);
+    setAvatarEditor((prev) => {
+      if (prev.src?.startsWith('blob:')) {
+        URL.revokeObjectURL(prev.src);
+      }
+      return createProfileAvatarEditorState();
+    });
+  };
+
+  useEffect(() => {
+    if (!avatarEditor.isOpen) return undefined;
+
+    const updateDrag = (clientX, clientY) => {
+      const drag = dragStateRef.current;
+      if (!drag.active) return;
+
+      const deltaX = clientX - drag.lastX;
+      const deltaY = clientY - drag.lastY;
+      drag.lastX = clientX;
+      drag.lastY = clientY;
+
+      setAvatarEditor((prev) => ({
+        ...prev,
+        position: {
+          x: prev.position.x + deltaX,
+          y: prev.position.y + deltaY,
+        },
+      }));
+    };
+
+    const endDrag = () => {
+      if (!dragStateRef.current.active) return;
+      dragStateRef.current.active = false;
+      setIsCropDragging(false);
+    };
+
+    const handleMouseMove = (event) => {
+      updateDrag(event.clientX, event.clientY);
+    };
+
+    const handleTouchMove = (event) => {
+      if (!dragStateRef.current.active) return;
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      event.preventDefault();
+      updateDrag(touch.clientX, touch.clientY);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', endDrag);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', endDrag);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', endDrag);
+    };
+  }, [avatarEditor.isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarEditor.src?.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarEditor.src);
+      }
+    };
+  }, [avatarEditor.src]);
+
   if (!user) {
     return <ContentLoader />;
   }
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB');
-        return;
-      }
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
+    e.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    try {
+      const image = await loadProfileImageFromUrl(previewUrl);
+      setAvatarEditor((prev) => {
+        if (prev.src?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev.src);
+        }
+        return {
+          ...createProfileAvatarEditorState(),
+          isOpen: true,
+          src: previewUrl,
+          fileName: file.name || 'avatar.jpg',
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+        };
+      });
+    } catch {
+      URL.revokeObjectURL(previewUrl);
+      toast.error('Could not read this image');
     }
   };
 
   const handleAvatarUpload = async () => {
-    if (!avatarFile) return;
+    if (!avatarEditor.src) return;
     
     setIsUploadingAvatar(true);
     try {
+      const croppedBlob = await renderProfileAvatarBlob({
+        src: avatarEditor.src,
+        position: avatarEditor.position,
+        zoom: avatarEditor.zoom,
+        rotation: avatarEditor.rotation,
+      });
+      const safeName = (avatarEditor.fileName || 'avatar').replace(/\.[^/.]+$/, '');
+      const croppedFile = new File([croppedBlob], `${safeName}-edited.jpg`, { type: 'image/jpeg' });
       const formData = new FormData();
-      formData.append('avatar', avatarFile);
+      formData.append('avatar', croppedFile);
       const response = await usersAPI.uploadAvatar(formData);
       const avatar = response?.data?.data?.avatar;
       if (avatar) {
         setUser({ ...user, avatar });
-        setAvatarFile(null);
-        setAvatarPreview(null);
         toast.success('Profile picture updated!');
+        closeAvatarEditor();
       } else {
         toast.error('Upload failed');
       }
@@ -1163,10 +1341,9 @@ export function ProfilePage() {
       <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Profile</h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card p-6 text-center">
-          {/* Avatar with upload */}
           <div className="relative inline-block mb-4">
             <Avatar 
-              src={avatarPreview || user?.avatar} 
+              src={buildMediaUrl(user?.avatar)} 
               name={user?.fullName} 
               size="xl" 
               className="mx-auto"
@@ -1185,32 +1362,7 @@ export function ProfilePage() {
               />
             </label>
           </div>
-          
-          {/* Upload Button */}
-          {avatarFile && (
-            <div className="mb-4 space-y-2">
-              <p className="text-sm text-dark-500 truncate">{avatarFile.name}</p>
-              <div className="flex gap-2 justify-center">
-                <Button 
-                  size="sm" 
-                  onClick={handleAvatarUpload} 
-                  isLoading={isUploadingAvatar}
-                >
-                  Upload
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="secondary"
-                  onClick={() => {
-                    setAvatarFile(null);
-                    setAvatarPreview(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
+          <p className="mb-4 text-xs text-dark-500">Tap the camera icon to choose, crop, and update your photo.</p>
           
           <h2 className="text-2xl font-semibold text-dark-900 dark:text-white">{user?.fullName}</h2>
           <p className="text-dark-500">{user?.email}</p>
@@ -1228,6 +1380,125 @@ export function ProfilePage() {
           </form>
         </div>
       </div>
+      <Modal
+        isOpen={avatarEditor.isOpen}
+        onClose={() => {
+          if (!isUploadingAvatar) {
+            closeAvatarEditor();
+          }
+        }}
+        title="Edit Profile Picture"
+        size="lg"
+      >
+        <div className="space-y-6">
+          <div className="mx-auto w-full max-w-sm">
+            <div
+              className={`relative mx-auto h-72 w-72 overflow-hidden rounded-full border-4 border-primary-200 dark:border-primary-900 bg-dark-100 dark:bg-dark-800 select-none touch-none ${
+                isCropDragging ? 'cursor-grabbing' : 'cursor-grab'
+              }`}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                dragStateRef.current = {
+                  active: true,
+                  lastX: event.clientX,
+                  lastY: event.clientY,
+                };
+                setIsCropDragging(true);
+              }}
+              onTouchStart={(event) => {
+                const touch = event.touches?.[0];
+                if (!touch) return;
+                dragStateRef.current = {
+                  active: true,
+                  lastX: touch.clientX,
+                  lastY: touch.clientY,
+                };
+                setIsCropDragging(true);
+              }}
+            >
+              {avatarEditor.src && (
+                <img
+                  src={avatarEditor.src}
+                  alt="Avatar crop preview"
+                  className="pointer-events-none absolute left-1/2 top-1/2 max-w-none"
+                  style={{
+                    ...cropPreviewImageStyle,
+                    transform: `translate(calc(-50% + ${avatarEditor.position.x}px), calc(-50% + ${avatarEditor.position.y}px)) scale(${avatarEditor.zoom}) rotate(${avatarEditor.rotation}deg)`,
+                    transformOrigin: 'center',
+                  }}
+                />
+              )}
+              <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/70" />
+            </div>
+            <p className="mt-2 text-center text-xs text-dark-500">Drag image to reposition inside the circle</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <div className="mb-1 flex items-center justify-between text-sm text-dark-600 dark:text-dark-300">
+                <span>Zoom</span>
+                <span>{avatarEditor.zoom.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.01"
+                value={avatarEditor.zoom}
+                onChange={(event) => setAvatarEditor((prev) => ({ ...prev, zoom: Number(event.target.value) }))}
+                className="w-full accent-primary-600"
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between text-sm text-dark-600 dark:text-dark-300">
+                <span>Rotation</span>
+                <span>{avatarEditor.rotation}&deg;</span>
+              </div>
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                step="1"
+                value={avatarEditor.rotation}
+                onChange={(event) => setAvatarEditor((prev) => ({ ...prev, rotation: Number(event.target.value) }))}
+                className="w-full accent-primary-600"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (!isUploadingAvatar) {
+                  closeAvatarEditor();
+                }
+              }}
+              disabled={isUploadingAvatar}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              leftIcon={<RotateCcw className="h-4 w-4" />}
+              onClick={() => setAvatarEditor((prev) => ({ ...prev, position: { x: 0, y: 0 }, zoom: 1, rotation: 0 }))}
+              disabled={isUploadingAvatar}
+            >
+              Reset
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAvatarUpload}
+              isLoading={isUploadingAvatar}
+            >
+              Done & Update
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

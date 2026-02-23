@@ -43,6 +43,7 @@ const CONFIG = {
     '/auth/login',
     '/auth/register',
     '/auth/refresh',
+    '/auth/social/exchange',
     '/auth/forgot-password',
     '/auth/reset-password',
     '/auth/verify-email',

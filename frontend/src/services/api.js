@@ -139,8 +139,10 @@ fetchCsrfToken().catch(() => {});
 
 // Auth API
 export const authAPI = {
+  checkEmail: (email) => api.get('/auth/check-email', { params: { email } }),
   login: (data) => api.post('/auth/login', data),
   register: (data) => api.post('/auth/register', data),
+  socialExchange: (code) => api.post('/auth/social/exchange', { code }),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),

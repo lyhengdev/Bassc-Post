@@ -389,7 +389,18 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: (data) => usersAPI.updateProfile(data),
     onSuccess: (response) => {
-      updateUser(response.data.data.user);
+      const rawUser = response?.data?.data?.user;
+      const normalizedUser = rawUser
+        ? {
+            ...rawUser,
+            profileCompletionRequired: Boolean(rawUser.profileNeedsCompletion),
+            profileMissingFields: Array.isArray(rawUser.profileMissingFields)
+              ? rawUser.profileMissingFields
+              : [],
+          }
+        : rawUser;
+
+      updateUser(normalizedUser);
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       toast.success('Profile updated successfully');
     },

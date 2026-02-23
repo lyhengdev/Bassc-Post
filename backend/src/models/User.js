@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import {
+  getDefaultAvatarByGender,
+  isAvatarMissing,
+  isDefaultAvatar,
+  normalizeGender,
+} from '../utils/userProfile.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -34,9 +40,36 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'editor', 'writer', 'user'],
       default: 'user',
     },
+    googleId: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
+    facebookId: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female'],
+      default: 'male',
+    },
+    birthday: {
+      type: Date,
+      default: null,
+      validate: {
+        validator: (value) => !value || value <= new Date(),
+        message: 'Birthday cannot be in the future',
+      },
+    },
     avatar: {
       type: String,
-      default: null,
+      default: function () {
+        return getDefaultAvatarByGender(this.gender);
+      },
     },
     bio: {
       type: String,
@@ -51,6 +84,17 @@ const userSchema = new mongoose.Schema(
     isEmailVerified: {
       type: Boolean,
       default: false,
+    },
+    profileNeedsCompletion: {
+      type: Boolean,
+      default: false,
+    },
+    profileMissingFields: {
+      type: [{
+        type: String,
+        enum: ['gender', 'birthday'],
+      }],
+      default: [],
     },
     emailVerificationToken: {
       type: String,
@@ -81,7 +125,10 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function (doc, ret) {
+      transform: function (_doc, ret) {
+        if (isAvatarMissing(ret.avatar)) {
+          ret.avatar = getDefaultAvatarByGender(ret.gender);
+        }
         delete ret.password;
         delete ret.__v;
         return ret;
@@ -99,6 +146,17 @@ userSchema.virtual('fullName').get(function () {
 // Index for faster queries (email index is auto-created by unique: true)
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ createdAt: -1 });
+
+// Ensure normalized gender and default avatar are always persisted
+userSchema.pre('validate', function (next) {
+  this.gender = normalizeGender(this.gender);
+
+  if (isAvatarMissing(this.avatar) || (this.isModified('gender') && isDefaultAvatar(this.avatar))) {
+    this.avatar = getDefaultAvatarByGender(this.gender);
+  }
+
+  next();
+});
 
 // Pre-save middleware to hash password
 userSchema.pre('save', async function (next) {

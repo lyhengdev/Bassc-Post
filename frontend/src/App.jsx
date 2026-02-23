@@ -18,6 +18,8 @@ const CategoryPage = lazy(() => import('./pages/public/articles.jsx').then((m) =
 const CategoriesListPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.CategoriesListPage })));
 const LoginPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.RegisterPage })));
+const SocialAuthCallbackPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.SocialAuthCallbackPage })));
+const CompleteProfilePage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.CompleteProfilePage })));
 const ContactPage = lazy(() => import('./pages/public/misc.jsx').then((m) => ({ default: m.ContactPage })));
 const AboutPage = lazy(() => import('./pages/public/misc.jsx').then((m) => ({ default: m.AboutPage })));
 const AccountPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.AccountPage })));
@@ -54,6 +56,13 @@ const AdCollectionsPage = lazy(() => import('./pages/dashboard/ad-collections/Ad
 const CreateCollectionWizard = lazy(() => import('./pages/dashboard/ad-collections/CreateCollectionWizard.jsx'));
 const AdFormPage = lazy(() => import('./pages/dashboard/AdFormPage.jsx'));
 
+function getPostLoginPath(user) {
+  if (!user) return '/';
+  if (user.profileCompletionRequired) return '/complete-profile';
+  if (user.role === 'user') return '/';
+  return '/dashboard';
+}
+
 // Protected Route Component - for writer/editor/admin
 function ProtectedRoute({ children, roles }) {
   const { isAuthenticated, user } = useAuthStore();
@@ -61,6 +70,10 @@ function ProtectedRoute({ children, roles }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user?.profileCompletionRequired) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   // Users with 'user' role should not access dashboard
@@ -76,11 +89,15 @@ function ProtectedRoute({ children, roles }) {
 }
 
 function AccountRoute({ children }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const location = useLocation();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user?.profileCompletionRequired) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   return children;
@@ -91,13 +108,24 @@ function GuestRoute({ children }) {
   const { isAuthenticated, user } = useAuthStore();
   
   if (isAuthenticated) {
-    // Users go to homepage, staff goes to dashboard
-    if (user?.role === 'user') {
-      return <Navigate to="/" replace />;
-    }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getPostLoginPath(user)} replace />;
   }
   
+  return children;
+}
+
+function CompleteProfileRoute({ children }) {
+  const { isAuthenticated, user } = useAuthStore();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!user?.profileCompletionRequired) {
+    return <Navigate to={getPostLoginPath(user)} replace />;
+  }
+
   return children;
 }
 
@@ -194,6 +222,22 @@ export default function App() {
               <GuestRoute>
                 <RegisterPage />
               </GuestRoute>
+            }
+          />
+          <Route
+            path="/auth/social/callback"
+            element={
+              <GuestRoute>
+                <SocialAuthCallbackPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/complete-profile"
+            element={
+              <CompleteProfileRoute>
+                <CompleteProfilePage />
+              </CompleteProfileRoute>
             }
           />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
