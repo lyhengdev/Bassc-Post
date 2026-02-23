@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { UserPlus, Edit, Trash2, Users as UsersIcon, Mail, Shield } from 'lucide-react';
+import { Edit, Trash2, Users as UsersIcon, Mail, Shield } from 'lucide-react';
 import { useUsers, useUpdateUser, useDeleteUser } from '../../hooks/useApi';
 import { Button, Input, Modal, ContentLoader, EmptyState, Avatar, Badge, ConfirmModal } from '../../components/common/index.jsx';
 import { formatRelativeTime } from '../../utils';

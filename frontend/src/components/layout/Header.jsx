@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {Link, NavLink, useNavigate, useLocation} from 'react-router-dom';
 import {
     Search,
+    X,
     Sun,
     Moon,
     User,
@@ -10,14 +11,19 @@ import {
 } from 'lucide-react';
 import {useAuthStore, useThemeStore} from '../../stores/authStore';
 import {useLogout, useCategories, usePublicSettings} from '../../hooks/useApi';
-import {Button, Avatar} from '../common/index.jsx';
+import {Avatar} from '../common/index.jsx';
 import {NotificationDropdown} from '../common/NotificationDropdown.jsx';
 import {cn, buildMediaUrl} from '../../utils';
+
+const SEARCH_OVERLAY_ANIMATION_MS = 220;
 
 export default function Header() {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [searchOverlayVisible, setSearchOverlayVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const searchInputRef = useRef(null);
+    const searchCloseTimerRef = useRef(null);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -167,14 +173,94 @@ export default function Header() {
         );
     };
 
+    const openSearchOverlay = () => {
+        if (searchCloseTimerRef.current) {
+            window.clearTimeout(searchCloseTimerRef.current);
+            searchCloseTimerRef.current = null;
+        }
+        setSearchOverlayVisible(true);
+        setSearchOpen(true);
+    };
+
+    const closeSearchOverlay = () => {
+        if (!searchOpen && !searchOverlayVisible && !searchCloseTimerRef.current) {
+            return;
+        }
+        setSearchOpen(false);
+        if (searchCloseTimerRef.current) {
+            window.clearTimeout(searchCloseTimerRef.current);
+        }
+        searchCloseTimerRef.current = window.setTimeout(() => {
+            setSearchOverlayVisible(false);
+            searchCloseTimerRef.current = null;
+        }, SEARCH_OVERLAY_ANIMATION_MS);
+    };
+
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
             navigate(`/articles?q=${encodeURIComponent(searchQuery)}`);
             setSearchQuery('');
-            setSearchOpen(false);
+            closeSearchOverlay();
         }
     };
+
+    useEffect(() => {
+        if (!searchOpen) return;
+        const timer = window.setTimeout(() => {
+            searchInputRef.current?.focus();
+        }, 10);
+        return () => window.clearTimeout(timer);
+    }, [searchOpen]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        const originalOverflow = document.body.style.overflow;
+        if (searchOverlayVisible) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = originalOverflow || '';
+        }
+        return () => {
+            document.body.style.overflow = originalOverflow || '';
+        };
+    }, [searchOverlayVisible]);
+
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            const targetTag = event.target?.tagName;
+            const isTypingTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(targetTag) || event.target?.isContentEditable;
+
+            if (event.key === 'Escape' && searchOpen) {
+                closeSearchOverlay();
+                return;
+            }
+
+            if (!showSearchToggle || isTypingTarget) return;
+
+            const isShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+            const isSlash = event.key === '/';
+            if (isShortcut || isSlash) {
+                event.preventDefault();
+                openSearchOverlay();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [searchOpen, showSearchToggle]);
+
+    useEffect(() => {
+        closeSearchOverlay();
+    }, [location.pathname, location.search]);
+
+    useEffect(() => {
+        return () => {
+            if (searchCloseTimerRef.current) {
+                window.clearTimeout(searchCloseTimerRef.current);
+            }
+        };
+    }, []);
 
     const closeUserMenu = () => setUserMenuOpen(false);
     const profilePath = canAccessDashboard ? '/dashboard/profile' : '/account';
@@ -274,8 +360,10 @@ export default function Header() {
                             {/* Search */}
                             {showSearchToggle && (
                                 <button
-                                    onClick={() => setSearchOpen(!searchOpen)}
+                                    onClick={openSearchOverlay}
                                     className="p-2 text-dark-500 hover:text-dark-900 dark:hover:text-white transition-colors"
+                                    aria-label="Open search"
+                                    title="Search (Ctrl/Cmd + K)"
                                 >
                                     <Search className="w-5 h-5"/>
                                 </button>
@@ -381,22 +469,115 @@ export default function Header() {
                 </div>
             )}
 
-            {/* Search Bar */}
-            {searchOpen && showSearchToggle && (
-                <div className="absolute top-full left-0 right-0 bg-white dark:bg-dark-900 border-b border-dark-200 dark:border-dark-700 shadow-lg py-4">
-                    <form onSubmit={handleSearch} className="container-custom">
-                        <div className="relative max-w-2xl mx-auto">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400"/>
-                            <input
-                                type="text"
-                                placeholder="Search news, topics..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 border border-dark-200 dark:border-dark-600 rounded-lg bg-white dark:bg-dark-800 text-dark-900 dark:text-white placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                autoFocus
-                            />
+            {/* Search Overlay */}
+            {searchOverlayVisible && showSearchToggle && (
+                <div
+                    className={cn(
+                        'fixed inset-0 z-[70] bg-dark-950/45 backdrop-blur-sm transition-opacity duration-200 ease-out',
+                        searchOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                    )}
+                    onClick={closeSearchOverlay}
+                >
+                    <div className="container-custom pt-20 sm:pt-24" onClick={(event) => event.stopPropagation()}>
+                        <div
+                            className={cn(
+                                'mx-auto max-w-3xl overflow-hidden rounded-2xl border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 shadow-2xl transition-all duration-200 ease-out',
+                                searchOpen ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-[0.98] opacity-0'
+                            )}
+                        >
+                            <form onSubmit={handleSearch} className="border-b border-dark-200 dark:border-dark-700 p-3 sm:p-4">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400"/>
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            placeholder="Search news, topics, categories..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full rounded-full border border-dark-200 dark:border-dark-600 bg-dark-50 dark:bg-dark-800 py-3 pl-12 pr-10 text-dark-900 dark:text-white placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchQuery('')}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-dark-200 dark:hover:bg-dark-700"
+                                                aria-label="Clear search"
+                                            >
+                                                <X className="w-4 h-4 text-dark-400" />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="inline-flex items-center justify-center rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
+                                    >
+                                        Search
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={closeSearchOverlay}
+                                        className="hidden sm:inline-flex items-center justify-center rounded-full border border-dark-200 dark:border-dark-700 px-4 py-2.5 text-sm font-semibold text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div className="space-y-4 p-4 sm:p-5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-dark-400">Quick Jump</p>
+                                    <span className="hidden sm:inline text-xs text-dark-400">Press <kbd className="rounded bg-dark-100 dark:bg-dark-800 px-1.5 py-0.5">Esc</kbd> to close</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Link
+                                        to="/articles"
+                                        onClick={closeSearchOverlay}
+                                        className="rounded-full bg-dark-100 dark:bg-dark-800 px-3 py-1.5 text-sm text-dark-700 dark:text-dark-200 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                                    >
+                                        All News
+                                    </Link>
+                                    <Link
+                                        to="/categories"
+                                        onClick={closeSearchOverlay}
+                                        className="rounded-full bg-dark-100 dark:bg-dark-800 px-3 py-1.5 text-sm text-dark-700 dark:text-dark-200 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                                    >
+                                        Categories
+                                    </Link>
+                                    <Link
+                                        to="/about"
+                                        onClick={closeSearchOverlay}
+                                        className="rounded-full bg-dark-100 dark:bg-dark-800 px-3 py-1.5 text-sm text-dark-700 dark:text-dark-200 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
+                                    >
+                                        About
+                                    </Link>
+                                </div>
+
+                                {Array.isArray(categories) && categories.length > 0 && (
+                                    <div>
+                                        <p className="text-xs uppercase tracking-[0.2em] text-dark-400 mb-2">Trending Topics</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {categories.slice(0, 10).map((cat) => (
+                                                <Link
+                                                    key={cat._id}
+                                                    to={`/category/${cat.slug}`}
+                                                    onClick={closeSearchOverlay}
+                                                    className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+                                                    style={{
+                                                        borderColor: `${cat.color || '#64748b'}55`,
+                                                        color: cat.color || '#64748b',
+                                                        backgroundColor: `${cat.color || '#64748b'}14`,
+                                                    }}
+                                                >
+                                                    {cat.name}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
             )}
 

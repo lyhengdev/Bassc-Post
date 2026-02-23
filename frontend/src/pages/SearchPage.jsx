@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search, Filter, X, Clock, TrendingUp, Sparkles } from 'lucide-react';
+import { Search, Filter, X, Clock, Sparkles } from 'lucide-react';
 import api from '../services/api';
 
 export default function SearchPage() {

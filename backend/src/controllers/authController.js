@@ -1,6 +1,5 @@
 import { User } from '../models/index.js';
 import { generateTokens, verifyRefreshToken, generateEmailVerificationToken, generatePasswordResetToken } from '../utils/jwt.js';
-import { generateRandomString } from '../utils/helpers.js';
 import emailService from '../services/emailService.js';
 import { recordFailedAttempt, clearFailedAttempts } from '../middleware/loginLimiter.js';
 import logger from '../services/loggerService.js';

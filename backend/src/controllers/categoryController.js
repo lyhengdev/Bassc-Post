@@ -1,5 +1,4 @@
 import { Category, Article } from '../models/index.js';
-import { parsePaginationParams } from '../utils/helpers.js';
 import {
   successResponse,
   createdResponse,

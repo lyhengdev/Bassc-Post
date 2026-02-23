@@ -1,8 +1,110 @@
 import { Link } from 'react-router-dom';
 import { Clock, Eye, User } from 'lucide-react';
-import { cn, formatRelativeTime, formatDate, truncate, getCategoryAccent, buildMediaUrl } from '../../utils';
+import { cn, formatRelativeTime, formatDate, truncate, buildMediaUrl } from '../../utils';
 import { Badge } from '../common/index.jsx';
 import { BodyAd } from '../ads/index.js';
+
+const URL_REGEX = /https?:\/\/[^\s<>"']+/gi;
+const TRAILING_URL_PUNCTUATION_REGEX = /[),.;:!?]+$/;
+
+function splitTrailingUrlPunctuation(urlText) {
+  const trailingMatch = urlText.match(TRAILING_URL_PUNCTUATION_REGEX);
+  if (!trailingMatch) {
+    return { url: urlText, trailing: '' };
+  }
+
+  const trailing = trailingMatch[0];
+  return {
+    url: urlText.slice(0, -trailing.length),
+    trailing,
+  };
+}
+
+function isHttpUrl(value) {
+  try {
+    const parsedUrl = new URL(value);
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function renderLinkifiedText(text, doc) {
+  URL_REGEX.lastIndex = 0;
+  const fragment = doc.createDocumentFragment();
+  let lastIndex = 0;
+  let match = null;
+
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    const matchedText = match[0];
+    const startIndex = match.index;
+    const endIndex = startIndex + matchedText.length;
+
+    if (startIndex > lastIndex) {
+      fragment.appendChild(doc.createTextNode(text.slice(lastIndex, startIndex)));
+    }
+
+    const { url, trailing } = splitTrailingUrlPunctuation(matchedText);
+    if (url && isHttpUrl(url)) {
+      const anchor = doc.createElement('a');
+      anchor.href = url;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer nofollow';
+      anchor.textContent = url;
+      fragment.appendChild(anchor);
+
+      if (trailing) {
+        fragment.appendChild(doc.createTextNode(trailing));
+      }
+    } else {
+      fragment.appendChild(doc.createTextNode(matchedText));
+    }
+
+    lastIndex = endIndex;
+  }
+
+  if (lastIndex < text.length) {
+    fragment.appendChild(doc.createTextNode(text.slice(lastIndex)));
+  }
+
+  return fragment;
+}
+
+function linkifyHtml(rawHtml) {
+  if (typeof rawHtml !== 'string' || !rawHtml.trim()) return rawHtml;
+
+  if (typeof DOMParser === 'undefined' || typeof document === 'undefined') {
+    return rawHtml;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${rawHtml}</div>`, 'text/html');
+  const root = doc.body.firstElementChild;
+  if (!root) return rawHtml;
+
+  const showText = typeof NodeFilter !== 'undefined' ? NodeFilter.SHOW_TEXT : 4;
+  const walker = doc.createTreeWalker(root, showText);
+  const textNodes = [];
+
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode;
+    const parentTagName = textNode?.parentElement?.tagName;
+    if (!textNode?.nodeValue?.trim()) continue;
+    if (parentTagName && ['A', 'SCRIPT', 'STYLE', 'CODE', 'PRE'].includes(parentTagName)) continue;
+
+    URL_REGEX.lastIndex = 0;
+    if (URL_REGEX.test(textNode.nodeValue)) {
+      textNodes.push(textNode);
+    }
+  }
+
+  textNodes.forEach((textNode) => {
+    const fragment = renderLinkifiedText(textNode.nodeValue || '', doc);
+    textNode.parentNode?.replaceChild(fragment, textNode);
+  });
+
+  return root.innerHTML;
+}
 
 // ==================== ARTICLE CARD ====================
 export function ArticleCard({ article, variant = 'default', index = 0, priority = false }) {
@@ -212,7 +314,7 @@ export function ArticleContent({ content, inArticleAds = {}, onAdImpression, onA
   let paragraphCount = 0;
 
   return (
-    <div className="article-content prose prose-lg max-w-none dark:prose-invert">
+    <div className="article-content prose prose-lg max-w-none break-words dark:prose-invert">
       {content.blocks.map((block, index) => {
         const blockElement = <Block key={block.id || index} block={block} />;
 
@@ -254,18 +356,18 @@ function Block({ block }) {
 
   switch (type) {
     case 'paragraph':
-      return <p dangerouslySetInnerHTML={{ __html: data.text }} />;
+      return <p dangerouslySetInnerHTML={{ __html: linkifyHtml(data.text) }} />;
 
     case 'header':
       const HeadingTag = `h${data.level}`;
-      return <HeadingTag dangerouslySetInnerHTML={{ __html: data.text }} />;
+      return <HeadingTag dangerouslySetInnerHTML={{ __html: linkifyHtml(data.text) }} />;
 
     case 'list':
       const ListTag = data.style === 'ordered' ? 'ol' : 'ul';
       return (
         <ListTag>
           {data.items.map((item, i) => (
-            <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+            <li key={i} dangerouslySetInnerHTML={{ __html: linkifyHtml(item) }} />
           ))}
         </ListTag>
       );
@@ -273,7 +375,7 @@ function Block({ block }) {
     case 'quote':
       return (
         <blockquote>
-          <p dangerouslySetInnerHTML={{ __html: data.text }} />
+          <p dangerouslySetInnerHTML={{ __html: linkifyHtml(data.text) }} />
           {data.caption && (
             <cite className="block mt-2 text-sm not-italic">
               — {data.caption}
@@ -337,7 +439,7 @@ function Block({ block }) {
                     <td
                       key={cellIndex}
                       className="px-4 py-2 border border-dark-200 dark:border-dark-700"
-                      dangerouslySetInnerHTML={{ __html: cell }}
+                      dangerouslySetInnerHTML={{ __html: linkifyHtml(cell) }}
                     />
                   ))}
                 </tr>

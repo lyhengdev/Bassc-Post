@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { BarChart3, TrendingUp, Eye, FileText, Users, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
-import { formatNumber, formatRelativeTime } from '../../utils';
+import { formatNumber } from '../../utils';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Clock, Eye, TrendingUp } from 'lucide-react';
-import { formatRelativeTime, formatDate, cn, getCategoryAccent, buildMediaUrl } from '../../utils';
+import { formatRelativeTime, cn, getCategoryAccent, buildMediaUrl } from '../../utils';
 
 /**
  * Modern News Card Component

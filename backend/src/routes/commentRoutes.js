@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, optionalAuth, isEditor, isAdmin } from '../middleware/auth.js';
+import { authenticate, optionalAuth, isEditor } from '../middleware/auth.js';
 import { validateObjectId } from '../middleware/validation.js';
 import {
   getArticleComments,

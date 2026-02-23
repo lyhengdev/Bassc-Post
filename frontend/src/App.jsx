@@ -11,23 +11,23 @@ import {
   LazyLoadFallback 
 } from './components/common/index.jsx';
 
-const HomePage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.HomePage })));
-const ArticlesPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ArticlesPage })));
-const ArticlePage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ArticlePage })));
-const CategoryPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.CategoryPage })));
-const CategoriesListPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.CategoriesListPage })));
-const LoginPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.RegisterPage })));
-const ContactPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ContactPage })));
-const AboutPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.AboutPage })));
-const AccountPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.AccountPage })));
-const PreviewPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.PreviewPage })));
-const PreviewByIdPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.PreviewByIdPage })));
-const VerifyEmailPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.VerifyEmailPage })));
-const NewsletterConfirmPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.NewsletterConfirmPage })));
-const NewsletterUnsubscribePage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.NewsletterUnsubscribePage })));
-const ForgotPasswordPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ForgotPasswordPage })));
-const ResetPasswordPage = lazy(() => import('./pages/public/index.jsx').then((m) => ({ default: m.ResetPasswordPage })));
+const HomePage = lazy(() => import('./pages/public/home.jsx').then((m) => ({ default: m.HomePage })));
+const ArticlesPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.ArticlesPage })));
+const ArticlePage = lazy(() => import('./pages/public/article-detail.jsx').then((m) => ({ default: m.ArticlePage })));
+const CategoryPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.CategoryPage })));
+const CategoriesListPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.CategoriesListPage })));
+const LoginPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.RegisterPage })));
+const ContactPage = lazy(() => import('./pages/public/misc.jsx').then((m) => ({ default: m.ContactPage })));
+const AboutPage = lazy(() => import('./pages/public/misc.jsx').then((m) => ({ default: m.AboutPage })));
+const AccountPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.AccountPage })));
+const PreviewPage = lazy(() => import('./pages/public/misc.jsx').then((m) => ({ default: m.PreviewPage })));
+const PreviewByIdPage = lazy(() => import('./pages/public/misc.jsx').then((m) => ({ default: m.PreviewByIdPage })));
+const VerifyEmailPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.VerifyEmailPage })));
+const NewsletterConfirmPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.NewsletterConfirmPage })));
+const NewsletterUnsubscribePage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.NewsletterUnsubscribePage })));
+const ForgotPasswordPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/public/auth.jsx').then((m) => ({ default: m.ResetPasswordPage })));
 
 const DashboardHome = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.DashboardHome })));
 const MyArticlesPage = lazy(() => import('./pages/dashboard/index.jsx').then((m) => ({ default: m.MyArticlesPage })));

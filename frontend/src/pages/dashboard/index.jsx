@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, XCircle, ExternalLink, Users, Layers, Activity } from 'lucide-react';
+import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, ExternalLink, Users, Layers, Activity } from 'lucide-react';
 import { useDashboardSummary, useAnalyticsViews, useAnalyticsArticles, useAnalyticsAds, useMyArticles, useAdminArticles, usePendingArticles, useDeleteArticle, useApproveArticle, useRejectArticle, useUpdateProfile } from '../../hooks/useApi';
 import { usersAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';

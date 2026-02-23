@@ -8,7 +8,7 @@ import {
 import { cn, formatRelativeTime } from '../../utils';
 import { resolveNotificationLink } from '../../utils/notificationLink';
 import useNotificationStore from '../../stores/notificationStore';
-import { Button, Badge, Avatar } from '../common/index.jsx';
+import { Button } from '../common/index.jsx';
 
 // Notification type icons
 const typeIcons = {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Save, X, Eye, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Save, X, Plus, Trash2, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import PlacementPicker from '../../components/campaigns/PlacementPicker';

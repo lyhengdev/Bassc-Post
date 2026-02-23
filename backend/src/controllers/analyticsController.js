@@ -1,5 +1,5 @@
 import { Article, User, Category, AdStatsDaily } from '../models/index.js';
-import { PageView, SiteAnalytics, AILog, analyticsHelpers } from '../models/Analytics.js';
+import { PageView, AILog } from '../models/Analytics.js';
 import {
   successResponse,
 } from '../utils/apiResponse.js';

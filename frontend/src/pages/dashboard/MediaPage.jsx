@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { Upload, Image as ImageIcon, Trash2, Search, Grid, List, ExternalLink } from 'lucide-react';
 import { useMedia, useUploadMedia, useDeleteMedia } from '../../hooks/useApi';
-import { Button, Input, ContentLoader, EmptyState, Modal, ConfirmModal } from '../../components/common/index.jsx';
+import { Button, ContentLoader, EmptyState, Modal, ConfirmModal } from '../../components/common/index.jsx';
 import { formatBytes, formatRelativeTime, buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 

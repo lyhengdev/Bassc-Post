@@ -70,7 +70,10 @@ export default function MobileNav() {
       ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-dark-900 border-t border-dark-200 dark:border-dark-800 md:hidden safe-bottom">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 w-screen max-w-none bg-white dark:bg-dark-900 border-t border-dark-200 dark:border-dark-800 md:hidden safe-bottom"
+      style={{ left: 0, right: 0, width: '100vw', maxWidth: '100vw' }}
+    >
       <div className="flex items-center justify-around py-2">
         {navItems.map((item) => {
           const isExternal = /^https?:\/\//.test(item.href);

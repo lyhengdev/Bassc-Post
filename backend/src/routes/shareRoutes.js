@@ -58,6 +58,22 @@ const isSocialCrawler = (req) => {
   return SOCIAL_CRAWLER_SIGNATURES.some((signature) => ua.includes(signature));
 };
 
+const stripTags = (value = '') => String(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+const getContentExcerpt = (content) => {
+  if (!content || !Array.isArray(content.blocks)) return '';
+  const paragraphBlock = content.blocks.find((block) => block?.type === 'paragraph' && block?.data?.text);
+  if (!paragraphBlock) return '';
+  return stripTags(paragraphBlock.data.text);
+};
+
+const truncateText = (value = '', maxLength = 260) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 1).trim()}...`;
+};
+
 router.get('/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -66,7 +82,7 @@ router.get('/:slug', async (req, res) => {
     }
 
     const article = await Article.findOne({ slug, status: 'published' })
-      .select('title excerpt metaTitle metaDescription featuredImage publishedAt updatedAt slug author')
+      .select('title excerpt metaTitle metaDescription content featuredImage publishedAt updatedAt slug author')
       .populate('author', 'firstName lastName fullName')
       .lean();
 
@@ -85,7 +101,11 @@ router.get('/:slug', async (req, res) => {
       ? configuredApiBaseUrl
       : requestOrigin || siteUrl;
     const title = article.metaTitle || article.title || config.siteName || 'Article';
-    const description = article.metaDescription || article.excerpt || config.siteDescription || '';
+    const fallbackExcerpt = getContentExcerpt(article.content);
+    const description = truncateText(
+      article.metaDescription || article.excerpt || fallbackExcerpt || config.siteDescription || '',
+      260
+    );
     const imagePath = article.featuredImage || '/LogoV1.png';
     const imageUrl = imagePath.startsWith('/uploads/')
       ? resolveUrl(imageBaseUrl, imagePath)

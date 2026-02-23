@@ -8,7 +8,7 @@ import {
   MessageCircle, Send, Hash, Megaphone, ExternalLink
 } from 'lucide-react';
 import { useSiteSettings, useUpdateSettings, useUpdateBranding, useUpdateSEO, useToggleFeature } from '../../hooks/useApi';
-import { Button, Input, Textarea, ContentLoader, Modal } from '../../components/common/index.jsx';
+import { Button, Input, Textarea, ContentLoader } from '../../components/common/index.jsx';
 import { buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 

@@ -492,6 +492,7 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
     overscroll-behavior-y: contain;
   }
   ::selection {
@@ -674,6 +675,15 @@
   .article-content p {
     @apply mb-6;
   }
+  .article-content p,
+  .article-content li,
+  .article-content blockquote,
+  .article-content td,
+  .article-content th,
+  .article-content figcaption,
+  .article-content a {
+    overflow-wrap: anywhere;
+  }
   .article-content h2 {
     @apply text-2xl font-display font-bold text-dark-900 dark:text-white mt-10 mb-4;
   }
@@ -701,6 +711,7 @@
   }
   .article-content a {
     @apply text-primary-600 dark:text-primary-400 underline hover:text-primary-700 dark:hover:text-primary-300;
+    word-break: break-word;
   }
   .article-content pre {
     @apply bg-dark-900 text-dark-100 p-4 rounded-xl overflow-x-auto my-6 text-sm;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Menu, Bell, Home, Sun, Moon, X } from 'lucide-react';
+import { Menu, Home, Sun, Moon, X } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';

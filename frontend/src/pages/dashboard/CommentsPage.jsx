@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { MessageCircle, CheckCircle, XCircle, AlertTriangle, Trash2, Eye, Filter, Search, RefreshCw } from 'lucide-react';
+import { MessageCircle, CheckCircle, XCircle, AlertTriangle, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { useAllComments, useModerateComment, useDeleteComment } from '../../hooks/useApi';
 import { Button, Avatar, Badge, ContentLoader, Modal, Textarea, EmptyState, ConfirmModal } from '../../components/common/index.jsx';
 import { formatRelativeTime, cn } from '../../utils';
