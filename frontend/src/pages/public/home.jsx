@@ -10,6 +10,7 @@ import { BodyAd } from '../../components/ads/index.js';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
 import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
+import useLanguage from '../../hooks/useLanguage';
 
 const HOME_TYPE = {
     eyebrow: 'text-[11px] sm:text-xs uppercase tracking-[0.24em] text-dark-400',
@@ -24,21 +25,29 @@ const HOME_TYPE = {
 };
 
 const SectionHeader = ({ eyebrow, title, subtitle, link, linkText = 'View all' }) => (
-    <div className="flex items-end justify-between mb-5">
-        <div>
-            <p className={HOME_TYPE.eyebrow}>{eyebrow || 'Section'}</p>
-            <h2 className={`${HOME_TYPE.sectionTitle} mt-1 leading-tight`}>
-              {title}
-            </h2>
-            {subtitle && <p className={`${HOME_TYPE.sectionSubtitle} mt-1 max-w-xl`}>{subtitle}</p>}
-        </div>
-        {link && (
-            <Link to={link} className="text-sm font-medium flex items-center gap-1 link-muted">
-                {linkText} <ArrowRight className="w-4 h-4" />
-            </Link>
-        )}
-    </div>
+    <SectionHeaderInner eyebrow={eyebrow} title={title} subtitle={subtitle} link={link} linkText={linkText} />
 );
+
+function SectionHeaderInner({ eyebrow, title, subtitle, link, linkText = 'View all' }) {
+  const { t, translateText } = useLanguage();
+
+  return (
+    <div className="flex items-end justify-between mb-5">
+      <div>
+        <p className={HOME_TYPE.eyebrow}>{eyebrow || translateText('Section')}</p>
+        <h2 className={`${HOME_TYPE.sectionTitle} mt-1 leading-tight`}>
+          {title}
+        </h2>
+        {subtitle && <p className={`${HOME_TYPE.sectionSubtitle} mt-1 max-w-xl`}>{subtitle}</p>}
+      </div>
+      {link && (
+        <Link to={link} className="text-sm font-medium flex items-center gap-1 link-muted">
+          {linkText ? translateText(linkText) : t('common.viewAll', 'View all')} <ArrowRight className="w-4 h-4" />
+        </Link>
+      )}
+    </div>
+  );
+}
 
 // ==================== MIXED LEAD + LIST LAYOUT ====================
 function MixedLeadList({
@@ -49,6 +58,7 @@ function MixedLeadList({
   leadAspectClass = 'aspect-[16/10]',
   showCategory = true,
 }) {
+    const { translateText } = useLanguage();
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -80,7 +90,7 @@ function MixedLeadList({
     }
 
     if (!articles?.length) {
-        return <p className="text-dark-500 text-center py-8">{emptyMessage || 'No news available'}</p>;
+        return <p className="text-dark-500 text-center py-8">{emptyMessage || translateText('No news available')}</p>;
     }
 
     const [lead, ...rest] = articles;
@@ -120,7 +130,7 @@ function MixedLeadList({
             </article>
 
             {listTitle && rest.length > 0 && (
-                <div className="text-xs uppercase tracking-widest text-dark-500">{listTitle}</div>
+                <div className="text-xs uppercase tracking-widest text-dark-500">{translateText(listTitle)}</div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {rest.map((article) => (
@@ -161,6 +171,7 @@ function MixedLeadList({
 
 // ==================== FEATURED SECTION ====================
 function FeaturedSection({ section }) {
+    const { translateText } = useLanguage();
     const rawLimit = Number(section?.settings?.limit);
     const baseLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 8;
     const rawSkip = Number(section?.settings?.skip);
@@ -213,11 +224,11 @@ function FeaturedSection({ section }) {
     }
 
     if (!articles.length) {
-        return <p className="text-dark-500 text-center py-8">No featured news. Mark news as featured in the dashboard.</p>;
+        return <p className="text-dark-500 text-center py-8">{translateText('No featured news. Mark news as featured in the dashboard.')}</p>;
     }
 
     if (!lead) {
-        return <p className="text-dark-500 text-center py-8">No additional featured news available.</p>;
+        return <p className="text-dark-500 text-center py-8">{translateText('No additional featured news available.')}</p>;
     }
 
     return (
@@ -233,7 +244,7 @@ function FeaturedSection({ section }) {
                         />
                     </div>
                     <div className="p-5 sm:p-6">
-                        <p className="text-xs uppercase tracking-[0.24em] text-dark-400">Featured</p>
+                        <p className="text-xs uppercase tracking-[0.24em] text-dark-400">{translateText('Featured')}</p>
                         <h3 className={HOME_TYPE.bigTitle}>
                             {lead.title}
                         </h3>
@@ -261,7 +272,7 @@ function FeaturedSection({ section }) {
                             className="w-24 h-20 sm:w-28 sm:h-24 object-cover rounded-xl flex-shrink-0"
                         />
                         <div className="min-w-0">
-                            <p className="text-xs uppercase tracking-[0.24em] text-dark-400">Highlight</p>
+                            <p className="text-xs uppercase tracking-[0.24em] text-dark-400">{translateText('Highlight')}</p>
                             <p className={cn(HOME_TYPE.cardTitleAll, 'mt-1 line-clamp-2')}>
                                 {article.title}
                             </p>
@@ -273,8 +284,8 @@ function FeaturedSection({ section }) {
                 {moreItems.length > 0 && (
                     <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 p-4 sm:p-5">
                         <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs uppercase tracking-[0.24em] text-dark-400">More Featured</p>
-                            <span className="text-xs text-dark-400">{moreItems.length} more</span>
+                            <p className="text-xs uppercase tracking-[0.24em] text-dark-400">{translateText('More Featured')}</p>
+                            <span className="text-xs text-dark-400">{moreItems.length} {translateText('more')}</span>
                         </div>
                         <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
                             {moreItems.map((article) => (
@@ -298,6 +309,7 @@ function FeaturedSection({ section }) {
 
 // ==================== BREAKING NEWS SECTION ====================
 function BreakingNewsSection({ section, extraArticles = [], excludeArticles = [], isHeroLoading = false }) {
+  const { translateText } = useLanguage();
   const desiredItems = 6;
   const fetchLimit = Math.max(section.settings?.limit || 6, desiredItems * 3);
   const {data, isLoading} = useArticles({page: 1, limit: fetchLimit, isBreaking: true});
@@ -346,14 +358,14 @@ function BreakingNewsSection({ section, extraArticles = [], excludeArticles = []
   }
 
   if (!articles.length) {
-    return <p className="text-dark-500 text-center py-8">No breaking news in the dashboard.</p>;
+    return <p className="text-dark-500 text-center py-8">{translateText('No breaking news in the dashboard.')}</p>;
   }
 
   return (
     <div className="space-y-4">
       <div
         className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-        <span className="font-bold uppercase tracking-widest text-xs">Breaking</span>
+        <span className="font-bold uppercase tracking-widest text-xs">{translateText('Breaking')}</span>
         <div className="flex flex-wrap gap-3 text-dark-700">
           {tickerItems.map((item) => (
             <Link key={item._id} to={`/article/${item.slug}`} className="hover:text-red-600 line-clamp-2">
@@ -376,7 +388,7 @@ function BreakingNewsSection({ section, extraArticles = [], excludeArticles = []
                 alt={article.title}
                 className="min-w-16 min-h-16 max-h-16 rounded-lg object-cover"
               />
-              <p className="text-xs font-semibold uppercase tracking-widest text-red-600 hidden md:display">Alert</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-red-600 hidden md:display">{translateText('Alert')}</p>
             </div> <div className="flex w-full gap-3 justify-between">
             <h3 className={HOME_TYPE.cardTitleAll}>
               {article.title}
@@ -391,6 +403,7 @@ function BreakingNewsSection({ section, extraArticles = [], excludeArticles = []
 }
 // ==================== BREAKING HERO LAYOUT ====================
 function BreakingHeroSection({ section }) {
+    const { translateText } = useLanguage();
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 6, isBreaking: true });
     const articles = data?.data?.articles || [];
     const mainBreaking = articles[0];
@@ -421,7 +434,7 @@ function BreakingHeroSection({ section }) {
     if (!mainBreaking) {
         return (
             <div className="aspect-[4/3] rounded-lg bg-dark-100 dark:bg-dark-800 flex items-center justify-center">
-                <p className="text-dark-500">No breaking news yet</p>
+                <p className="text-dark-500">{translateText('No breaking news yet')}</p>
             </div>
         );
     }
@@ -442,7 +455,7 @@ function BreakingHeroSection({ section }) {
                             </div>
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                             <div className="absolute bottom-0 left-0 right-0 p-4 pb-0 sm:p-6 h-full flex flex-col justify-between  ">
-                                <p className="text-xs uppercase tracking-[0.24em] text-white/70">Breaking</p>
+                                <p className="text-xs uppercase tracking-[0.24em] text-white/70">{translateText('Breaking')}</p>
                                <div> <div className="flex flex-wrap items-center gap-2 mt-2">
                                  {mainBreaking.category && (
                                    <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
@@ -496,8 +509,8 @@ function BreakingHeroSection({ section }) {
                         </article>
                     ))}
                     <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-gradient-to-br from-primary-600 to-primary-800 text-white p-4">
-                        <p className="text-xs uppercase tracking-[0.24em] text-white/70">Quick Update</p>
-                        <p className="text-sm mt-2 text-white/90">Fresh headlines drop every hour. Stay ahead with real-time coverage.</p>
+                        <p className="text-xs uppercase tracking-[0.24em] text-white/70">{translateText('Quick Update')}</p>
+                        <p className="text-sm mt-2 text-white/90">{translateText('Fresh headlines drop every hour. Stay ahead with real-time coverage.')}</p>
                     </div>
                 </div>
             </div>
@@ -509,6 +522,7 @@ function BreakingHeroSection({ section }) {
 
 // ==================== LATEST SECTION ====================
 function LatestSection({ section, excludeArticleIds = [], onArticlesResolved }) {
+    const { translateText } = useLanguage();
     const navigate = useNavigate();
     const initialLimit = Number.isFinite(Number(section.settings?.limit))
         ? Math.max(1, Number(section.settings.limit))
@@ -556,7 +570,7 @@ function LatestSection({ section, excludeArticleIds = [], onArticlesResolved }) 
     }
 
     if (!articles.length) {
-        return <p className="text-dark-500 text-center py-8">No news published yet</p>;
+        return <p className="text-dark-500 text-center py-8">{translateText('No news published yet')}</p>;
     }
 
     return (
@@ -624,7 +638,7 @@ function LatestSection({ section, excludeArticleIds = [], onArticlesResolved }) 
                         className="px-3 py-1.5 text-sm rounded-lg sm:px-5 sm:py-2.5 sm:text-base sm:rounded-xl"
                         rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
-                        See more
+                        {translateText('See more')}
                     </Button>
                 </div>
             )}
@@ -634,6 +648,7 @@ function LatestSection({ section, excludeArticleIds = [], onArticlesResolved }) 
 
 // ==================== CATEGORY GRID SECTION ====================
 function CategoryGridSection({ section }) {
+    const { translateText } = useLanguage();
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 18 });
     const articles = data?.data?.articles || [];
     const grouped = articles.reduce((acc, article) => {
@@ -657,7 +672,7 @@ function CategoryGridSection({ section }) {
     }
 
     if (!blocks.length) {
-        return <p className="text-dark-500 text-center py-8">No news published yet</p>;
+        return <p className="text-dark-500 text-center py-8">{translateText('No news published yet')}</p>;
     }
 
     return (
@@ -672,11 +687,11 @@ function CategoryGridSection({ section }) {
                             className="text-xs sm:text-sm font-semibold uppercase tracking-widest"
                             style={{ color: block.category?.color || '#6B7280' }}
                         >
-                            {block.category?.name || 'Uncategorized'}
+                            {block.category?.name || translateText('Uncategorized')}
                         </span>
                         {block.category?.slug && (
                             <Link to={`/category/${block.category.slug}`} className="text-xs sm:text-sm link-muted">
-                                View →
+                                {translateText('View')} →
                             </Link>
                         )}
                     </div>
@@ -707,6 +722,7 @@ function CategoryGridSection({ section }) {
 
 // ==================== TRENDING SECTION ====================
 function TrendingSection({ section }) {
+    const { translateText } = useLanguage();
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 6, sort: '-viewCount' });
     const articles = data?.data?.articles || [];
     const lead = articles[0];
@@ -726,7 +742,7 @@ function TrendingSection({ section }) {
     }
 
     if (!articles.length) {
-        return <p className="text-dark-500 text-center py-8">No trending news</p>;
+        return <p className="text-dark-500 text-center py-8">{translateText('No trending news')}</p>;
     }
 
     return (
@@ -743,11 +759,11 @@ function TrendingSection({ section }) {
                             />
                         </div>
                         <div className="p-4">
-                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-widest text-primary-600">#1 Trending</p>
+                            <p className="text-xs sm:text-sm font-semibold uppercase tracking-widest text-primary-600">#1 {translateText('Trending')}</p>
                             <h3 className={HOME_TYPE.bigTitle}>
                                 {lead.title}
                             </h3>
-                            <p className="text-xs sm:text-sm text-dark-400 mt-2">{lead.viewCount || 0} views</p>
+                            <p className="text-xs sm:text-sm text-dark-400 mt-2">{lead.viewCount || 0} {translateText('views')}</p>
                         </div>
                     </Link>
                 </article>
@@ -766,7 +782,7 @@ function TrendingSection({ section }) {
                             <p className={HOME_TYPE.cardTitleAll}>
                                 {article.title}
                             </p>
-                            <p className="text-xs sm:text-sm text-dark-400">{article.viewCount || 0} views</p>
+                            <p className="text-xs sm:text-sm text-dark-400">{article.viewCount || 0} {translateText('views')}</p>
                         </div>
                     </Link>
                 ))}
@@ -777,6 +793,7 @@ function TrendingSection({ section }) {
 
 // ==================== NEWS LIST SECTION ====================
 function NewsListSection({ section, excludeArticleIds = [], onArticlesResolved }){
+    const { translateText } = useLanguage();
     const initialLimit = Number.isFinite(Number(section.settings?.limit))
         ? Math.max(1, Number(section.settings.limit))
         : 8;
@@ -807,7 +824,7 @@ function NewsListSection({ section, excludeArticleIds = [], onArticlesResolved }
             <MixedLeadList
                 articles={articles}
                 isLoading={isLoading}
-                emptyMessage="No news published yet"
+                emptyMessage={translateText('No news published yet')}
                 showCategory={false}
             />
             {isLoadingMore && (
@@ -831,7 +848,7 @@ function NewsListSection({ section, excludeArticleIds = [], onArticlesResolved }
                         isLoading={isLoadingMore}
                         className="px-3 py-1.5 text-sm rounded-lg sm:px-5 sm:py-2.5 sm:text-base sm:rounded-xl"
                     >
-                        See more
+                        {translateText('See more')}
                     </Button>
                 </div>
             )}
@@ -841,6 +858,7 @@ function NewsListSection({ section, excludeArticleIds = [], onArticlesResolved }
 
 // ==================== GRID WITH SIDEBAR SECTION ====================
 function GridWithSidebarSection({ section }) {
+    const { translateText } = useLanguage();
     const { data, isLoading } = useArticles({
         page: 1,
         limit: section.settings?.limit || 7
@@ -851,14 +869,15 @@ function GridWithSidebarSection({ section }) {
         <MixedLeadList
             articles={articles}
             isLoading={isLoading}
-            emptyMessage="No news published yet"
-            listTitle={section.settings?.sidebarTitle || 'More Stories'}
+            emptyMessage={translateText('No news published yet')}
+            listTitle={section.settings?.sidebarTitle || translateText('More Stories')}
         />
     );
 }
 
 // ==================== FEATURED + LIST SECTION (Magazine Layout) ====================
 function MagazineLayoutSection({ section }) {
+    const { translateText } = useLanguage();
     const { data, isLoading } = useArticles({ page: 1, limit: section.settings?.limit || 5 });
     const articles = data?.data?.articles || [];
 
@@ -866,13 +885,14 @@ function MagazineLayoutSection({ section }) {
         <MixedLeadList
             articles={articles}
             isLoading={isLoading}
-            emptyMessage="No news published yet"
+            emptyMessage={translateText('No news published yet')}
         />
     );
 }
 
 // ==================== CATEGORY TABS SECTION ====================
 function CategoryTabsSection({ section }) {
+    const { translateText } = useLanguage();
     const { data: categoriesData } = useCategories();
     const categories = categoriesData?.slice(0, 5) || [];
     const [activeTab, setActiveTab] = useState(0);
@@ -908,7 +928,7 @@ function CategoryTabsSection({ section }) {
             <MixedLeadList
                 articles={articles}
                 isLoading={isLoading}
-                emptyMessage="No news published yet"
+                emptyMessage={translateText('No news published yet')}
             />
         </div>
     );
@@ -916,6 +936,7 @@ function CategoryTabsSection({ section }) {
 
 // ==================== OPINION/EDITORS PICK SECTION ====================
 function EditorPicksSection({ section }) {
+    const { translateText } = useLanguage();
     const { data, isLoading } = useArticles({
         page: 1,
         limit: section.settings?.limit || 4,
@@ -941,7 +962,7 @@ function EditorPicksSection({ section }) {
     }
 
     if (!articles.length) {
-        return <p className="text-dark-500 text-center py-8">No editor picks available</p>;
+        return <p className="text-dark-500 text-center py-8">{translateText('No editor picks available')}</p>;
     }
 
     return (
@@ -996,6 +1017,7 @@ function CustomHtmlSection({ section }) {
 
 // ==================== CATEGORY SPOTLIGHT SECTION ====================
 function CategorySpotlightSection({ section }) {
+  const { translateText } = useLanguage();
   const categorySlug = section.settings?.categorySlug || '';
   const { data, isLoading } = useArticlesByCategory(categorySlug, { page: 1, limit: section.settings?.limit || 4 });
   const articles = data?.data?.articles || [];
@@ -1015,22 +1037,22 @@ function CategorySpotlightSection({ section }) {
   }
 
   if (!articles.length) {
-    return <p className="text-dark-500 text-center py-8">No news in this category yet</p>;
+    return <p className="text-dark-500 text-center py-8">{translateText('No news in this category yet')}</p>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between rounded-xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 p-4">
         <div>
-          <p className="text-xs uppercase tracking-widest text-dark-400 mb-1">Spotlight</p>
+          <p className="text-xs uppercase tracking-widest text-dark-400 mb-1">{translateText('Spotlight')}</p>
           <h3 className="text-lg font-bold text-dark-900 dark:text-white">
-            {category?.name || 'Category'}
+            {category?.name || translateText('Category')}
           </h3>
-          <p className="text-sm text-dark-500">Power, policy, and people shaping the week.</p>
+          <p className="text-sm text-dark-500">{translateText('Power, policy, and people shaping the week.')}</p>
         </div>
         {categorySlug && (
           <Link to={`/category/${categorySlug}`} className="text-sm link-primary">
-            More →
+            {translateText('More')} →
           </Link>
         )}
       </div>
@@ -1057,6 +1079,7 @@ function CategorySpotlightSection({ section }) {
 
 // Render dynamic section based on type
 function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved }) {
+  const { translateText } = useLanguage();
   switch (section.type) {
     case 'hero':
       return null;
@@ -1064,7 +1087,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'featured_articles':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Featured" title={section.title} subtitle={section.subtitle} link="/articles" />}
+          {section.title && <SectionHeader eyebrow={translateText('Featured')} title={section.title} subtitle={section.subtitle} link="/articles" />}
           <FeaturedSection section={section} />
         </div>
       );
@@ -1072,7 +1095,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'latest_articles':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Latest" title={section.title} subtitle={section.subtitle} link="/articles" />}
+          {section.title && <SectionHeader eyebrow={translateText('Latest')} title={section.title} subtitle={section.subtitle} link="/articles" />}
           <LatestSection
             section={section}
             excludeArticleIds={excludeArticleIds}
@@ -1084,7 +1107,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'category_grid':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Categories" title={section.title} subtitle={section.subtitle} link="/categories" />}
+          {section.title && <SectionHeader eyebrow={translateText('Categories')} title={section.title} subtitle={section.subtitle} link="/categories" />}
           <CategoryGridSection section={section} />
         </div>
       );
@@ -1092,7 +1115,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'trending':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Trending" title={section.title} subtitle={section.subtitle} />}
+          {section.title && <SectionHeader eyebrow={translateText('Trending')} title={section.title} subtitle={section.subtitle} />}
           <TrendingSection section={section} />
         </div>
       );
@@ -1108,7 +1131,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'breaking_news':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Breaking" title={section.title} subtitle={section.subtitle} />}
+          {section.title && <SectionHeader eyebrow={translateText('Breaking')} title={section.title} subtitle={section.subtitle} />}
           <BreakingHeroSection section={section} />
         </div>
       );
@@ -1116,7 +1139,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'news_list':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="News" title={section.title} subtitle={section.subtitle} link="/articles" />}
+          {section.title && <SectionHeader eyebrow={translateText('News')} title={section.title} subtitle={section.subtitle} link="/articles" />}
           <NewsListSection
             section={section}
             excludeArticleIds={excludeArticleIds}
@@ -1128,7 +1151,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'grid_with_sidebar':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Stories" title={section.title} subtitle={section.subtitle} link="/articles" />}
+          {section.title && <SectionHeader eyebrow={translateText('Stories')} title={section.title} subtitle={section.subtitle} link="/articles" />}
           <GridWithSidebarSection section={section} />
         </div>
       );
@@ -1136,7 +1159,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'magazine_layout':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Magazine" title={section.title} subtitle={section.subtitle} link="/articles" />}
+          {section.title && <SectionHeader eyebrow={translateText('Magazine')} title={section.title} subtitle={section.subtitle} link="/articles" />}
           <MagazineLayoutSection section={section} />
         </div>
       );
@@ -1144,7 +1167,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'category_tabs':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Categories" title={section.title} subtitle={section.subtitle} />}
+          {section.title && <SectionHeader eyebrow={translateText('Categories')} title={section.title} subtitle={section.subtitle} />}
           <CategoryTabsSection section={section} />
         </div>
       );
@@ -1152,7 +1175,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'editor_picks':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Editors" title={section.title} subtitle={section.subtitle} />}
+          {section.title && <SectionHeader eyebrow={translateText('Editors')} title={section.title} subtitle={section.subtitle} />}
           <EditorPicksSection section={section} />
         </div>
       );
@@ -1160,7 +1183,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
     case 'category_spotlight':
       return (
         <div className="mb-2">
-          {section.title && <SectionHeader eyebrow="Spotlight" title={section.title} subtitle={section.subtitle} link={section.settings?.categorySlug ? `/category/${section.settings.categorySlug}` : '/articles'} />}
+          {section.title && <SectionHeader eyebrow={translateText('Spotlight')} title={section.title} subtitle={section.subtitle} link={section.settings?.categorySlug ? `/category/${section.settings.categorySlug}` : '/articles'} />}
           <CategorySpotlightSection section={section} />
         </div>
       );
@@ -1172,6 +1195,7 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
 
 // ==================== HOME PAGE ====================
 export function HomePage() {
+  const { t, translateText } = useLanguage();
   const navigate = useNavigate();
   const { data: publicSettings } = usePublicSettings();
   const [latestLimit, setLatestLimit] = useState(8);
@@ -1368,19 +1392,19 @@ export function HomePage() {
                   trackAdEvent={trackAdEvent}
                 />
 
-                {/* Newsletter */}
-                <div className="mt-6 bg-primary-600 rounded-lg p-5 text-white">
-                  <h3 className="font-bold mb-2">Stay Updated</h3>
-                  <p className="text-primary-100 text-sm mb-4">Get the latest news delivered to your inbox.</p>
-                  <input
-                    type="email"
-                    placeholder="Your email"
-                    className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 mb-3"
-                  />
-                  <button className="w-full py-2 bg-white text-primary-600 text-sm font-medium rounded hover:bg-primary-50 transition-colors">
-                    Subscribe
-                  </button>
-                </div>
+	                {/* Newsletter */}
+	                <div className="mt-6 bg-primary-600 rounded-lg p-5 text-white">
+	                  <h3 className="font-bold mb-2">{t('common.stayUpdated', 'Stay Updated')}</h3>
+	                  <p className="text-primary-100 text-sm mb-4">{t('common.latestNewsInbox', 'Get the latest news delivered to your inbox.')}</p>
+	                  <input
+	                    type="email"
+	                    placeholder={t('common.yourEmail', 'Your email')}
+	                    className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 mb-3"
+	                  />
+	                  <button className="w-full py-2 bg-white text-primary-600 text-sm font-medium rounded hover:bg-primary-50 transition-colors">
+	                    {t('common.subscribe', 'Subscribe')}
+	                  </button>
+	                </div>
               </div>
             </aside>
           </div>
@@ -1393,18 +1417,22 @@ export function HomePage() {
   return (
     <>
       <Helmet>
-        <title>{publicSettings?.siteName || 'Bassac Post'} - Latest News & Updates</title>
+        <title>{`${publicSettings?.siteName || 'Bassac Post'} - ${translateText('Latest News & Updates')}`}</title>
       </Helmet>
 
       <div className="container-custom py-6 lg:py-8 text-[15px] sm:text-base">
         <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
           {/* Main Content Area */}
           <div className="flex-1 min-w-0">
-            {/* Breaking News Section */}
-            <section className="mb-10">
-              <SectionHeader eyebrow="Breaking" title="Breaking News" subtitle="Latest alerts and urgent updates" />
-              <BreakingHeroSection section={{ settings: { limit: 6 } }} />
-            </section>
+	            {/* Breaking News Section */}
+	            <section className="mb-10">
+	              <SectionHeader
+                  eyebrow={translateText('Breaking')}
+                  title={translateText('Breaking News')}
+                  subtitle={translateText('Latest alerts and urgent updates')}
+                />
+	              <BreakingHeroSection section={{ settings: { limit: 6 } }} />
+	            </section>
 
             {inlineSidebarAds?.length > 0 && (
               <div className="lg:hidden">
@@ -1415,28 +1443,28 @@ export function HomePage() {
             {renderAdGroup(betweenSectionsAds[0], 'between_sections', { fixedHeight: 100 })}
 
             {/* Trending Section */}
-            {(trendingLoading || trendingArticles.length > 0) && (
-              <section className="mb-10">
-                <h2 className="text-2xl font-bold text-primary-600 mb-5 uppercase tracking-wide">Trending</h2>
-                <MixedLeadList
-                  articles={trendingArticles}
-                  isLoading={trendingLoading}
-                  emptyMessage="No trending news"
-                  leadAspectClass="aspect-[16/7]"
-                />
-              </section>
-            )}
+	            {(trendingLoading || trendingArticles.length > 0) && (
+	              <section className="mb-10">
+	                <h2 className="text-2xl font-bold text-primary-600 mb-5 uppercase tracking-wide">{translateText('Trending')}</h2>
+	                <MixedLeadList
+	                  articles={trendingArticles}
+	                  isLoading={trendingLoading}
+	                  emptyMessage={translateText('No trending news')}
+	                  leadAspectClass="aspect-[16/7]"
+	                />
+	              </section>
+	            )}
 
             {renderAdGroup(betweenSectionsAds[1], 'between_sections', { fixedHeight: 100 })}
 
-            {/* Latest News Section */}
-            <section className="mb-10">
-              <h2 className="text-2xl font-bold text-primary-600 mb-5 uppercase tracking-wide">Latest News</h2>
-              <MixedLeadList
-                articles={latestNews}
-                isLoading={latestLoading}
-                emptyMessage="No news published yet"
-              />
+	            {/* Latest News Section */}
+	            <section className="mb-10">
+	              <h2 className="text-2xl font-bold text-primary-600 mb-5 uppercase tracking-wide">{translateText('Latest News')}</h2>
+	              <MixedLeadList
+	                articles={latestNews}
+	                isLoading={latestLoading}
+	                emptyMessage={translateText('No news published yet')}
+	              />
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
 	                {latestNews.length >= latestLimit && (
 		                  <Button
@@ -1445,15 +1473,15 @@ export function HomePage() {
 		                    isLoading={isFetchingLatest}
                         className="px-3 py-1.5 text-sm rounded-lg sm:px-5 sm:py-2.5 sm:text-base sm:rounded-xl"
 		                    rightIcon={<ArrowRight className="w-4 h-4" />}
-		                  >
-		                    See more
-		                  </Button>
-	                )}
-                <Link to="/articles" className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-primary-600 text-primary-600 font-medium rounded-lg hover:bg-primary-600 hover:text-white transition-colors">
-                  View All News <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </section>
+			                  >
+			                    {translateText('See more')}
+			                  </Button>
+		                )}
+	                <Link to="/articles" className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-primary-600 text-primary-600 font-medium rounded-lg hover:bg-primary-600 hover:text-white transition-colors">
+	                  {translateText('View All News')} <ArrowRight className="w-4 h-4" />
+	                </Link>
+	              </div>
+	            </section>
 
             {renderAdGroup(betweenSectionsAds[2], 'between_sections', { fixedHeight: 100 })}
 
@@ -1477,18 +1505,18 @@ export function HomePage() {
                 trackAdEvent={trackAdEvent}
               />
 
-              <div className="mt-6 bg-primary-600 rounded-lg p-5 text-white">
-                <h3 className="font-bold mb-2">Stay Updated</h3>
-                <p className="text-primary-100 text-sm mb-4">Get the latest news delivered to your inbox.</p>
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 mb-3"
-                />
-                <button className="w-full py-2 bg-white text-primary-600 text-sm font-medium rounded hover:bg-primary-50 transition-colors">
-                  Subscribe
-                </button>
-              </div>
+	              <div className="mt-6 bg-primary-600 rounded-lg p-5 text-white">
+	                <h3 className="font-bold mb-2">{t('common.stayUpdated', 'Stay Updated')}</h3>
+	                <p className="text-primary-100 text-sm mb-4">{t('common.latestNewsInbox', 'Get the latest news delivered to your inbox.')}</p>
+	                <input
+	                  type="email"
+	                  placeholder={t('common.yourEmail', 'Your email')}
+	                  className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 mb-3"
+	                />
+	                <button className="w-full py-2 bg-white text-primary-600 text-sm font-medium rounded hover:bg-primary-50 transition-colors">
+	                  {t('common.subscribe', 'Subscribe')}
+	                </button>
+	              </div>
             </div>
           </aside>
         </div>
@@ -1499,6 +1527,7 @@ export function HomePage() {
 
 // Category Section for Homepage
 function HomeCategorySection({ category }) {
+  const { translateText } = useLanguage();
   const { data, isLoading } = useArticlesByCategory(category.slug, { page: 1, limit: 4 });
   const articles = data?.data?.articles || [];
 
@@ -1511,13 +1540,13 @@ function HomeCategorySection({ category }) {
           </h2>
         </div>
         <Link to={`/category/${category.slug}`} className="text-sm font-medium flex items-center gap-1 link-muted">
-          More <ArrowRight className="w-4 h-4" />
+          {translateText('More')} <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
       <MixedLeadList
         articles={articles}
         isLoading={isLoading}
-        emptyMessage={`No news in ${category.name} yet`}
+        emptyMessage={`${translateText('No news in this category yet')}: ${category.name}`}
       />
     </section>
   );

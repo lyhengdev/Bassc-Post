@@ -12,6 +12,7 @@ import api, {
   commentsAPI,
 } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
+import { getPreferredLanguageCode } from '../utils';
 import toast from 'react-hot-toast';
 
 // ==================== AUTH HOOKS ====================
@@ -68,10 +69,11 @@ export function useLogout() {
 
 export function useArticles(params = {}, queryOptions = {}) {
   const { q, sort, sortBy, sortOrder, ...otherParams } = params;
+  const language = (params?.language || getPreferredLanguageCode());
   
   return useQuery({
     ...queryOptions,
-    queryKey: ['articles', params],
+    queryKey: ['articles', params, language],
     queryFn: async () => {
       let resolvedSortBy = sortBy;
       let resolvedSortOrder = sortOrder;
@@ -83,6 +85,7 @@ export function useArticles(params = {}, queryOptions = {}) {
 
       const requestParams = {
         ...otherParams,
+        ...(language ? { language } : {}),
         ...(resolvedSortBy ? { sortBy: resolvedSortBy } : {}),
         ...(resolvedSortOrder ? { sortOrder: resolvedSortOrder } : {}),
       };
@@ -107,20 +110,22 @@ export function useArticles(params = {}, queryOptions = {}) {
 }
 
 export function useFeaturedArticles(limit = 5) {
+  const language = getPreferredLanguageCode();
   return useQuery({
-    queryKey: ['articles', 'featured', limit],
+    queryKey: ['articles', 'featured', limit, language],
     queryFn: async () => {
-      const response = await articlesAPI.getFeatured(limit);
+      const response = await articlesAPI.getFeatured(limit, { language });
       return response.data.data.articles;
     },
   });
 }
 
 export function useLatestArticles(limit = 10) {
+  const language = getPreferredLanguageCode();
   return useQuery({
-    queryKey: ['articles', 'latest', limit],
+    queryKey: ['articles', 'latest', limit, language],
     queryFn: async () => {
-      const response = await articlesAPI.getLatest(limit);
+      const response = await articlesAPI.getLatest(limit, { language });
       return response.data.data.articles;
     },
     placeholderData: keepPreviousData,
@@ -133,6 +138,17 @@ export function useArticleBySlug(slug) {
     queryFn: async () => {
       const response = await articlesAPI.getBySlug(slug);
       return response.data.data.article;
+    },
+    enabled: !!slug,
+  });
+}
+
+export function useResolvedArticleBySlug(slug, language) {
+  return useQuery({
+    queryKey: ['article', 'resolved', slug, language],
+    queryFn: async () => {
+      const response = await articlesAPI.resolveBySlug(slug, language);
+      return response.data.data;
     },
     enabled: !!slug,
   });
@@ -166,10 +182,11 @@ export function useArticleInsights(id, options = {}) {
 }
 
 export function useArticlesByCategory(slug, params = {}) {
+  const language = (params?.language || getPreferredLanguageCode());
   return useQuery({
-    queryKey: ['articles', 'category', slug, params],
+    queryKey: ['articles', 'category', slug, params, language],
     queryFn: async () => {
-      const response = await articlesAPI.getByCategory(slug, params);
+      const response = await articlesAPI.getByCategory(slug, { ...params, language });
       return response.data;
     },
     enabled: !!slug,
@@ -177,10 +194,11 @@ export function useArticlesByCategory(slug, params = {}) {
 }
 
 export function useRelatedArticles(id, limit = 4) {
+  const language = getPreferredLanguageCode();
   return useQuery({
-    queryKey: ['articles', 'related', id, limit],
+    queryKey: ['articles', 'related', id, limit, language],
     queryFn: async () => {
-      const response = await articlesAPI.getRelated(id, limit);
+      const response = await articlesAPI.getRelated(id, limit, { language });
       return response.data.data.articles;
     },
     enabled: !!id,
@@ -188,10 +206,15 @@ export function useRelatedArticles(id, limit = 4) {
 }
 
 export function useMyArticles(params = {}, options = {}) {
+  const language = (params?.language || getPreferredLanguageCode());
+
   return useQuery({
-    queryKey: ['articles', 'my', params],
+    queryKey: ['articles', 'my', params, language],
     queryFn: async () => {
-      const response = await articlesAPI.getMy(params);
+      const response = await articlesAPI.getMy({
+        ...params,
+        ...(language ? { language } : {}),
+      });
       return response.data;
     },
     ...options,
@@ -199,10 +222,15 @@ export function useMyArticles(params = {}, options = {}) {
 }
 
 export function useAdminArticles(params = {}, options = {}) {
+  const language = (params?.language || getPreferredLanguageCode());
+
   return useQuery({
-    queryKey: ['articles', 'admin', params],
+    queryKey: ['articles', 'admin', params, language],
     queryFn: async () => {
-      const response = await articlesAPI.getAdmin(params);
+      const response = await articlesAPI.getAdmin({
+        ...params,
+        ...(language ? { language } : {}),
+      });
       return response.data;
     },
     ...options,
@@ -210,10 +238,15 @@ export function useAdminArticles(params = {}, options = {}) {
 }
 
 export function usePendingArticles(params = {}) {
+  const language = (params?.language || getPreferredLanguageCode());
+
   return useQuery({
-    queryKey: ['articles', 'pending', params],
+    queryKey: ['articles', 'pending', params, language],
     queryFn: async () => {
-      const response = await articlesAPI.getPending(params);
+      const response = await articlesAPI.getPending({
+        ...params,
+        ...(language ? { language } : {}),
+      });
       return response.data;
     },
   });

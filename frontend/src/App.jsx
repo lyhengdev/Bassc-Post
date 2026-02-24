@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams, Link } from 'react-router-dom';
 import { useAuthStore, useThemeStore } from './stores/authStore';
 import useNotificationStore from './stores/notificationStore';
+import useLanguage from './hooks/useLanguage';
 import { PublicLayout, DashboardLayout } from './components/layout/index.jsx';
 import { 
   ContentLoader, 
@@ -145,13 +146,14 @@ function ShareRedirectRoute() {
 
 // 404 Page
 function NotFoundPage() {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-dark-300 mb-4">404</h1>
-        <p className="text-dark-500 mb-6">Page not found</p>
+        <p className="text-dark-500 mb-6">{t('common.notFound', 'Page not found')}</p>
         <Link to="/" className="btn btn-primary">
-          Go Home
+          {t('common.goHome', 'Go Home')}
         </Link>
       </div>
     </div>

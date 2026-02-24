@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
 
 // Error Boundary Class Component (required for catching React errors)
 class ErrorBoundaryClass extends React.Component {
@@ -48,6 +49,7 @@ class ErrorBoundaryClass extends React.Component {
 
 // Default Error Fallback UI
 function DefaultErrorFallback({ error, errorInfo, reset }) {
+  const { translateText } = useLanguage();
   const isDev = process.env.NODE_ENV === 'development';
 
   return (
@@ -57,10 +59,10 @@ function DefaultErrorFallback({ error, errorInfo, reset }) {
           <AlertTriangle className="w-8 h-8 text-red-600" />
         </div>
         <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">
-          Something went wrong
+          {translateText('Something went wrong')}
         </h2>
         <p className="text-dark-500 mb-6">
-          An unexpected error occurred. Please try again or go back to the home page.
+          {translateText('An unexpected error occurred. Please try again or go back to the home page.')}
         </p>
 
         {isDev && error && (
@@ -82,14 +84,14 @@ function DefaultErrorFallback({ error, errorInfo, reset }) {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            Try Again
+            {translateText('Try Again')}
           </button>
           <a
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-dark-100 dark:bg-dark-800 text-dark-700 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
           >
             <Home className="w-4 h-4" />
-            Go Home
+            {translateText('Go Home')}
           </a>
         </div>
       </div>
@@ -99,6 +101,7 @@ function DefaultErrorFallback({ error, errorInfo, reset }) {
 
 // Page-level Error Fallback (full page)
 export function PageErrorFallback({ error, reset }) {
+  const { translateText } = useLanguage();
   const isDev = process.env.NODE_ENV === 'development';
 
   return (
@@ -108,10 +111,10 @@ export function PageErrorFallback({ error, reset }) {
           <AlertTriangle className="w-10 h-10 text-red-600" />
         </div>
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-3">
-          Oops! Something went wrong
+          {translateText('Oops! Something went wrong')}
         </h1>
         <p className="text-dark-500 mb-8">
-          We're sorry, but something unexpected happened. Our team has been notified.
+          {translateText("We're sorry, but something unexpected happened. Our team has been notified.")}
         </p>
 
         {isDev && error && (
@@ -128,14 +131,14 @@ export function PageErrorFallback({ error, reset }) {
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors font-medium"
           >
             <RefreshCw className="w-5 h-5" />
-            Try Again
+            {translateText('Try Again')}
           </button>
           <a
             href="/"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-dark-100 dark:bg-dark-800 text-dark-700 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors font-medium"
           >
             <Home className="w-5 h-5" />
-            Go Home
+            {translateText('Go Home')}
           </a>
         </div>
       </div>
@@ -145,15 +148,16 @@ export function PageErrorFallback({ error, reset }) {
 
 // Compact Error Fallback (for smaller components)
 export function CompactErrorFallback({ error, reset }) {
+  const { translateText } = useLanguage();
   return (
     <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-center">
       <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-      <p className="text-sm text-red-600 dark:text-red-400 mb-3">Failed to load</p>
+      <p className="text-sm text-red-600 dark:text-red-400 mb-3">{translateText('Failed to load')}</p>
       <button
         onClick={reset}
         className="text-sm font-medium link-primary"
       >
-        Try again
+        {translateText('Try again')}
       </button>
     </div>
   );

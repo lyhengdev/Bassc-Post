@@ -109,7 +109,15 @@ const aiLogSchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ['grammar-check', 'headline-generator', 'summary', 'sentiment-analysis'],
+      enum: [
+        'grammar-check',
+        'headline-generator',
+        'summary',
+        'sentiment-analysis',
+        'writing-improvement',
+        'translation',
+        'translation-azure',
+      ],
       required: true,
     },
     inputTokens: {

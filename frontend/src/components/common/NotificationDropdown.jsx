@@ -8,7 +8,7 @@ import {
 import { cn, formatRelativeTime } from '../../utils';
 import { resolveNotificationLink } from '../../utils/notificationLink';
 import useNotificationStore from '../../stores/notificationStore';
-import { Button } from '../common/index.jsx';
+import useLanguage from '../../hooks/useLanguage';
 
 // Notification type icons
 const typeIcons = {
@@ -45,6 +45,7 @@ const typeColors = {
 };
 
 function NotificationItem({ notification, onMarkRead, onDelete, onClick }) {
+  const { translateText } = useLanguage();
   const Icon = typeIcons[notification.type] || Bell;
   const colorClass = typeColors[notification.type] || 'text-dark-600 bg-dark-100 dark:bg-dark-800';
 
@@ -67,10 +68,10 @@ function NotificationItem({ notification, onMarkRead, onDelete, onClick }) {
           'text-sm line-clamp-1',
           notification.isRead ? 'text-dark-600 dark:text-dark-400' : 'text-dark-900 dark:text-white font-medium'
         )}>
-          {notification.title}
+          {translateText(notification.title)}
         </p>
         <p className="text-xs text-dark-500 line-clamp-2 mt-0.5">
-          {notification.message}
+          {translateText(notification.message)}
         </p>
         <p className="text-xs text-dark-400 mt-1">
           {formatRelativeTime(notification.createdAt)}
@@ -95,6 +96,7 @@ function NotificationItem({ notification, onMarkRead, onDelete, onClick }) {
 }
 
 export function NotificationDropdown() {
+  const { translateText } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   
@@ -155,10 +157,10 @@ export function NotificationDropdown() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-dark-200 dark:border-dark-700">
             <h3 className="font-semibold text-dark-900 dark:text-white">
-              Notifications
+              {translateText('Notifications')}
               {unreadCount > 0 && (
                 <span className="ml-2 text-xs font-normal text-dark-500">
-                  {unreadCount} new
+                  {unreadCount} {translateText('new')}
                 </span>
               )}
             </h3>
@@ -167,7 +169,7 @@ export function NotificationDropdown() {
                 <button
                   onClick={requestBrowserPermission}
                   className="text-xs link-primary"
-                  title="Enable browser notifications"
+                  title={translateText('Enable browser notifications')}
                 >
                   <Bell className="w-4 h-4" />
                 </button>
@@ -178,7 +180,7 @@ export function NotificationDropdown() {
                   className="text-xs link-primary flex items-center gap-1"
                 >
                   <CheckCheck className="w-4 h-4" />
-                  <span className="hidden sm:inline">Mark all read</span>
+                  <span className="hidden sm:inline">{translateText('Mark all read')}</span>
                 </button>
               )}
             </div>
@@ -193,7 +195,7 @@ export function NotificationDropdown() {
             ) : notifications.length === 0 ? (
               <div className="p-8 text-center">
                 <Bell className="w-12 h-12 text-dark-300 mx-auto mb-3" />
-                <p className="text-dark-500 text-sm">No notifications yet</p>
+                <p className="text-dark-500 text-sm">{translateText('No notifications yet')}</p>
               </div>
             ) : (
               <div className="divide-y divide-dark-100 dark:divide-dark-800">
@@ -217,7 +219,7 @@ export function NotificationDropdown() {
               onClick={() => setIsOpen(false)}
               className="flex items-center justify-center gap-1 px-4 py-3 text-sm link-primary hover:bg-primary-50 dark:hover:bg-primary-900/20 border-t border-dark-200 dark:border-dark-700"
             >
-              View all notifications
+              {translateText('View all notifications')}
               <ChevronRight className="w-4 h-4" />
             </Link>
           )}

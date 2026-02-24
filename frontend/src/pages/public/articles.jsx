@@ -13,10 +13,12 @@ import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.js
 import { InlineAdGroup, createAdTracker, getSectionIndexAfterRows } from '../../components/ads/inlineAds.jsx';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
 import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
+import useLanguage from '../../hooks/useLanguage';
 
 // ==================== HOME PAGE ====================
 
 function ArticleCardNews({ article }) {
+  const { translateText } = useLanguage();
   return (
     <article className="bg-white dark:bg-dark-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow group flex items-stretch gap-4 p-4 sm:flex-col sm:gap-0 sm:p-0 sm:h-full">
       {/* Image */}
@@ -64,7 +66,7 @@ function ArticleCardNews({ article }) {
           {article.author && (
             <div className="hidden min-[421px]:flex items-center gap-1.5">
               <User className="w-4 h-4" />
-              <span>{article.author.fullName || 'Admin'}</span>
+              <span>{article.author.fullName || translateText('Admin')}</span>
             </div>
           )}
           <div className="flex items-center gap-1.5">
@@ -84,6 +86,7 @@ function ArticleCardNews({ article }) {
 }
 
 function SearchFeedCard({ article }) {
+  const { translateText } = useLanguage();
   const imageUrl = buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/240/240`;
 
   return (
@@ -131,7 +134,7 @@ function SearchFeedCard({ article }) {
 
           <div className="mt-2 flex items-center justify-between gap-2">
             <div className="min-w-0 flex items-center gap-2 text-xs text-dark-500 dark:text-dark-400">
-              {article.author && <span className="truncate">{article.author.fullName || 'Admin'}</span>}
+              {article.author && <span className="truncate">{article.author.fullName || translateText('Admin')}</span>}
               {article.viewCount > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <Eye className="w-3.5 h-3.5" />
@@ -143,7 +146,7 @@ function SearchFeedCard({ article }) {
               to={`/article/${article.slug}`}
               className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
             >
-              Open <ArrowUpRight className="w-3.5 h-3.5" />
+              {translateText('Open')} <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -154,6 +157,7 @@ function SearchFeedCard({ article }) {
 
 // ==================== ARTICLES PAGE ====================
 export function ArticlesPage() {
+  const { t, translateText, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const categorySlug = searchParams.get('category') || '';
@@ -168,11 +172,12 @@ export function ArticlesPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['articles', 'infinite', { category: categorySlug, q: searchQuery, limit }],
+    queryKey: ['articles', 'infinite', { category: categorySlug, q: searchQuery, limit, language }],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         page: pageParam,
         limit,
+        language,
         ...(categorySlug ? { category: categorySlug } : {}),
         ...(searchQuery ? { q: searchQuery } : {}),
       };
@@ -238,7 +243,9 @@ export function ArticlesPage() {
   const articles = articlesPages?.pages?.flatMap((page) => (
     page?.data?.articles || page?.data || page?.articles || []
   )) || [];
-  const resultCountLabel = hasNextPage ? `${articles.length}+ results` : `${articles.length} results`;
+  const resultCountLabel = hasNextPage
+    ? t('articles.resultsMore', '{{count}}+ results', { count: articles.length })
+    : t('articles.results', '{{count}} results', { count: articles.length });
   const getNewsGridColumns = () => {
     if (typeof window === 'undefined') return 3;
     const width = window.innerWidth;
@@ -308,7 +315,7 @@ export function ArticlesPage() {
 
   return (
     <>
-      <Helmet><title>News - Bassac Post</title></Helmet>
+      <Helmet><title>{`${t('nav.news', 'News')} - Bassac Post`}</title></Helmet>
 
       <div className="container-custom py-4 lg:py-6 text-[15px] sm:text-base">
         {/* Main Layout: Content + Sidebar Ad */}
@@ -322,7 +329,7 @@ export function ArticlesPage() {
                   <input
                     type="search"
                     enterKeyHint="search"
-                    placeholder="Search posts, topics, authors..."
+                    placeholder={translateText('Search posts, topics, authors...')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-12 pr-10 py-3 rounded-full border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 text-dark-900 dark:text-white placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -332,7 +339,7 @@ export function ArticlesPage() {
                       type="button"
                       onClick={() => setSearch('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-dark-200 dark:hover:bg-dark-700"
-                      aria-label="Clear search"
+                      aria-label={t('common.clearSearch', 'Clear search')}
                     >
                       <X className="w-4 h-4 text-dark-400" />
                     </button>
@@ -343,16 +350,16 @@ export function ArticlesPage() {
 
             {isSearchMode ? (
               <section className="mb-6 rounded-2xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 p-4 sm:p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-[0.2em] text-dark-400">Search Results</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-dark-400">{t('articles.searchResults', 'Search Results')}</p>
                 <h1 className="mt-1 text-2xl lg:text-3xl font-bold text-dark-900 dark:text-white">"{searchQuery}"</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-dark-500">
-                  <span>{isLoading ? 'Searching...' : resultCountLabel}</span>
+                  <span>{isLoading ? t('common.searching', 'Searching...') : resultCountLabel}</span>
                 </div>
               </section>
             ) : (
               <div className="mb-6">
-                <h1 className="text-2xl lg:text-2xl font-bold text-dark-900 dark:text-white mb-2">News Feed</h1>
-                <p className="text-dark-500">Find stories faster with search and category filters.</p>
+                <h1 className="text-2xl lg:text-2xl font-bold text-dark-900 dark:text-white mb-2">{t('articles.newsFeed', 'News Feed')}</h1>
+                <p className="text-dark-500">{translateText('Find stories faster with search and category filters.')}</p>
               </div>
             )}
 
@@ -467,7 +474,7 @@ export function ArticlesPage() {
                       disabled={isFetchingNextPage}
                       className="px-6 py-2 rounded-lg bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
                     >
-                      {isFetchingNextPage ? 'Loading more...' : 'Load more'}
+                      {isFetchingNextPage ? t('common.loadingMore', 'Loading more...') : t('common.loadMore', 'Load more')}
                     </button>
                   </div>
                 )}
@@ -476,7 +483,7 @@ export function ArticlesPage() {
             ) : (
               <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 text-center py-16 px-6">
                 <Search className="w-10 h-10 mx-auto text-dark-400 mb-3" />
-                <p className="text-dark-700 dark:text-dark-200 text-lg font-semibold">No news found</p>
+                <p className="text-dark-700 dark:text-dark-200 text-lg font-semibold">{t('articles.noNewsFound', 'No news found')}</p>
                 {searchQuery && (
                   <button
                     onClick={() => {
@@ -486,7 +493,7 @@ export function ArticlesPage() {
                     className="mt-4 inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
                   >
                     <X className="w-4 h-4" />
-                    Clear search
+                    {t('common.clearSearch', 'Clear search')}
                   </button>
                 )}
               </div>
@@ -514,6 +521,7 @@ export function ArticlesPage() {
 
 // ==================== CATEGORIES LIST PAGE (Mobile-friendly) ====================
 export function CategoriesListPage() {
+  const { t, translateText } = useLanguage();
   const { data: categories, isLoading } = useCategories();
   const { data: settings } = usePublicSettings();
   const [query, setQuery] = useState('');
@@ -544,7 +552,7 @@ export function CategoriesListPage() {
   return (
     <>
       <Helmet>
-        <title>{`Categories - ${siteName}`}</title>
+        <title>{`${t('nav.categories', 'Categories')} - ${siteName}`}</title>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-dark-50 via-white to-white dark:from-dark-950 dark:via-dark-950 dark:to-dark-950">
@@ -557,27 +565,27 @@ export function CategoriesListPage() {
             <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               <div className="max-w-2xl">
                 <p className="text-xs uppercase tracking-[0.24em] text-dark-400 dark:text-dark-500">
-                  Browse by topic
+                  {t('categories.browseByTopic', 'Browse by topic')}
                 </p>
                 <h1 className="font-display text-2xl sm:text-3xl font-bold text-dark-900 dark:text-white mt-2">
-                  Categories
+                  {t('nav.categories', 'Categories')}
                 </h1>
                 <p className="text-sm sm:text-base text-dark-600 dark:text-dark-400 mt-2">
-                  Find stories faster with topic pages—search, sort, and jump into what you care about.
+                  {translateText('Find stories faster with topic pages—search, sort, and jump into what you care about.')}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
                 <Link to="/articles">
                   <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                    All News
+                    {t('search.allNews', 'All News')}
                   </Button>
                 </Link>
                 <div className="flex items-center gap-2 rounded-full border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 px-3 py-1.5 text-xs text-dark-600 dark:text-dark-300">
-                  <span className="text-dark-400">Topics</span>
+                  <span className="text-dark-400">{t('categories.topics', 'Topics')}</span>
                   <span className="font-semibold text-dark-900 dark:text-white">{total}</span>
                   <span className="mx-1 h-3 w-px bg-dark-200 dark:bg-dark-700" />
-                  <span className="text-dark-400">News</span>
+                  <span className="text-dark-400">{t('nav.news', 'News')}</span>
                   <span className="font-semibold text-dark-900 dark:text-white">{totalArticles}</span>
                 </div>
               </div>
@@ -591,7 +599,7 @@ export function CategoriesListPage() {
                   <Input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search categories (e.g., business, sports, tech)..."
+                    placeholder={t('categories.searchPlaceholder', 'Search categories (e.g., business, sports, tech)...')}
                     className="pl-10"
                   />
                 </div>
@@ -608,7 +616,7 @@ export function CategoriesListPage() {
                       : 'border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 text-dark-700 dark:text-dark-200 hover:bg-dark-50 dark:hover:bg-dark-800'
                   )}
                 >
-                  <TrendingUp className="w-4 h-4" /> Popular
+                  <TrendingUp className="w-4 h-4" /> {t('categories.popular', 'Popular')}
                 </button>
                 <button
                   type="button"
@@ -628,8 +636,10 @@ export function CategoriesListPage() {
             {!isLoading && (
               <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-dark-500 dark:text-dark-400">
                 <p>
-                  Showing <span className="font-semibold text-dark-900 dark:text-white">{filtered.length}</span> of{' '}
-                  <span className="font-semibold text-dark-900 dark:text-white">{total}</span> categories
+                  {t('categories.showingOf', 'Showing {{shown}} of {{total}} categories', {
+                    shown: filtered.length,
+                    total,
+                  })}
                   {normalizedQuery ? (
                     <>
                       {' '}
@@ -643,7 +653,7 @@ export function CategoriesListPage() {
                     onClick={() => setQuery('')}
                     className="text-primary-600 dark:text-primary-400 hover:underline"
                   >
-                    Clear
+                    {t('common.clear', 'Clear')}
                   </button>
                 )}
               </div>
@@ -687,7 +697,7 @@ export function CategoriesListPage() {
                             <img
                               loading="lazy"
                               src={imageUrl}
-                              alt={category?.name || 'Category'}
+                              alt={category?.name || translateText('Category')}
                               className="h-full w-full object-cover transition-transform duration-500 transform-gpu group-hover:scale-[1.06]"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-dark-950/70 via-dark-950/20 to-transparent" />
@@ -710,7 +720,7 @@ export function CategoriesListPage() {
 
                         <div className="absolute right-4 top-4">
                           <Badge className="bg-white/90 text-dark-900 border border-white/60">
-                            {count} news
+                            {count} {translateText('news')}
                           </Badge>
                         </div>
 
@@ -728,17 +738,17 @@ export function CategoriesListPage() {
                           </p>
                         ) : (
                           <p className="text-sm text-dark-500 dark:text-dark-400">
-                            Explore the latest updates in <span className="font-semibold text-dark-900 dark:text-white">{category?.name}</span>.
+                            {translateText('Explore the latest updates in')} <span className="font-semibold text-dark-900 dark:text-white">{category?.name}</span>.
                           </p>
                         )}
 
                         <div className="mt-4 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-                            <span className="text-xs text-dark-500 dark:text-dark-400">Topic page</span>
+                            <span className="text-xs text-dark-500 dark:text-dark-400">{translateText('Topic page')}</span>
                           </div>
                           <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                            Explore <span aria-hidden>→</span>
+                            {translateText('Explore')} <span aria-hidden>→</span>
                           </span>
                         </div>
                       </div>
@@ -748,19 +758,19 @@ export function CategoriesListPage() {
               </div>
             ) : (
               <div className="rounded-3xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 p-10 text-center">
-                <p className="text-dark-900 dark:text-white font-semibold">No categories found</p>
+                <p className="text-dark-900 dark:text-white font-semibold">{translateText('No categories found')}</p>
                 <p className="text-dark-600 dark:text-dark-400 mt-2">
-                  Try a different search, or browse all news.
+                  {translateText('Try a different search, or browse all news.')}
                 </p>
                 <div className="mt-5 flex items-center justify-center gap-2">
                   {normalizedQuery && (
                     <Button variant="outline" onClick={() => setQuery('')}>
-                      Clear search
+                      {t('common.clearSearch', 'Clear search')}
                     </Button>
                   )}
                   <Link to="/articles">
                     <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Browse News
+                      {translateText('Browse News')}
                     </Button>
                   </Link>
                 </div>
@@ -775,6 +785,7 @@ export function CategoriesListPage() {
 
 // ==================== CATEGORY PAGE ====================
 export function CategoryPage() {
+    const { t, translateText, language } = useLanguage();
     const { slug } = useParams();
     const loadMoreRef = useRef(null);
     const limit = 12;
@@ -791,11 +802,12 @@ export function CategoryPage() {
         hasNextPage,
         isFetchingNextPage,
     } = useInfiniteQuery({
-        queryKey: ['category', 'infinite', { slug, limit }],
+        queryKey: ['category', 'infinite', { slug, limit, language }],
         queryFn: async ({ pageParam = 1 }) => {
             const response = await articlesAPI.getByCategory(slug, {
                 page: pageParam,
                 limit,
+                language,
             });
             return { ...response.data, __page: pageParam };
         },
@@ -854,7 +866,7 @@ export function CategoryPage() {
       .filter((ad, index, arr) => ad?._id && arr.findIndex((item) => item?._id === ad._id) === index);
     const inlineSidebarAds = sidebarStackAds.slice(0, 2);
     const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
-    const loadMoreLabel = isFetchingNextPage ? 'Loading more...' : 'Load more';
+    const loadMoreLabel = isFetchingNextPage ? t('common.loadingMore', 'Loading more...') : t('common.loadMore', 'Load more');
     const trackCategoryAd = createAdTracker({
         trackAdEvent,
         pageType: 'category',
@@ -898,7 +910,7 @@ export function CategoryPage() {
     return (
         <>
             <Helmet>
-                <title>{category?.name || 'Category'} - Bassac Post</title>
+                <title>{`${category?.name || translateText('Category')} - Bassac Post`}</title>
             </Helmet>
 
             <div className="container-custom py-8">
@@ -906,7 +918,7 @@ export function CategoryPage() {
                     <div className="flex-1 min-w-0">
                         <div className="mb-8">
                             <Link to="/articles" className="inline-flex items-center gap-2 text-dark-500 hover:text-dark-700 mb-4">
-                                ← Back to News
+                                ← {t('common.backToNews', 'Back to News')}
                             </Link>
                             <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 p-5 sm:p-6">
                                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest"
@@ -916,7 +928,7 @@ export function CategoryPage() {
                                     className="w-8 h-1 rounded-full"
                                     style={{ backgroundColor: category?.color || getCategoryAccent(category?.name || slug.replace(/-/g, ' ')) }}
                                   />
-                                  Category
+                                  {translateText('Category')}
                                 </div>
                                 <h1 className="font-display text-2xl font-bold text-dark-900 dark:text-white mt-2">
                                     {category?.name || slug.replace(/-/g, ' ')}
@@ -1003,7 +1015,7 @@ export function CategoryPage() {
                             </>
                         ) : (
                             <p className="text-center py-20 text-dark-500">
-                                No news in this category
+                                {translateText('No news in this category')}
                             </p>
                         )}
                     </div>

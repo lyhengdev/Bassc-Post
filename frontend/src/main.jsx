@@ -8,6 +8,21 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import './index.css';
 
+if (typeof window !== 'undefined') {
+  const storedLanguage = (
+    localStorage.getItem('preferredLanguage')
+    || localStorage.getItem('i18nextLng')
+    || 'en'
+  ).toLowerCase();
+  const initialLanguage = storedLanguage.startsWith('km')
+    ? 'km'
+    : storedLanguage.startsWith('zh')
+      ? 'zh'
+      : 'en';
+  document.documentElement.lang = initialLanguage;
+  document.documentElement.dir = 'ltr';
+}
+
 // Create React Query client
 const queryClient = new QueryClient({
   defaultOptions: {

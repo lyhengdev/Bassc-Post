@@ -20,10 +20,12 @@ import {
   Megaphone,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import useLanguage from '../../hooks/useLanguage';
 import { cn } from '../../utils';
 
 export default function Sidebar({ isOpen, onClose }) {
   const { user } = useAuthStore();
+  const { t, translateText } = useLanguage();
   const role = user?.role;
 
   const menuItems = [
@@ -190,7 +192,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <span className="text-white font-display font-bold">B</span>
             </div>
             <span className="font-display font-bold text-lg text-dark-900 dark:text-white">
-              Dashboard
+              {t('nav.dashboard', 'Dashboard')}
             </span>
           </div>
           <button
@@ -206,7 +208,7 @@ export default function Sidebar({ isOpen, onClose }) {
           {filteredMenuItems.map((section) => (
             <div key={section.title}>
               <h4 className="px-3 mb-2 text-smcou font-semibold text-dark-500 uppercase tracking-wider">
-                {section.title}
+                {translateText(section.title)}
               </h4>
               <ul className="space-y-1">
                 {section.items.map((item) => (
@@ -225,7 +227,7 @@ export default function Sidebar({ isOpen, onClose }) {
                       }
                     >
                       <item.icon className="w-5 h-5" />
-                      {item.label}
+                      {translateText(item.label)}
                     </NavLink>
                   </li>
                 ))}
@@ -241,7 +243,7 @@ export default function Sidebar({ isOpen, onClose }) {
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-800 hover:text-dark-900 dark:hover:text-white transition-colors"
           >
             <Globe className="w-5 h-5" />
-            Back to Website
+            {t('common.backToWebsite', 'Back to Website')}
           </a>
         </div>
       </aside>

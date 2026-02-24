@@ -38,8 +38,6 @@ const GOOGLE_SCOPES = [
   'openid',
   'email',
   'profile',
-  'https://www.googleapis.com/auth/user.gender.read',
-  'https://www.googleapis.com/auth/user.birthday.read',
 ];
 
 const SOCIAL_PROVIDERS = ['google', 'facebook'];
@@ -106,54 +104,6 @@ const getStateCookieName = (provider) => `oauth_state_${provider}`;
 const normalizeProvider = (provider) => {
   if (typeof provider !== 'string') return '';
   return provider.trim().toLowerCase();
-};
-
-const toIsoDate = (year, month, day) => {
-  if (!year || !month || !day) return null;
-  const isoDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const testDate = new Date(`${isoDate}T00:00:00`);
-  if (Number.isNaN(testDate.getTime())) {
-    return null;
-  }
-  return isoDate;
-};
-
-const normalizeSocialGender = (value) => {
-  if (typeof value !== 'string') return null;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'male' || normalized === 'female') return normalized;
-  return null;
-};
-
-const parseFacebookBirthday = (value) => {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return toIsoDate(trimmed.slice(0, 4), trimmed.slice(5, 7), trimmed.slice(8, 10));
-  }
-
-  const [month = '', day = '', year = ''] = trimmed.split('/');
-  if (!year) return null;
-  return toIsoDate(year, month, day);
-};
-
-const parseGoogleBirthday = (birthdays) => {
-  if (!Array.isArray(birthdays) || birthdays.length === 0) {
-    return null;
-  }
-
-  const selectedBirthday = birthdays.find((entry) => entry?.metadata?.primary) || birthdays[0];
-  const date = selectedBirthday?.date;
-  if (!date) return null;
-
-  if (!date.year) {
-    // Ignore partial birthdays because DB requires a full date.
-    return null;
-  }
-
-  return toIsoDate(date.year, date.month, date.day);
 };
 
 const parseJsonResponse = async (response) => {
@@ -312,19 +262,6 @@ const exchangeGoogleCodeForProfile = async (code) => {
     throw new Error('Google account email is not verified');
   }
 
-  const peopleResponse = await fetch('https://people.googleapis.com/v1/people/me?personFields=birthdays,genders', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  const peopleData = peopleResponse.ok ? await parseJsonResponse(peopleResponse) : {};
-
-  const genderRaw = Array.isArray(peopleData?.genders)
-    ? (peopleData.genders.find((entry) => entry?.metadata?.primary)?.value || peopleData.genders[0]?.value)
-    : null;
-  const gender = normalizeSocialGender(genderRaw);
-  const birthday = parseGoogleBirthday(peopleData?.birthdays);
-
   return {
     provider: 'google',
     providerId: userInfo?.sub || '',
@@ -333,8 +270,8 @@ const exchangeGoogleCodeForProfile = async (code) => {
     lastName: userInfo?.family_name || '',
     name: userInfo?.name || '',
     avatar: userInfo?.picture || '',
-    gender,
-    birthday,
+    gender: null,
+    birthday: null,
   };
 };
 
@@ -364,7 +301,7 @@ const exchangeFacebookCodeForProfile = async (code) => {
   }
 
   const profileQuery = new URLSearchParams({
-    fields: 'id,first_name,last_name,name,email,birthday,gender,picture.type(large)',
+    fields: 'id,first_name,last_name,name,email,picture.type(large)',
     access_token: accessToken,
   }).toString();
   const profileResponse = await fetch(`https://graph.facebook.com/me?${profileQuery}`);
@@ -388,8 +325,8 @@ const exchangeFacebookCodeForProfile = async (code) => {
     lastName: profilePayload?.last_name || '',
     name: profilePayload?.name || '',
     avatar: profilePayload?.picture?.data?.url || '',
-    gender: normalizeSocialGender(profilePayload?.gender),
-    birthday: parseFacebookBirthday(profilePayload?.birthday),
+    gender: null,
+    birthday: null,
   };
 };
 
@@ -599,7 +536,7 @@ const buildFacebookAuthUrl = (state) => {
     redirect_uri: facebookConfig.redirectUri,
     response_type: 'code',
     state,
-    scope: 'email,public_profile,user_birthday',
+    scope: 'email,public_profile',
   });
 
   return `https://www.facebook.com/v20.0/dialog/oauth?${params.toString()}`;

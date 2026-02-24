@@ -1,6 +1,13 @@
 import React from 'react';
 import { cn, getInitials, buildMediaUrl } from '../../utils';
 import { Loader2 } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
+
+function localizeNode(node, translateText) {
+  if (typeof node === 'string') return translateText(node);
+  if (Array.isArray(node)) return node.map((child) => localizeNode(child, translateText));
+  return node;
+}
 
 // ==================== BUTTON ====================
 export const Button = React.forwardRef(function Button(
@@ -17,6 +24,8 @@ export const Button = React.forwardRef(function Button(
   },
   ref
 ) {
+  const { translateText } = useLanguage();
+
   const variants = {
     primary: 'btn-primary',
     secondary: 'btn-secondary',
@@ -45,7 +54,7 @@ export const Button = React.forwardRef(function Button(
       {...props}
     >
       {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : leftIcon}
-      {children}
+      {localizeNode(children, translateText)}
       {!isLoading && rightIcon}
     </button>
   );
@@ -56,11 +65,16 @@ export const Input = React.forwardRef(function Input(
   { className, type = 'text', error, label, ...props },
   ref
 ) {
+  const { translateText } = useLanguage();
+  const localizedLabel = typeof label === 'string' ? translateText(label) : label;
+  const localizedError = typeof error === 'string' ? translateText(error) : error;
+  const localizedPlaceholder = typeof props.placeholder === 'string' ? translateText(props.placeholder) : props.placeholder;
+
   return (
     <div className="w-full">
-      {label && (
+      {localizedLabel && (
         <label className="label">
-          {label}
+          {localizedLabel}
           {props.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
@@ -69,8 +83,9 @@ export const Input = React.forwardRef(function Input(
         ref={ref}
         className={cn('input', error && 'input-error', className)}
         {...props}
+        placeholder={localizedPlaceholder}
       />
-      {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
+      {localizedError && <p className="mt-1.5 text-sm text-red-500">{localizedError}</p>}
     </div>
   );
 });
@@ -80,11 +95,16 @@ export const Textarea = React.forwardRef(function Textarea(
   { className, error, label, ...props },
   ref
 ) {
+  const { translateText } = useLanguage();
+  const localizedLabel = typeof label === 'string' ? translateText(label) : label;
+  const localizedError = typeof error === 'string' ? translateText(error) : error;
+  const localizedPlaceholder = typeof props.placeholder === 'string' ? translateText(props.placeholder) : props.placeholder;
+
   return (
     <div className="w-full">
-      {label && (
+      {localizedLabel && (
         <label className="label">
-          {label}
+          {localizedLabel}
           {props.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
@@ -92,14 +112,16 @@ export const Textarea = React.forwardRef(function Textarea(
         ref={ref}
         className={cn('input min-h-[120px]', error && 'input-error', className)}
         {...props}
+        placeholder={localizedPlaceholder}
       />
-      {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
+      {localizedError && <p className="mt-1.5 text-sm text-red-500">{localizedError}</p>}
     </div>
   );
 });
 
 // ==================== AVATAR ====================
 export function Avatar({ src, alt, name, size = 'md', className }) {
+  const { translateText } = useLanguage();
   const sizes = {
     xs: 'w-6 h-6 text-xs',
     sm: 'w-8 h-8 text-sm',
@@ -114,7 +136,7 @@ export function Avatar({ src, alt, name, size = 'md', className }) {
     return (
       <img loading="lazy"
         src={resolvedSrc}
-        alt={alt || name || 'Avatar'}
+        alt={alt || name || translateText('Avatar')}
         className={cn('rounded-full object-cover', sizes[size], className)}
       />
     );
@@ -153,6 +175,7 @@ export function Badge({ children, variant = 'primary', className, style }) {
 
 // ==================== STATUS BADGE ====================
 export function StatusBadge({ status }) {
+  const { translateText } = useLanguage();
   const config = {
     draft: { className: 'badge-neutral', label: 'Draft' },
     pending: { className: 'badge-warning', label: 'Pending' },
@@ -163,7 +186,7 @@ export function StatusBadge({ status }) {
 
   const { className, label } = config[status] || config.draft;
 
-  return <span className={cn('badge', className)}>{label}</span>;
+  return <span className={cn('badge', className)}>{translateText(label)}</span>;
 }
 
 // ==================== SPINNER ====================
@@ -274,6 +297,7 @@ export function ArticleListSkeleton({ count = 6 }) {
 
 // ==================== MODAL ====================
 export function Modal({ isOpen, onClose, title, children, size = 'md', showCloseButton = true }) {
+  const { translateText } = useLanguage();
   if (!isOpen) return null;
 
   const sizes = {
@@ -304,7 +328,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', showClose
           {title && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-dark-200 dark:border-dark-700">
               <h2 className="text-2xl font-semibold text-dark-900 dark:text-white">
-                {title}
+                {typeof title === 'string' ? translateText(title) : title}
               </h2>
               {showCloseButton && (
                 <button
@@ -338,6 +362,7 @@ export function ConfirmModal({
   isLoading = false,
   icon: Icon
 }) {
+  const { translateText } = useLanguage();
   if (!isOpen) return null;
 
   const variants = {
@@ -384,12 +409,12 @@ export function ConfirmModal({
 
             {/* Title */}
             <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">
-              {title}
+              {typeof title === 'string' ? translateText(title) : title}
             </h3>
 
             {/* Message */}
             <p className="text-dark-500 dark:text-dark-400 mb-6">
-              {message}
+              {typeof message === 'string' ? translateText(message) : message}
             </p>
 
             {/* Buttons */}
@@ -399,7 +424,7 @@ export function ConfirmModal({
                 disabled={isLoading}
                 className="btn btn-secondary flex-1"
               >
-                {cancelText}
+                {typeof cancelText === 'string' ? translateText(cancelText) : cancelText}
               </button>
               <button
                 onClick={onConfirm}
@@ -409,10 +434,10 @@ export function ConfirmModal({
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing...
+                    {translateText('Processing...')}
                   </>
                 ) : (
-                  confirmText
+                  typeof confirmText === 'string' ? translateText(confirmText) : confirmText
                 )}
               </button>
             </div>
@@ -433,6 +458,7 @@ export function AlertModal({
   variant = 'info', // 'info' | 'success' | 'warning' | 'error'
   icon: Icon
 }) {
+  const { translateText } = useLanguage();
   if (!isOpen) return null;
 
   const variants = {
@@ -480,17 +506,17 @@ export function AlertModal({
 
             {/* Title */}
             <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">
-              {title}
+              {typeof title === 'string' ? translateText(title) : title}
             </h3>
 
             {/* Message */}
             <p className="text-dark-500 dark:text-dark-400 mb-6">
-              {message}
+              {typeof message === 'string' ? translateText(message) : message}
             </p>
 
             {/* Button */}
             <button onClick={onClose} className="btn btn-primary w-full">
-              {buttonText}
+              {typeof buttonText === 'string' ? translateText(buttonText) : buttonText}
             </button>
           </div>
         </div>
@@ -501,6 +527,7 @@ export function AlertModal({
 
 // ==================== EMPTY STATE ====================
 export function EmptyState({ icon: Icon, title, description, action }) {
+  const { translateText } = useLanguage();
   return (
     <div className="text-center py-12">
       {Icon && (
@@ -509,10 +536,10 @@ export function EmptyState({ icon: Icon, title, description, action }) {
         </div>
       )}
       <h3 className="text-lg font-semibold text-dark-900 dark:text-white mb-2">
-        {title}
+        {typeof title === 'string' ? translateText(title) : title}
       </h3>
       {description && (
-        <p className="text-dark-500 mb-6 max-w-sm mx-auto">{description}</p>
+        <p className="text-dark-500 mb-6 max-w-sm mx-auto">{typeof description === 'string' ? translateText(description) : description}</p>
       )}
       {action}
     </div>

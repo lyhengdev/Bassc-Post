@@ -54,46 +54,92 @@ export const sanitizeHtml = (html) => {
  * Sanitize Editor.js content
  */
 export const sanitizeEditorContent = (content) => {
-  if (!content || !content.blocks) return content;
+  if (!content) return content;
 
-  const sanitizedBlocks = content.blocks.map((block) => {
-    const sanitizedData = { ...block.data };
+  const allowedBlockTypes = new Set([
+    'paragraph',
+    'header',
+    'list',
+    'image',
+    'quote',
+    'code',
+    'delimiter',
+    'table',
+    'embed',
+    'raw',
+    'checklist',
+    'warning',
+    'linkTool',
+    'attaches',
+  ]);
 
-    // Sanitize text content based on block type
-    switch (block.type) {
-      case 'paragraph':
-      case 'header':
-      case 'quote':
-        if (sanitizedData.text) {
-          sanitizedData.text = sanitizeHtml(sanitizedData.text);
-        }
-        break;
-      case 'list':
-        if (sanitizedData.items) {
-          sanitizedData.items = sanitizedData.items.map((item) => sanitizeHtml(item));
-        }
-        break;
-      case 'checklist':
-        if (sanitizedData.items) {
-          sanitizedData.items = sanitizedData.items.map((item) => ({
-            ...item,
-            text: sanitizeHtml(item.text),
-          }));
-        }
-        break;
-      case 'table':
-        if (sanitizedData.content) {
-          sanitizedData.content = sanitizedData.content.map((row) =>
-            row.map((cell) => sanitizeHtml(cell))
-          );
-        }
-        break;
-    }
+  const sourceBlocks = Array.isArray(content.blocks) ? content.blocks : [];
+  const nowKey = Date.now().toString(36);
 
-    return { ...block, data: sanitizedData };
-  });
+  const sanitizedBlocks = sourceBlocks
+    .map((block, index) => {
+      if (!block || typeof block !== 'object') {
+        return null;
+      }
 
-  return { ...content, blocks: sanitizedBlocks };
+      const normalizedType = typeof block.type === 'string' && allowedBlockTypes.has(block.type)
+        ? block.type
+        : 'paragraph';
+      const sanitizedData = block.data && typeof block.data === 'object' && !Array.isArray(block.data)
+        ? { ...block.data }
+        : {};
+
+      // Sanitize text content based on block type
+      switch (normalizedType) {
+        case 'paragraph':
+        case 'header':
+        case 'quote':
+        case 'warning':
+          if (sanitizedData.text) {
+            sanitizedData.text = sanitizeHtml(sanitizedData.text);
+          }
+          break;
+        case 'list':
+          if (Array.isArray(sanitizedData.items)) {
+            sanitizedData.items = sanitizedData.items.map((item) => sanitizeHtml(item));
+          }
+          break;
+        case 'checklist':
+          if (Array.isArray(sanitizedData.items)) {
+            sanitizedData.items = sanitizedData.items.map((item) => ({
+              ...item,
+              text: sanitizeHtml(item?.text || ''),
+            }));
+          }
+          break;
+        case 'table':
+          if (Array.isArray(sanitizedData.content)) {
+            sanitizedData.content = sanitizedData.content.map((row) => (
+              Array.isArray(row) ? row.map((cell) => sanitizeHtml(cell)) : []
+            ));
+          }
+          break;
+      }
+
+      if (normalizedType === 'paragraph' && typeof sanitizedData.text !== 'string') {
+        sanitizedData.text = '';
+      }
+
+      return {
+        ...block,
+        id: typeof block.id === 'string' && block.id.trim() ? block.id : `blk-${nowKey}-${index}`,
+        type: normalizedType,
+        data: sanitizedData,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    ...content,
+    blocks: sanitizedBlocks,
+    time: typeof content.time === 'number' ? content.time : Date.now(),
+    version: content.version || '2.28.2',
+  };
 };
 
 /**

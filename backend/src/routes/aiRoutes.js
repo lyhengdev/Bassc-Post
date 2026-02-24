@@ -13,5 +13,6 @@ router.post('/headline-generator', aiController.generateHeadlines);
 router.post('/summary', aiController.generateSummary);
 router.post('/sentiment-analysis', aiController.sentimentAnalysis);
 router.post('/improve-writing', aiController.improveWriting);
+router.post('/translate-article', aiController.translateArticle);
 
 export default router;

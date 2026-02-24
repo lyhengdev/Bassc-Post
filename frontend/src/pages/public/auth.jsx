@@ -9,6 +9,7 @@ import { Button, Avatar, Input, Textarea, Modal } from '../../components/common/
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildApiUrl, buildMediaUrl } from '../../utils';
 import { useAuthStore } from '../../stores/authStore';
+import useLanguage from '../../hooks/useLanguage';
 
 function GoogleLogo({ className = 'w-4 h-4' }) {
   return (
@@ -37,6 +38,7 @@ function startSocialAuth(provider) {
 }
 
 function SocialAuthButtons({ isBusy = false }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-2">
       <button
@@ -46,7 +48,7 @@ function SocialAuthButtons({ isBusy = false }) {
         className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-dark-200 bg-white px-4 py-2.5 text-sm font-semibold text-dark-700 transition-colors hover:bg-dark-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-100 dark:hover:bg-dark-800"
       >
         <GoogleLogo />
-        Continue with Google
+        {t('auth.continueWithGoogle', 'Continue with Google')}
       </button>
       <button
         type="button"
@@ -55,13 +57,14 @@ function SocialAuthButtons({ isBusy = false }) {
         className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-dark-200 bg-white px-4 py-2.5 text-sm font-semibold text-dark-700 transition-colors hover:bg-dark-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-100 dark:hover:bg-dark-800"
       >
         <Facebook className="w-4 h-4 text-[#1877F2]" />
-        Continue with Facebook
+        {t('auth.continueWithFacebook', 'Continue with Facebook')}
       </button>
     </div>
   );
 }
 
 export function LoginPage() {
+  const { t, translateText } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,7 +97,7 @@ export function LoginPage() {
 
   return (
     <>
-      <Helmet><title>Sign In - Bassac Post</title></Helmet>
+      <Helmet><title>{`${t('auth.signIn', 'Sign In')} - Bassac Post`}</title></Helmet>
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <Link to="/" className="flex items-center gap-2 mb-8 justify-center">
@@ -105,12 +108,12 @@ export function LoginPage() {
           </Link>
 
           <div className="card p-8">
-            <h1 className="text-2xl font-bold text-dark-900 dark:text-white text-center mb-6">Sign In</h1>
+            <h1 className="text-2xl font-bold text-dark-900 dark:text-white text-center mb-6">{t('auth.signIn', 'Sign In')}</h1>
 
             <SocialAuthButtons isBusy={isPending} />
             <div className="my-5 flex items-center gap-3 text-xs text-dark-500">
               <span className="h-px flex-1 bg-dark-200 dark:bg-dark-700" />
-              <span>or use email</span>
+              <span>{t('auth.orUseEmail', 'or use email')}</span>
               <span className="h-px flex-1 bg-dark-200 dark:bg-dark-700" />
             </div>
 
@@ -127,24 +130,24 @@ export function LoginPage() {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="w-4 h-4 text-primary-600 rounded focus:ring-2 focus:ring-primary-500" />
-                  <span className="text-sm text-dark-600 dark:text-dark-400">Remember me</span>
+                  <span className="text-sm text-dark-600 dark:text-dark-400">{t('auth.rememberMe', 'Remember me')}</span>
                 </label>
-                <Link to="/forgot-password" className="text-sm link-primary">Forgot password?</Link>
+                <Link to="/forgot-password" className="text-sm link-primary">{t('auth.forgotPassword', 'Forgot password?')}</Link>
               </div>
 
-              <Button type="submit" className="w-full" size="lg" isLoading={isPending}>Sign In</Button>
+              <Button type="submit" className="w-full" size="lg" isLoading={isPending}>{t('auth.signIn', 'Sign In')}</Button>
             </form>
 
             <p className="mt-6 text-center text-dark-500">
-              Don't have an account? <Link to="/register" className="font-medium link-primary">Sign up</Link>
+              {t('auth.noAccount', "Don't have an account?")} <Link to="/register" className="font-medium link-primary">{t('auth.signUp', 'Sign up')}</Link>
             </p>
 
             <div className="mt-6 p-4 bg-dark-100 dark:bg-dark-800 rounded-xl">
-              <p className="text-sm font-medium text-dark-600 dark:text-dark-400 mb-2">Demo Accounts:</p>
+              <p className="text-sm font-medium text-dark-600 dark:text-dark-400 mb-2">{translateText('Demo Accounts:')}</p>
               <div className="text-xs text-dark-500 space-y-1">
-                <p>Admin: admin@bassacmedia.com / Admin@123</p>
-                <p>Editor: editor@bassacmedia.com / Editor@123</p>
-                <p>Writer: writer@bassacmedia.com / Writer@123</p>
+                <p>{translateText('Admin')}: admin@bassacmedia.com / Admin@123</p>
+                <p>{translateText('Editor')}: editor@bassacmedia.com / Editor@123</p>
+                <p>{translateText('Writer')}: writer@bassacmedia.com / Writer@123</p>
               </div>
             </div>
           </div>
@@ -319,6 +322,7 @@ const renderCroppedAvatarBlob = async ({ src, position, zoom, rotation }) => {
 };
 
 export function RegisterPage() {
+  const { t, translateText } = useLanguage();
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -473,7 +477,7 @@ export function RegisterPage() {
 
   return (
     <>
-      <Helmet><title>Create Account - Bassac Post</title></Helmet>
+      <Helmet><title>{`${t('auth.createAccount', 'Create Account')} - Bassac Post`}</title></Helmet>
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <Link to="/" className="flex items-center gap-2 mb-8 justify-center">
@@ -484,12 +488,12 @@ export function RegisterPage() {
           </Link>
 
           <div className="card p-8">
-            <h1 className="text-2xl font-bold text-dark-900 dark:text-white text-center mb-6">Create Account</h1>
+            <h1 className="text-2xl font-bold text-dark-900 dark:text-white text-center mb-6">{t('auth.createAccount', 'Create Account')}</h1>
 
             <SocialAuthButtons isBusy={isPending} />
             <div className="my-5 flex items-center gap-3 text-xs text-dark-500">
               <span className="h-px flex-1 bg-dark-200 dark:bg-dark-700" />
-              <span>or use email</span>
+              <span>{t('auth.orUseEmail', 'or use email')}</span>
               <span className="h-px flex-1 bg-dark-200 dark:bg-dark-700" />
             </div>
 
@@ -511,13 +515,13 @@ export function RegisterPage() {
                           : 'text-dark-500'
                   }`}
                 >
-                  {emailCheck.status === 'checking' && 'Checking email availability...'}
-                  {emailCheck.status === 'available' && 'Email is available'}
-                  {emailCheck.status === 'error' && 'Could not verify email right now'}
+                  {emailCheck.status === 'checking' && translateText('Checking email availability...')}
+                  {emailCheck.status === 'available' && translateText('Email is available')}
+                  {emailCheck.status === 'error' && translateText('Could not verify email right now')}
                 </p>
               )}
               <div>
-                <label className="label">Gender<span className="text-red-500 ml-1">*</span></label>
+                <label className="label">{t('auth.gender', 'Gender')}<span className="text-red-500 ml-1">*</span></label>
                 <div className="grid grid-cols-2 gap-2 rounded-xl border border-dark-200 dark:border-dark-700 p-1 bg-dark-50 dark:bg-dark-900/40">
                   {['male', 'female'].map((option) => (
                     <button
@@ -533,14 +537,14 @@ export function RegisterPage() {
                           : 'text-dark-600 hover:bg-white dark:text-dark-300 dark:hover:bg-dark-800'
                       }`}
                     >
-                      {option}
+                      {translateText(option)}
                     </button>
                   ))}
                 </div>
-                {visibleErrors.gender && <p className="mt-1.5 text-sm text-red-500">{visibleErrors.gender}</p>}
+                {visibleErrors.gender && <p className="mt-1.5 text-sm text-red-500">{translateText(visibleErrors.gender)}</p>}
               </div>
               <div>
-                <label className="label">Birthday<span className="text-red-500 ml-1">*</span></label>
+                <label className="label">{t('auth.birthday', 'Birthday')}<span className="text-red-500 ml-1">*</span></label>
                 <div className="grid grid-cols-3 gap-2">
                   <select
                     value={form.birthDay}
@@ -548,7 +552,7 @@ export function RegisterPage() {
                     className={`input py-2.5 ${visibleErrors.birthday ? 'input-error' : ''}`}
                     required
                   >
-                    <option value="">Day</option>
+                    <option value="">{t('auth.day', 'Day')}</option>
                     {Array.from({ length: getDaysInMonth(form.birthYear, form.birthMonth) }, (_, index) => `${index + 1}`).map((day) => (
                       <option key={day} value={day}>{day}</option>
                     ))}
@@ -559,9 +563,9 @@ export function RegisterPage() {
                     className={`input py-2.5 ${visibleErrors.birthday ? 'input-error' : ''}`}
                     required
                   >
-                    <option value="">Month</option>
+                    <option value="">{t('auth.month', 'Month')}</option>
                     {birthdayMonths.map((month) => (
-                      <option key={month.value} value={month.value}>{month.label}</option>
+                      <option key={month.value} value={month.value}>{translateText(month.label)}</option>
                     ))}
                   </select>
                   <select
@@ -570,13 +574,13 @@ export function RegisterPage() {
                     className={`input py-2.5 ${visibleErrors.birthday ? 'input-error' : ''}`}
                     required
                   >
-                    <option value="">Year</option>
+                    <option value="">{t('auth.year', 'Year')}</option>
                     {birthdayYears.map((year) => (
                       <option key={year} value={year}>{year}</option>
                     ))}
                   </select>
                 </div>
-                {visibleErrors.birthday && <p className="mt-1.5 text-sm text-red-500">{visibleErrors.birthday}</p>}
+                {visibleErrors.birthday && <p className="mt-1.5 text-sm text-red-500">{translateText(visibleErrors.birthday)}</p>}
               </div>
               <div>
                 <div className="relative">
@@ -598,7 +602,7 @@ export function RegisterPage() {
                       ))}
                     </div>
                     <p className={`text-xs ${passwordStrength.score >= 3 ? 'text-emerald-600' : 'text-dark-500'}`}>
-                      Password strength: {passwordStrength.label}
+                      {t('auth.passwordStrength', 'Password strength')}: {translateText(passwordStrength.label)}
                     </p>
                   </div>
                 )}
@@ -608,7 +612,7 @@ export function RegisterPage() {
             </form>
 
             <p className="mt-6 text-center text-dark-500">
-              Already have an account? <Link to="/login" className="font-medium link-primary">Sign in</Link>
+              {t('auth.haveAccount', 'Already have an account?')} <Link to="/login" className="font-medium link-primary">{t('auth.signIn', 'Sign in')}</Link>
             </p>
           </div>
         </div>
@@ -620,6 +624,7 @@ export function RegisterPage() {
 // ==================== SOCIAL CALLBACK PAGE ====================
 
 export function SocialAuthCallbackPage() {
+  const { translateText } = useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
@@ -675,9 +680,9 @@ export function SocialAuthCallbackPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-md card p-8 text-center">
-          <h1 className="text-xl font-bold text-dark-900 dark:text-white mb-3">Sign-In Failed</h1>
-          <p className="text-sm text-dark-500 mb-6">{message}</p>
-          <Link to="/login" className="btn btn-primary w-full">Back to Login</Link>
+          <h1 className="text-xl font-bold text-dark-900 dark:text-white mb-3">{translateText('Sign-In Failed')}</h1>
+          <p className="text-sm text-dark-500 mb-6">{translateText(message)}</p>
+          <Link to="/login" className="btn btn-primary w-full">{translateText('Back to Login')}</Link>
         </div>
       </div>
     );
@@ -687,8 +692,8 @@ export function SocialAuthCallbackPage() {
     <div className="min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-md card p-8 text-center">
         <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <h1 className="text-xl font-bold text-dark-900 dark:text-white mb-2">Signing you in</h1>
-        <p className="text-sm text-dark-500">{message}</p>
+        <h1 className="text-xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Signing you in')}</h1>
+        <p className="text-sm text-dark-500">{translateText(message)}</p>
       </div>
     </div>
   );
@@ -697,6 +702,7 @@ export function SocialAuthCallbackPage() {
 // ==================== COMPLETE PROFILE PAGE ====================
 
 export function CompleteProfilePage() {
+  const { translateText } = useLanguage();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const { mutate: updateProfile, isPending } = useUpdateProfile();
@@ -759,7 +765,7 @@ export function CompleteProfilePage() {
 
   return (
     <>
-      <Helmet><title>Complete Profile - Bassac Post</title></Helmet>
+      <Helmet><title>{`${translateText('Complete Profile')} - Bassac Post`}</title></Helmet>
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <Link to="/" className="flex items-center gap-2 mb-8 justify-center">
@@ -770,44 +776,44 @@ export function CompleteProfilePage() {
           </Link>
 
           <div className="card p-8">
-            <h1 className="text-2xl font-bold text-dark-900 dark:text-white text-center mb-2">Complete Your Profile</h1>
+            <h1 className="text-2xl font-bold text-dark-900 dark:text-white text-center mb-2">{translateText('Complete Your Profile')}</h1>
             <p className="text-sm text-dark-500 text-center mb-6">
-              We need your gender and birthday to finish your account setup.
+              {translateText('We need your gender and birthday to finish your account setup.')}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {errors.form && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {errors.form}
+                  {translateText(errors.form)}
                 </div>
               )}
 
               <div>
-                <label className="label">Gender<span className="text-red-500 ml-1">*</span></label>
+                <label className="label">{translateText('Gender')}<span className="text-red-500 ml-1">*</span></label>
                 <select
                   value={form.gender}
                   onChange={(event) => setForm((prev) => ({ ...prev, gender: event.target.value }))}
                   className={`input ${errors.gender ? 'input-error' : ''}`}
                   required
                 >
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
+                  <option value="">{translateText('Select gender')}</option>
+                  <option value="male">{translateText('Male')}</option>
+                  <option value="female">{translateText('Female')}</option>
                 </select>
-                {errors.gender && <p className="mt-1.5 text-sm text-red-500">{errors.gender}</p>}
+                {errors.gender && <p className="mt-1.5 text-sm text-red-500">{translateText(errors.gender)}</p>}
               </div>
 
               <Input
-                label="Birthday"
+                label={translateText('Birthday')}
                 type="date"
                 value={form.birthday}
                 onChange={(event) => setForm((prev) => ({ ...prev, birthday: event.target.value }))}
-                error={errors.birthday}
+                error={translateText(errors.birthday)}
                 required
               />
 
               <Button type="submit" className="w-full" size="lg" isLoading={isPending}>
-                Save & Continue
+                {translateText('Save & Continue')}
               </Button>
             </form>
           </div>
@@ -820,6 +826,7 @@ export function CompleteProfilePage() {
 // ==================== ACCOUNT PAGE ====================
 
 export function AccountPage() {
+  const { translateText } = useLanguage();
   const { user, setUser } = useAuthStore();
   const { mutate: updateProfile, isPending } = useUpdateProfile();
   const initialBirthday = user?.birthday && !Number.isNaN(new Date(user.birthday).getTime())
@@ -928,12 +935,12 @@ export function AccountPage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+      toast.error(translateText('Please select an image file'));
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
+      toast.error(translateText('Image must be less than 5MB'));
       return;
     }
 
@@ -956,7 +963,7 @@ export function AccountPage() {
       });
     } catch {
       URL.revokeObjectURL(previewUrl);
-      toast.error('Could not read this image');
+      toast.error(translateText('Could not read this image'));
     }
   };
 
@@ -979,13 +986,13 @@ export function AccountPage() {
       const avatar = response?.data?.data?.avatar;
       if (avatar) {
         setUser({ ...user, avatar });
-        toast.success('Profile picture updated!');
+        toast.success(translateText('Profile picture updated!'));
         closeAvatarEditor();
       } else {
-        toast.error('Upload failed');
+        toast.error(translateText('Upload failed'));
       }
     } catch (error) {
-      toast.error('Upload failed');
+      toast.error(translateText('Upload failed'));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -998,10 +1005,10 @@ export function AccountPage() {
 
   return (
     <>
-      <Helmet><title>Account - Bassac Post</title></Helmet>
+      <Helmet><title>{`${translateText('Account')} - Bassac Post`}</title></Helmet>
       <div className="container-custom py-10">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Account</h1>
+          <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">{translateText('Account')}</h1>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="card p-6 text-center">
               <div className="relative inline-block mb-4">
@@ -1025,14 +1032,14 @@ export function AccountPage() {
                   />
                 </label>
               </div>
-              <p className="mb-4 text-xs text-dark-500">Tap the camera icon to choose, crop, and update your photo.</p>
+              <p className="mb-4 text-xs text-dark-500">{translateText('Tap the camera icon to choose, crop, and update your photo.')}</p>
 
               <h2 className="text-2xl font-semibold text-dark-900 dark:text-white">{user?.fullName}</h2>
               <p className="text-dark-500">{user?.email}</p>
-              <p className="text-sm text-primary-600 capitalize mt-1">{user?.role}</p>
+              <p className="text-sm text-primary-600 capitalize mt-1">{translateText(user?.role)}</p>
             </div>
             <div className="card p-6">
-              <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Edit Profile</h2>
+              <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Edit Profile')}</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input label="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
@@ -1040,25 +1047,25 @@ export function AccountPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Gender</label>
+                    <label className="label">{translateText('Gender')}</label>
                     <select
                       value={form.gender}
                       onChange={(e) => setForm({ ...form, gender: e.target.value })}
                       className="input"
                     >
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
+                      <option value="male">{translateText('Male')}</option>
+                      <option value="female">{translateText('Female')}</option>
                     </select>
                   </div>
                   <Input
-                    label="Birthday"
+                    label={translateText('Birthday')}
                     type="date"
                     value={form.birthday}
                     onChange={(e) => setForm({ ...form, birthday: e.target.value })}
                   />
                 </div>
-                <Textarea label="Bio" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Tell us about yourself..." />
-                <Button type="submit" isLoading={isPending}>Save Changes</Button>
+                <Textarea label={translateText('Bio')} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder={translateText('Tell us about yourself...')} />
+                <Button type="submit" isLoading={isPending}>{translateText('Save Changes')}</Button>
               </form>
             </div>
           </div>
@@ -1114,13 +1121,13 @@ export function AccountPage() {
               )}
               <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/70" />
             </div>
-            <p className="mt-2 text-center text-xs text-dark-500">Drag image to reposition inside the circle</p>
+            <p className="mt-2 text-center text-xs text-dark-500">{translateText('Drag image to reposition inside the circle')}</p>
           </div>
 
           <div className="space-y-4">
             <div>
               <div className="mb-1 flex items-center justify-between text-sm text-dark-600 dark:text-dark-300">
-                <span>Zoom</span>
+                <span>{translateText('Zoom')}</span>
                 <span>{avatarEditor.zoom.toFixed(2)}x</span>
               </div>
               <input
@@ -1136,7 +1143,7 @@ export function AccountPage() {
 
             <div>
               <div className="mb-1 flex items-center justify-between text-sm text-dark-600 dark:text-dark-300">
-                <span>Rotation</span>
+                <span>{translateText('Rotation')}</span>
                 <span>{avatarEditor.rotation}&deg;</span>
               </div>
               <input
@@ -1162,7 +1169,7 @@ export function AccountPage() {
               }}
               disabled={isUploadingAvatar}
             >
-              Cancel
+              {translateText('Cancel')}
             </Button>
             <Button
               type="button"
@@ -1171,14 +1178,14 @@ export function AccountPage() {
               onClick={() => setAvatarEditor((prev) => ({ ...prev, position: { x: 0, y: 0 }, zoom: 1, rotation: 0 }))}
               disabled={isUploadingAvatar}
             >
-              Reset
+              {translateText('Reset')}
             </Button>
             <Button
               type="button"
               onClick={handleAvatarUpload}
               isLoading={isUploadingAvatar}
             >
-              Done & Update
+              {translateText('Done & Update')}
             </Button>
           </div>
         </div>
@@ -1190,6 +1197,7 @@ export function AccountPage() {
 // ==================== PREVIEW PAGE ====================
 
 export function VerifyEmailPage() {
+  const { translateText } = useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('verifying');
@@ -1232,15 +1240,15 @@ export function VerifyEmailPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Verify Email - Bassac Post</title>
+        <title>{`${translateText('Verify Email')} - Bassac Post`}</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="card p-8 text-center">
           {status === 'verifying' && (
             <>
               <div className="w-16 h-16 mx-auto mb-4 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Verifying Email</h1>
-              <p className="text-dark-500">Please wait while we verify your email address...</p>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Verifying Email')}</h1>
+              <p className="text-dark-500">{translateText('Please wait while we verify your email address...')}</p>
             </>
           )}
           {status === 'success' && (
@@ -1250,9 +1258,9 @@ export function VerifyEmailPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Email Verified!</h1>
-              <p className="text-dark-500 mb-4">{message}</p>
-              <p className="text-sm text-dark-400">Redirecting to login...</p>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Email Verified!')}</h1>
+              <p className="text-dark-500 mb-4">{translateText(message)}</p>
+              <p className="text-sm text-dark-400">{translateText('Redirecting to login...')}</p>
             </>
           )}
           {status === 'error' && (
@@ -1262,9 +1270,9 @@ export function VerifyEmailPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Verification Failed</h1>
-              <p className="text-dark-500 mb-6">{message}</p>
-              <Link to="/login" className="btn btn-primary">Go to Login</Link>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Verification Failed')}</h1>
+              <p className="text-dark-500 mb-6">{translateText(message)}</p>
+              <Link to="/login" className="btn btn-primary">{translateText('Go to Login')}</Link>
             </>
           )}
         </div>
@@ -1275,6 +1283,7 @@ export function VerifyEmailPage() {
 
 // ==================== Newsletter Confirm Page ====================
 export function NewsletterConfirmPage() {
+  const { translateText } = useLanguage();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
@@ -1304,15 +1313,15 @@ export function NewsletterConfirmPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Confirm Subscription - Bassac Post</title>
+        <title>{`${translateText('Confirm Subscription')} - Bassac Post`}</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="card p-8 text-center">
           {status === 'verifying' && (
             <>
               <div className="w-16 h-16 mx-auto mb-4 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Confirming Subscription</h1>
-              <p className="text-dark-500">Please wait while we confirm your subscription...</p>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Confirming Subscription')}</h1>
+              <p className="text-dark-500">{translateText('Please wait while we confirm your subscription...')}</p>
             </>
           )}
           {status === 'success' && (
@@ -1320,9 +1329,9 @@ export function NewsletterConfirmPage() {
               <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-emerald-600" />
               </div>
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Subscribed!</h1>
-              <p className="text-dark-500 mb-4">{message}</p>
-              <Link to="/" className="btn btn-primary">Go Home</Link>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Subscribed!')}</h1>
+              <p className="text-dark-500 mb-4">{translateText(message)}</p>
+              <Link to="/" className="btn btn-primary">{translateText('Go Home')}</Link>
             </>
           )}
           {status === 'error' && (
@@ -1332,9 +1341,9 @@ export function NewsletterConfirmPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Confirmation Failed</h1>
-              <p className="text-dark-500 mb-6">{message}</p>
-              <Link to="/" className="btn btn-primary">Go Home</Link>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Confirmation Failed')}</h1>
+              <p className="text-dark-500 mb-6">{translateText(message)}</p>
+              <Link to="/" className="btn btn-primary">{translateText('Go Home')}</Link>
             </>
           )}
         </div>
@@ -1345,6 +1354,7 @@ export function NewsletterConfirmPage() {
 
 // ==================== Newsletter Unsubscribe Page ====================
 export function NewsletterUnsubscribePage() {
+  const { translateText } = useLanguage();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
@@ -1375,15 +1385,15 @@ export function NewsletterUnsubscribePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Unsubscribe - Bassac Post</title>
+        <title>{`${translateText('Unsubscribe')} - Bassac Post`}</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="card p-8 text-center">
           {status === 'verifying' && (
             <>
               <div className="w-16 h-16 mx-auto mb-4 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Processing</h1>
-              <p className="text-dark-500">Please wait while we update your subscription...</p>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Processing')}</h1>
+              <p className="text-dark-500">{translateText('Please wait while we update your subscription...')}</p>
             </>
           )}
           {status === 'success' && (
@@ -1391,9 +1401,9 @@ export function NewsletterUnsubscribePage() {
               <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-emerald-600" />
               </div>
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Unsubscribed</h1>
-              <p className="text-dark-500 mb-4">{message}</p>
-              <Link to="/" className="btn btn-primary">Go Home</Link>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Unsubscribed')}</h1>
+              <p className="text-dark-500 mb-4">{translateText(message)}</p>
+              <Link to="/" className="btn btn-primary">{translateText('Go Home')}</Link>
             </>
           )}
           {status === 'error' && (
@@ -1403,9 +1413,9 @@ export function NewsletterUnsubscribePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Unsubscribe Failed</h1>
-              <p className="text-dark-500 mb-6">{message}</p>
-              <Link to="/" className="btn btn-primary">Go Home</Link>
+              <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Unsubscribe Failed')}</h1>
+              <p className="text-dark-500 mb-6">{translateText(message)}</p>
+              <Link to="/" className="btn btn-primary">{translateText('Go Home')}</Link>
             </>
           )}
         </div>
@@ -1416,6 +1426,7 @@ export function NewsletterUnsubscribePage() {
 
 // ==================== Forgot Password Page ====================
 export function ForgotPasswordPage() {
+  const { translateText } = useLanguage();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState('idle');
@@ -1452,7 +1463,7 @@ export function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Forgot Password - Bassac Post</title>
+        <title>{`${translateText('Forgot Password')} - Bassac Post`}</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -1461,26 +1472,26 @@ export function ForgotPasswordPage() {
           </Link>
         </div>
         <div className="card p-8">
-          <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Forgot Password</h2>
-          <p className="text-dark-500 mb-6">Enter your email and we'll send you a reset link.</p>
+          <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Forgot Password')}</h2>
+          <p className="text-dark-500 mb-6">{translateText("Enter your email and we'll send you a reset link.")}</p>
 
           {status === 'success' ? (
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
                 <Mail className="w-8 h-8 text-green-600" />
               </div>
-              <p className="text-dark-600 dark:text-dark-300 mb-6">{message}</p>
-              <Link to="/login" className="btn btn-primary">Back to Login</Link>
+              <p className="text-dark-600 dark:text-dark-300 mb-6">{translateText(message)}</p>
+              <Link to="/login" className="btn btn-primary">{translateText('Back to Login')}</Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {status === 'error' && (
                 <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-sm">
-                  {message}
+                  {translateText(message)}
                 </div>
               )}
               <Input
-                label="Email Address"
+                label={translateText('Email Address')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -1488,12 +1499,12 @@ export function ForgotPasswordPage() {
                 required
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+                {isSubmitting ? translateText('Sending...') : translateText('Send Reset Link')}
               </Button>
               <p className="text-center text-sm text-dark-500">
-                Remember your password?{' '}
+                {translateText('Remember your password?')}{' '}
                 <Link to="/login" className="text-primary-600 hover:underline">
-                  Sign in
+                  {translateText('Sign in')}
                 </Link>
               </p>
             </form>
@@ -1506,6 +1517,7 @@ export function ForgotPasswordPage() {
 
 // ==================== Reset Password Page ====================
 export function ResetPasswordPage() {
+  const { translateText } = useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
@@ -1569,7 +1581,7 @@ export function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
         <Helmet>
-          <title>Reset Password - Bassac Post</title>
+          <title>{`${translateText('Reset Password')} - Bassac Post`}</title>
         </Helmet>
         <div className="w-full max-w-md">
           <div className="card p-8 text-center">
@@ -1578,9 +1590,9 @@ export function ResetPasswordPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Invalid Link</h1>
-            <p className="text-dark-500 mb-6">{message}</p>
-            <Link to="/forgot-password" className="btn btn-primary">Request New Link</Link>
+            <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Invalid Link')}</h1>
+            <p className="text-dark-500 mb-6">{translateText(message)}</p>
+            <Link to="/forgot-password" className="btn btn-primary">{translateText('Request New Link')}</Link>
           </div>
         </div>
       </div>
@@ -1590,7 +1602,7 @@ export function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950 px-4">
       <Helmet>
-        <title>Reset Password - Bassac Post</title>
+        <title>{`${translateText('Reset Password')} - Bassac Post`}</title>
       </Helmet>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -1606,24 +1618,24 @@ export function ResetPasswordPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Password Reset!</h2>
-              <p className="text-dark-500 mb-4">{message}</p>
-              <p className="text-sm text-dark-400">Redirecting to login...</p>
+              <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Password Reset!')}</h2>
+              <p className="text-dark-500 mb-4">{translateText(message)}</p>
+              <p className="text-sm text-dark-400">{translateText('Redirecting to login...')}</p>
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">Reset Password</h2>
-              <p className="text-dark-500 mb-6">Enter your new password below.</p>
+              <h2 className="text-2xl font-bold text-dark-900 dark:text-white mb-2">{translateText('Reset Password')}</h2>
+              <p className="text-dark-500 mb-6">{translateText('Enter your new password below.')}</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {status === 'error' && (
                   <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-sm">
-                    {message}
+                    {translateText(message)}
                   </div>
                 )}
                 <div className="relative">
                   <Input
-                    label="New Password"
+                    label={translateText('New Password')}
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -1639,7 +1651,7 @@ export function ResetPasswordPage() {
                   </button>
                 </div>
                 <Input
-                  label="Confirm Password"
+                  label={translateText('Confirm Password')}
                   type={showPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -1647,7 +1659,7 @@ export function ResetPasswordPage() {
                   required
                 />
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? 'Resetting...' : 'Reset Password'}
+                  {isSubmitting ? translateText('Resetting...') : translateText('Reset Password')}
                 </Button>
               </form>
             </>

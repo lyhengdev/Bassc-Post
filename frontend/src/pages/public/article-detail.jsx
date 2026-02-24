@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowRight, Calendar, Eye, Facebook, Twitter, Linkedin, ArrowLeft, Mail, MessageCircle, ThumbsUp, Reply, Send, Trash2, CheckCircle, Link2 } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useLatestArticles, useArticleBySlug, useRelatedArticles, usePublicSettings, useCreateComment, useLikeComment, useDeleteComment } from '../../hooks/useApi';
+import { useLatestArticles, useResolvedArticleBySlug, useRelatedArticles, usePublicSettings, useCreateComment, useLikeComment, useDeleteComment } from '../../hooks/useApi';
 import { useArticleAds, useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
 import { articlesAPI, commentsAPI } from '../../services/api';
 import { ArticleContent } from '../../components/article/index.jsx';
@@ -14,9 +14,11 @@ import { InlineAdGroup } from '../../components/ads/inlineAds.jsx';
 import { buildMediaUrl, formatDate, cn, formatRelativeTime } from '../../utils';
 import { useAuthStore } from '../../stores/authStore';
 import { SidebarAdSlot } from './shared/rightSidebarAds.jsx';
+import useLanguage from '../../hooks/useLanguage';
 
 
 function NewsListWithExcerpt({ articles, isLoading, emptyMessage, imageSize = 'md' }) {
+  const { translateText } = useLanguage();
   const imageClassName = imageSize === 'sm'
     ? 'w-20 h-16'
     : 'w-28 h-20';
@@ -41,7 +43,7 @@ function NewsListWithExcerpt({ articles, isLoading, emptyMessage, imageSize = 'm
   }
 
   if (!articles?.length) {
-    return <p className="text-dark-500 text-sm">{emptyMessage || 'No news found'}</p>;
+    return <p className="text-dark-500 text-sm">{emptyMessage || translateText('No news found')}</p>;
   }
 
   return (
@@ -86,9 +88,10 @@ function NewsListWithExcerpt({ articles, isLoading, emptyMessage, imageSize = 'm
 // ==================== ARTICLES PAGE ====================
 
 function CommentItem({ comment, isReply = false, onLike, onDelete, onReplyClick, replyTo, user, isAuthenticated }) {
+  const { translateText } = useLanguage();
   const authorName = comment.author
     ? `${comment.author.firstName} ${comment.author.lastName}`
-    : comment.guestName || 'Anonymous';
+    : comment.guestName || translateText('Anonymous');
   const canDelete = isAuthenticated && (
     comment.author?._id === user?._id ||
     ['admin', 'editor'].includes(user?.role)
@@ -111,15 +114,15 @@ function CommentItem({ comment, isReply = false, onLike, onDelete, onReplyClick,
               {formatRelativeTime(comment.createdAt)}
             </span>
             {comment.isEdited && (
-              <span className="text-xs text-dark-400">(edited)</span>
+              <span className="text-xs text-dark-400">({translateText('edited')})</span>
             )}
             {comment.status === 'pending' && (
-              <Badge className="badge-warning text-xs">Pending</Badge>
+              <Badge className="badge-warning text-xs">{translateText('Pending')}</Badge>
             )}
             {comment.status === 'approved' && (
               <span
                 className="inline-flex items-center text-emerald-600"
-                title="Approved"
+                title={translateText('Approved')}
               >
                 <CheckCircle className="w-3.5 h-3.5" />
               </span>
@@ -149,7 +152,7 @@ function CommentItem({ comment, isReply = false, onLike, onDelete, onReplyClick,
                 className="flex items-center gap-1 text-xs text-dark-500 headline-hover"
               >
                 <Reply className="w-3.5 h-3.5" />
-                Reply
+                {translateText('Reply')}
               </button>
             )}
             {canDelete && (
@@ -188,6 +191,7 @@ function CommentItem({ comment, isReply = false, onLike, onDelete, onReplyClick,
 
 // ==================== REPLY FORM COMPONENT ====================
 function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticated, guestName, setGuestName, guestEmail, setGuestEmail }) {
+  const { translateText } = useLanguage();
   const [content, setContent] = useState('');
 
   const handleSubmit = (e) => {
@@ -202,7 +206,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
       <Textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Write a reply..."
+        placeholder={translateText('Write a reply...')}
         className="text-sm min-h-[80px]"
       />
       {!isAuthenticated && (
@@ -210,7 +214,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
           <Input
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
-            placeholder="Your name"
+            placeholder={translateText('Your name')}
             className="text-sm"
             required
           />
@@ -218,7 +222,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
             type="email"
             value={guestEmail}
             onChange={(e) => setGuestEmail(e.target.value)}
-            placeholder="Your email"
+            placeholder={translateText('Your email')}
             className="text-sm"
             required
           />
@@ -227,7 +231,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
       <div className="flex gap-2 mt-2">
         <Button type="submit" size="sm" disabled={isSubmitting || !content.trim()}>
           <Send className="w-3.5 h-3.5 mr-1" />
-          Reply
+          {translateText('Reply')}
         </Button>
         <Button
           type="button"
@@ -235,7 +239,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
           size="sm"
           onClick={onCancel}
         >
-          Cancel
+          {translateText('Cancel')}
         </Button>
       </div>
     </form>
@@ -244,6 +248,7 @@ function ReplyForm({ commentId, onSubmit, onCancel, isSubmitting, isAuthenticate
 
 // ==================== COMMENTS SECTION COMPONENT ====================
 function CommentsSection({ articleId }) {
+  const { t, translateText } = useLanguage();
   const { user, isAuthenticated } = useAuthStore();
   const commentsLimit = 5;
   const {
@@ -347,7 +352,7 @@ function CommentsSection({ articleId }) {
     <div className="mt-12 pt-8 border-t border-dark-200 dark:border-dark-800">
       <h3 className="flex items-center gap-2 text-2xl font-bold text-dark-900 dark:text-white mb-6">
         <MessageCircle className="w-5 h-5" />
-        Comments {comments.length > 0 && `(${comments.length})`}
+        {translateText('Comments')} {comments.length > 0 && `(${comments.length})`}
       </h3>
 
       {/* Comment Form */}
@@ -355,7 +360,7 @@ function CommentsSection({ articleId }) {
         <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder={isAuthenticated ? "Share your thoughts..." : "Write a comment..."}
+          placeholder={isAuthenticated ? translateText('Share your thoughts...') : translateText('Write a comment...')}
           className="mb-3"
         />
         {!isAuthenticated && (
@@ -363,14 +368,14 @@ function CommentsSection({ articleId }) {
             <Input
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Your name *"
+              placeholder={translateText('Your name *')}
               required
             />
             <Input
               type="email"
               value={guestEmail}
               onChange={(e) => setGuestEmail(e.target.value)}
-              placeholder="Your email *"
+              placeholder={translateText('Your email *')}
               required
             />
           </div>
@@ -379,11 +384,11 @@ function CommentsSection({ articleId }) {
           <p className="text-sm text-dark-500">
             {isAuthenticated
               ? `Commenting as ${user?.firstName}`
-              : 'Comments are moderated before appearing'}
+              : translateText('Comments are moderated before appearing')}
           </p>
           <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
             <Send className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Posting...' : 'Post Comment'}
+            {isSubmitting ? translateText('Posting...') : translateText('Post Comment')}
           </Button>
         </div>
       </form>
@@ -434,7 +439,7 @@ function CommentsSection({ articleId }) {
       ) : (
         <div className="text-center py-8">
           <MessageCircle className="w-12 h-12 text-dark-300 mx-auto mb-3" />
-          <p className="text-dark-500">No comments yet. Be the first to share your thoughts!</p>
+          <p className="text-dark-500">{translateText('No comments yet. Be the first to share your thoughts!')}</p>
         </div>
       )}
 
@@ -444,7 +449,7 @@ function CommentsSection({ articleId }) {
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
           >
-            {isFetchingNextPage ? 'Loading...' : 'Load more comments'}
+            {isFetchingNextPage ? t('common.loading', 'Loading...') : translateText('Load more comments')}
           </Button>
         </div>
       )}
@@ -454,9 +459,9 @@ function CommentsSection({ articleId }) {
         isOpen={!!deleteModal}
         onClose={() => setDeleteModal(null)}
         onConfirm={handleDelete}
-        title="Delete Comment"
-        message="Are you sure you want to delete this comment?"
-        confirmText="Delete"
+        title={translateText('Delete Comment')}
+        message={translateText('Are you sure you want to delete this comment?')}
+        confirmText={translateText('Delete')}
         variant="danger"
         isLoading={isDeleting}
         icon={Trash2}
@@ -467,8 +472,18 @@ function CommentsSection({ articleId }) {
 
 // ==================== ARTICLE DETAIL PAGE ====================
 export function ArticlePage() {
+  const { t, translateText, language } = useLanguage();
+  const navigate = useNavigate();
   const { slug } = useParams();
-  const { data: article, isLoading, error } = useArticleBySlug(slug);
+  const { data: resolvedArticlePayload, isLoading, error } = useResolvedArticleBySlug(slug, language);
+  const article = resolvedArticlePayload?.article;
+  const articleLanguage = resolvedArticlePayload?.language;
+  const missingSelectedLanguage = Boolean(
+    articleLanguage?.requested &&
+    articleLanguage?.usedFallback &&
+    articleLanguage?.resolved &&
+    articleLanguage.requested !== articleLanguage.resolved
+  );
   const backToNewsRef = useRef(null);
   const [relatedLimit, setRelatedLimit] = useState(5);
   const [moreNewsLimit, setMoreNewsLimit] = useState(5);
@@ -541,6 +556,12 @@ export function ArticlePage() {
     };
   }, [settings?.headerSettings?.showCategories, settings?.headerSettings?.sticky]);
 
+  useEffect(() => {
+    const resolvedSlug = articleLanguage?.resolvedSlug || article?.slug;
+    if (!resolvedSlug || !slug || resolvedSlug === slug) return;
+    navigate(`/article/${resolvedSlug}`, { replace: true });
+  }, [article?.slug, articleLanguage?.resolvedSlug, navigate, slug]);
+
   if (isLoading) {
     return (
       <div className="container-custom py-8 sm:py-10">
@@ -552,16 +573,17 @@ export function ArticlePage() {
   if (error || !article) {
     return (
       <div className="container-custom py-20 text-center">
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-4">News Not Found</h1>
-        <p className="text-dark-500 mb-6">The news you're looking for doesn't exist.</p>
-        <Link to="/articles"><Button>Browse News</Button></Link>
+        <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-4">{translateText('News Not Found')}</h1>
+        <p className="text-dark-500 mb-6">{translateText("The news you're looking for doesn't exist.")}</p>
+        <Link to="/articles"><Button>{translateText('Browse News')}</Button></Link>
       </div>
     );
   }
 
   const { title, excerpt, content, featuredImage, category, author, publishedAt, viewCount, wordCount, tags } = article;
+  const articleSlug = article?.slug || slug;
   // featuredImage is a string URL, not an object
-  const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${slug}/1200/600`;
+  const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${articleSlug}/1200/600`;
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const normalizeShareBase = (value = '') =>
     String(value)
@@ -586,7 +608,7 @@ export function ArticlePage() {
     resolveAbsoluteOrigin(import.meta.env.VITE_SOCKET_URL || '') ||
     resolveAbsoluteOrigin(normalizeShareBase(import.meta.env.VITE_SHARE_URL_BASE || ''));
   const shareBaseUrl = backendShareBase || siteUrl;
-  const shareUrl = shareBaseUrl ? `${shareBaseUrl}/share/${encodeURIComponent(slug)}` : '';
+  const shareUrl = shareBaseUrl ? `${shareBaseUrl}/share/${encodeURIComponent(articleSlug)}` : '';
   const moreNewsArticles = (moreNews || []).filter((item) => item._id !== article._id);
 
   const pageUrl = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -720,7 +742,7 @@ export function ArticlePage() {
         >
           <div className="container-custom py-3">
             <Link to="/articles" className="inline-flex items-center gap-2 text-dark-600 dark:text-dark-300 headline-hover">
-              <ArrowLeft className="w-4 h-4" /> Back to News
+              <ArrowLeft className="w-4 h-4" /> {t('common.backToNews', 'Back to News')}
             </Link>
           </div>
         </div>
@@ -730,6 +752,11 @@ export function ArticlePage() {
               <section className="border-b border-dark-100 dark:border-dark-800 mb-10">
                 <div className="py-5 lg:py-8">
                   <div className="max-w-4xl">
+                    {missingSelectedLanguage && (
+                      <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                        {translateText('This article is not available in the selected language yet. Showing English version.')}
+                      </div>
+                    )}
                     <h1 className="font-display text-2xl lg:text-3xl font-bold text-dark-900 dark:text-dark-100 mb-4">{title}</h1>
                     {excerpt && (
                       <p className="text-base text-dark-600 dark:text-dark-300 leading-relaxed">
@@ -756,7 +783,7 @@ export function ArticlePage() {
                         </div>
                       )}
                       <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{formatDate(publishedAt)}</span>
-                      <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{viewCount || 0} views</span>
+                      <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{viewCount || 0} {translateText('views')}</span>
                     </div>
                   </div>
                 </div>
@@ -803,7 +830,7 @@ export function ArticlePage() {
               )}
 
               <div className="mt-8 pt-6 border-t border-dark-200 dark:border-dark-800 flex items-center gap-4">
-                <span className="text-sm font-medium text-dark-500">Share:</span>
+                <span className="text-sm font-medium text-dark-500">{t('common.share', 'Share:')}</span>
                 <a href={`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800"><Facebook className="w-5 h-5 text-[#1877F2]" /></a>
                 {/*<a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800"><Twitter className="w-5 h-5 text-[#1DA1F2]" /></a>*/}
                 <a href={`https://linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800"><Linkedin className="w-5 h-5 text-[#0A66C2]" /></a>
@@ -813,7 +840,7 @@ export function ArticlePage() {
                 <button type="button" onClick={handleCopyLink} className="p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800">
                   <Link2 className={`w-5 h-5 ${copied ? 'text-primary-600' : 'text-dark-500'}`} />
                 </button>
-                {copied && <span className="text-xs text-primary-600">Copied</span>}
+                {copied && <span className="text-xs text-primary-600">{t('common.copied', 'Copied')}</span>}
               </div>
 
               {articleAds?.before_comments?.length > 0 && (
@@ -836,15 +863,15 @@ export function ArticlePage() {
               {/* More News Section */}
               <section className="mt-10 pt-8 border-t border-dark-200 dark:border-dark-800">
                 <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-lg font-semibold text-dark-900 dark:text-white">More News</h3>
+                  <h3 className="text-lg font-semibold text-dark-900 dark:text-white">{translateText('More News')}</h3>
                   <Link to="/articles" className="text-sm font-medium flex items-center gap-1 link-muted">
-                    View all <ArrowRight className="w-4 h-4" />
+                    {t('common.viewAll', 'View all')} <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
                 <NewsListWithExcerpt
                   articles={moreNewsArticles}
                   isLoading={isLoadingMoreNews}
-                  emptyMessage="No additional news available"
+                  emptyMessage={translateText('No additional news available')}
                 />
                 {moreNews?.length >= moreNewsLimit && (
                   <div className="mt-6 flex justify-center">
@@ -854,7 +881,7 @@ export function ArticlePage() {
                       className="px-3 py-1.5 text-sm rounded-lg sm:px-5 sm:py-2.5 sm:text-base sm:rounded-xl"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
-                      See more
+                      {t('common.seeMore', 'See more')}
                     </Button>
                   </div>
                 )}
@@ -877,17 +904,17 @@ export function ArticlePage() {
 
               {/* Related News */}
               <div className="card p-6 mt-0">
-                <h3 className="text-sm font-semibold text-dark-500 uppercase mb-4">Related News</h3>
+                <h3 className="text-sm font-semibold text-dark-500 uppercase mb-4">{translateText('Related News')}</h3>
                 <NewsListWithExcerpt
                   articles={related || []}
                   isLoading={isLoadingRelated}
-                  emptyMessage="No related news found"
+                  emptyMessage={translateText('No related news found')}
                   imageSize="sm"
                 />
                 {related?.length > 0 && (
                   <div className="mt-4 flex justify-center">
                     <Button size="sm" onClick={() => setRelatedLimit((prev) => prev + 5)}>
-                      Load more
+                      {t('common.loadMore', 'Load more')}
                     </Button>
                   </div>
                 )}

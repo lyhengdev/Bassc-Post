@@ -5,17 +5,19 @@ import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus
 import { useDashboardSummary, useAnalyticsViews, useAnalyticsArticles, useAnalyticsAds, useMyArticles, useAdminArticles, usePendingArticles, useDeleteArticle, useApproveArticle, useRejectArticle, useUpdateProfile } from '../../hooks/useApi';
 import { usersAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
+import useLanguage from '../../hooks/useLanguage';
 import { Button, ContentLoader, StatusBadge, Avatar, Modal, Input, Textarea, EmptyState, ConfirmModal, AlertModal, Skeleton } from '../../components/common/index.jsx';
 import { formatNumber, formatRelativeTime, buildMediaUrl } from '../../utils';
 import toast from 'react-hot-toast';
 
 // Dashboard Loading Skeleton
 function DashboardSkeleton({ role }) {
+  const { translateText } = useLanguage();
   const cardCount = role === 'admin' ? 6 : role === 'editor' ? 2 : 4;
   
   return (
     <>
-      <Helmet><title>Dashboard - Bassac Post</title></Helmet>
+      <Helmet><title>{`${translateText('Dashboard')} - Bassac Post`}</title></Helmet>
       
       {/* Header Skeleton */}
       <div className="mb-8">
@@ -111,11 +113,12 @@ function DashboardSkeleton({ role }) {
 }
 
 function LineChart({ data, stroke, fill, valueLabel }) {
+  const { translateText } = useLanguage();
   // Guard against empty data
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-40 flex items-center justify-center text-dark-400">
-        <p className="text-sm">No data available</p>
+        <p className="text-sm">{translateText('No data available')}</p>
       </div>
     );
   }
@@ -161,11 +164,12 @@ function LineChart({ data, stroke, fill, valueLabel }) {
 }
 
 function DualLineChart({ primary, secondary, primaryColor, secondaryColor }) {
+  const { translateText } = useLanguage();
   // Guard against empty data
   if (!primary || !secondary || primary.length === 0 || secondary.length === 0) {
     return (
       <div className="w-full h-40 flex items-center justify-center text-dark-400">
-        <p className="text-sm">No data available</p>
+        <p className="text-sm">{translateText('No data available')}</p>
       </div>
     );
   }
@@ -197,11 +201,12 @@ function DualLineChart({ primary, secondary, primaryColor, secondaryColor }) {
 }
 
 function BarChart({ data, color }) {
+  const { translateText } = useLanguage();
   // Guard against empty data
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-40 flex items-center justify-center text-dark-400">
-        <p className="text-sm">No data available</p>
+        <p className="text-sm">{translateText('No data available')}</p>
       </div>
     );
   }
@@ -240,13 +245,14 @@ function BarChart({ data, color }) {
 }
 
 function DonutChart({ segments, total }) {
+  const { translateText } = useLanguage();
   // Guard against empty data or invalid total
   if (!segments || segments.length === 0 || !total || total === 0) {
     return (
       <svg width="96" height="96" viewBox="0 0 96 96" className="text-dark-400">
         <circle cx="48" cy="48" r="32" fill="none" stroke="#e2e8f0" strokeWidth="12" />
         <text x="48" y="52" textAnchor="middle" fontSize="10" fill="currentColor">
-          No data
+          {translateText('No data')}
         </text>
       </svg>
     );
@@ -288,6 +294,7 @@ function DonutChart({ segments, total }) {
 }
 
 export function DashboardHome() {
+  const { translateText } = useLanguage();
   const { user } = useAuthStore();
   const isUserReady = !!user;
   const { data, isLoading } = useDashboardSummary({ enabled: isUserReady });
@@ -409,29 +416,29 @@ export function DashboardHome() {
 
   return (
     <>
-      <Helmet><title>Dashboard - Bassac Post</title></Helmet>
+      <Helmet><title>{`${translateText('Dashboard')} - Bassac Post`}</title></Helmet>
       <div className="mb-8">
         <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-gradient-to-br from-primary-600 via-blue-600 to-slate-900 text-white p-6 md:p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <p className="text-sm text-white/70">Dashboard</p>
-              <h1 className="text-2xl md:text-2xl font-bold">Welcome back, {user?.firstName}!</h1>
-              <p className="text-white/80 mt-2">Track newsroom momentum and stay ahead.</p>
+              <p className="text-sm text-white/70">{translateText('Dashboard')}</p>
+              <h1 className="text-2xl md:text-2xl font-bold">{translateText('Welcome back,')} {user?.firstName}!</h1>
+              <p className="text-white/80 mt-2">{translateText('Track newsroom momentum and stay ahead.')}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="rounded-xl bg-white/10 px-4 py-3">
-                <p className="text-xs text-white/70">Last 7 days</p>
-                <p className="text-lg font-semibold">{activitySeries.reduce((sum, d) => sum + d.value, 0)} items</p>
+                <p className="text-xs text-white/70">{translateText('Last 7 days')}</p>
+                <p className="text-lg font-semibold">{activitySeries.reduce((sum, d) => sum + d.value, 0)} {translateText('items')}</p>
               </div>
               <div className="rounded-xl bg-white/10 px-4 py-3">
-                <p className="text-xs text-white/70">Total views</p>
+                <p className="text-xs text-white/70">{translateText('Total views')}</p>
                 <p className="text-lg font-semibold">{formatNumber(stats.totalViews || 0)}</p>
               </div>
             </div>
           </div>
           <div className="mt-6 bg-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between text-xs text-white/70 mb-2">
-              <span className="uppercase tracking-wide">Activity</span>
+              <span className="uppercase tracking-wide">{translateText('Activity')}</span>
               <span>{activitySeries.map((d) => d.label).join(' • ')}</span>
             </div>
             <svg width="100%" height="70" viewBox="0 0 200 70" className="overflow-visible">
@@ -464,7 +471,7 @@ export function DashboardHome() {
               <TrendingUp className="w-4 h-4 text-emerald-500" />
             </div>
             <p className="text-2xl font-bold text-dark-900 dark:text-white">{formatNumber(stat.value)}</p>
-            <p className="text-sm text-dark-500">{stat.label}</p>
+            <p className="text-sm text-dark-500">{translateText(stat.label)}</p>
           </div>
         ))}
       </div>
@@ -474,8 +481,8 @@ export function DashboardHome() {
           <div className="card p-6 xl:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-semibold text-dark-900 dark:text-white">Views Over Time</h2>
-                <p className="text-sm text-dark-500">Last 30 days of traffic</p>
+                <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Views Over Time')}</h2>
+                <p className="text-sm text-dark-500">{translateText('Last 30 days of traffic')}</p>
               </div>
               <Eye className="w-5 h-5 text-primary-600" />
             </div>
@@ -483,15 +490,15 @@ export function DashboardHome() {
               data={viewsSeries}
               stroke="#2563eb"
               fill="rgba(37,99,235,0.18)"
-              valueLabel="views"
+              valueLabel={translateText('views')}
             />
           </div>
 
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-semibold text-dark-900 dark:text-white">Published Per Day</h2>
-                <p className="text-sm text-dark-500">Editorial output pace</p>
+                <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Published Per Day')}</h2>
+                <p className="text-sm text-dark-500">{translateText('Editorial output pace')}</p>
               </div>
               <FileText className="w-5 h-5 text-emerald-500" />
             </div>
@@ -501,8 +508,8 @@ export function DashboardHome() {
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-semibold text-dark-900 dark:text-white">Status Mix</h2>
-                <p className="text-sm text-dark-500">Published vs pending vs draft</p>
+                <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Status Mix')}</h2>
+                <p className="text-sm text-dark-500">{translateText('Published vs pending vs draft')}</p>
               </div>
               <BarChart3 className="w-5 h-5 text-amber-500" />
             </div>
@@ -512,7 +519,7 @@ export function DashboardHome() {
                 {statusSegments.map((segment) => (
                   <div key={segment.label} className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />
-                    <span className="text-dark-500">{segment.label}</span>
+                    <span className="text-dark-500">{translateText(segment.label)}</span>
                     <span className="font-semibold text-dark-900 dark:text-white">{segment.value}</span>
                   </div>
                 ))}
@@ -523,8 +530,8 @@ export function DashboardHome() {
           <div className="card p-6 xl:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-semibold text-dark-900 dark:text-white">Category Performance</h2>
-                <p className="text-sm text-dark-500">Views by category</p>
+                <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Category Performance')}</h2>
+                <p className="text-sm text-dark-500">{translateText('Views by category')}</p>
               </div>
               <Layers className="w-5 h-5 text-indigo-500" />
             </div>
@@ -537,7 +544,7 @@ export function DashboardHome() {
                     <div key={cat.name}>
                       <div className="flex items-center justify-between text-sm">
                         <p className="font-medium text-dark-900 dark:text-white">{cat.name}</p>
-                        <span className="text-dark-500">{formatNumber(cat.views || 0)} views</span>
+                        <span className="text-dark-500">{formatNumber(cat.views || 0)} {translateText('views')}</span>
                       </div>
                       <div className="mt-2 h-2 rounded-full bg-dark-100 dark:bg-dark-800 overflow-hidden">
                         <div className="h-full bg-indigo-500" style={{ width: `${width}%` }} />
@@ -547,15 +554,15 @@ export function DashboardHome() {
                 })}
               </div>
             ) : (
-              <p className="text-dark-500 text-center py-4">No category data yet</p>
+              <p className="text-dark-500 text-center py-4">{translateText('No category data yet')}</p>
             )}
           </div>
 
           <div className="card p-6 xl:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-semibold text-dark-900 dark:text-white">Ad Reach & CTR</h2>
-                <p className="text-sm text-dark-500">Impressions vs clicks (last 30 days)</p>
+                <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Ad Reach & CTR')}</h2>
+                <p className="text-sm text-dark-500">{translateText('Impressions vs clicks (last 30 days)')}</p>
               </div>
               <Activity className="w-5 h-5 text-rose-500" />
             </div>
@@ -569,28 +576,28 @@ export function DashboardHome() {
                 />
               </div>
               <div className="w-full lg:w-60 rounded-xl border border-dark-100 dark:border-dark-800 p-4">
-                <p className="text-xs text-dark-500">Total CTR</p>
+                <p className="text-xs text-dark-500">{translateText('Total CTR')}</p>
                 <p className="text-2xl font-bold text-dark-900 dark:text-white">
                   {adsAnalytics?.totals?.ctr ? `${adsAnalytics.totals.ctr}%` : '0%'}
                 </p>
                 <div className="mt-4 space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-dark-500">Impressions</span>
+                    <span className="text-dark-500">{translateText('Impressions')}</span>
                     <span className="font-semibold text-dark-900 dark:text-white">{formatNumber(adsAnalytics?.totals?.impressions || 0)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-dark-500">Clicks</span>
+                    <span className="text-dark-500">{translateText('Clicks')}</span>
                     <span className="font-semibold text-dark-900 dark:text-white">{formatNumber(adsAnalytics?.totals?.clicks || 0)}</span>
                   </div>
                 </div>
                 <div className="mt-4 text-xs text-dark-500">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-red-500" />
-                    Impressions
+                    {translateText('Impressions')}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    Clicks
+                    {translateText('Clicks')}
                   </div>
                 </div>
               </div>
@@ -602,7 +609,7 @@ export function DashboardHome() {
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-dark-900 dark:text-white">Content Momentum</h2>
+              <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Content Momentum')}</h2>
               <Activity className="w-5 h-5 text-emerald-500" />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -623,7 +630,7 @@ export function DashboardHome() {
 
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-dark-900 dark:text-white">Top Stories</h2>
+              <h2 className="font-semibold text-dark-900 dark:text-white">{translateText('Top Stories')}</h2>
               <BarChart3 className="w-5 h-5 text-blue-500" />
             </div>
             {topArticles.length > 0 ? (
@@ -635,7 +642,7 @@ export function DashboardHome() {
                     <div key={article._id}>
                       <div className="flex items-center justify-between text-sm">
                         <p className="font-medium text-dark-900 dark:text-white truncate">{article.title}</p>
-                        <span className="text-dark-500">{formatNumber(article.viewCount || 0)} views</span>
+                        <span className="text-dark-500">{formatNumber(article.viewCount || 0)} {translateText('views')}</span>
                       </div>
                       <div className="mt-2 h-2 rounded-full bg-dark-100 dark:bg-dark-800 overflow-hidden">
                         <div className="h-full bg-blue-500" style={{ width: `${width}%` }} />
@@ -645,14 +652,14 @@ export function DashboardHome() {
                 })}
               </div>
             ) : (
-              <p className="text-dark-500 text-center py-4">No top news yet</p>
+              <p className="text-dark-500 text-center py-4">{translateText('No top news yet')}</p>
             )}
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="card p-6">
-            <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Recent News</h2>
+            <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Recent News')}</h2>
             {recentItems.length > 0 ? (
               <div className="space-y-3">
                 {recentItems.map((article) => (
@@ -666,37 +673,37 @@ export function DashboardHome() {
                 ))}
               </div>
             ) : (
-              <p className="text-dark-500 text-center py-4">No recent news</p>
+              <p className="text-dark-500 text-center py-4">{translateText('No recent news')}</p>
             )}
           </div>
 
           <div className="card p-6">
-            <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Quick Actions</h2>
+            <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Quick Actions')}</h2>
             <div className="space-y-3">
               <Link to="/dashboard/articles/new" className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors">
                 <Plus className="w-5 h-5" />
-                <span className="font-medium">Write New News</span>
+                <span className="font-medium">{translateText('Write New News')}</span>
               </Link>
               <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors">
                 <FileText className="w-5 h-5" />
-                <span className="font-medium">View My News</span>
+                <span className="font-medium">{translateText('View My News')}</span>
               </Link>
               {(role === 'editor' || role === 'admin') && (
                 <Link to="/dashboard/pending" className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors">
                   <Clock className="w-5 h-5" />
-                  <span className="font-medium">Review Pending News</span>
+                  <span className="font-medium">{translateText('Review Pending News')}</span>
                 </Link>
               )}
               {role === 'admin' && (
                 <Link to="/dashboard/ads" className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors">
                   <BarChart3 className="w-5 h-5" />
-                  <span className="font-medium">Ad Insights</span>
+                  <span className="font-medium">{translateText('Ad Insights')}</span>
                 </Link>
               )}
               {role === 'admin' && (
                 <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors">
                   <BarChart3 className="w-5 h-5" />
-                  <span className="font-medium">News Insights</span>
+                  <span className="font-medium">{translateText('News Insights')}</span>
                 </Link>
               )}
             </div>
@@ -708,6 +715,7 @@ export function DashboardHome() {
 }
 
 export function MyArticlesPage() {
+  const { t, translateText } = useLanguage();
   const { user } = useAuthStore();
   const isUserReady = !!user;
   const [page, setPage] = useState(1);
@@ -743,16 +751,16 @@ export function MyArticlesPage() {
 
   return (
     <>
-      <Helmet><title>{isAdmin ? 'All News' : 'My News'} - Bassac Post</title></Helmet>
+      <Helmet><title>{`${translateText(isAdmin ? 'All News' : 'My News')} - Bassac Post`}</title></Helmet>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{isAdmin ? 'All News' : 'My News'}</h1>
+          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{translateText(isAdmin ? 'All News' : 'My News')}</h1>
           <p className="text-dark-500 text-sm">
-            {isAdmin ? 'Review and manage every news item across the newsroom.' : 'Drafts, submissions, and published stories in one place.'}
+            {translateText(isAdmin ? 'Review and manage every news item across the newsroom.' : 'Drafts, submissions, and published stories in one place.')}
           </p>
         </div>
         <Link to="/dashboard/articles/new">
-          <Button leftIcon={<Plus className="w-4 h-4" />}>New News</Button>
+          <Button leftIcon={<Plus className="w-4 h-4" />}>{translateText('New News')}</Button>
         </Link>
       </div>
 
@@ -760,17 +768,17 @@ export function MyArticlesPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
             <Input
-              label="Search"
+              label={t('common.search', 'Search')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search by title..."
+              placeholder={translateText('Search by title...')}
             />
           </div>
           <div>
-            <label className="label">Status</label>
+            <label className="label">{translateText('Status')}</label>
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -779,12 +787,12 @@ export function MyArticlesPage() {
               }}
               className="input"
             >
-              <option value="">All statuses</option>
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="published">Published</option>
-              <option value="rejected">Rejected</option>
-              <option value="archived">Archived</option>
+              <option value="">{translateText('All statuses')}</option>
+              <option value="draft">{translateText('Draft')}</option>
+              <option value="pending">{translateText('Pending')}</option>
+              <option value="published">{translateText('Published')}</option>
+              <option value="rejected">{translateText('Rejected')}</option>
+              <option value="archived">{translateText('Archived')}</option>
             </select>
           </div>
         </div>
@@ -798,11 +806,11 @@ export function MyArticlesPage() {
               <table className="w-full">
                 <thead className="bg-dark-50 dark:bg-dark-800">
                   <tr>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Title</th>
-                    {isAdmin && <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Author</th>}
-                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Status</th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Views</th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">Date</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">{translateText('Title')}</th>
+                    {isAdmin && <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">{translateText('Author')}</th>}
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">{translateText('Status')}</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">{translateText('Views')}</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-dark-500">{translateText('Date')}</th>
                     <th className="px-6 py-3"></th>
                   </tr>
                 </thead>
@@ -832,7 +840,7 @@ export function MyArticlesPage() {
                       </td>
                       {isAdmin && (
                         <td className="px-6 py-4 text-sm text-dark-500">
-                          {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || 'Unknown'}
+                          {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || translateText('Unknown')}
                         </td>
                       )}
                       <td className="px-6 py-4"><StatusBadge status={article.status} /></td>
@@ -843,14 +851,14 @@ export function MyArticlesPage() {
                           <Link
                             to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}
                             className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                            title="View news"
+                            title={translateText('View news')}
                           >
                             <ExternalLink className="w-4 h-4 text-dark-500" />
                           </Link>
                           <Link
                             to={`/dashboard/articles/${article._id}/insights`}
                             className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                            title="Insights"
+                            title={translateText('Insights')}
                           >
                             <BarChart3 className="w-4 h-4 text-dark-500" />
                           </Link>
@@ -888,26 +896,26 @@ export function MyArticlesPage() {
                 </div>
                 {isAdmin && (
                   <p className="text-xs text-dark-500 mb-2">
-                    {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || 'Unknown'}
+                    {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || translateText('Unknown')}
                   </p>
                 )}
                 <div className="flex items-center justify-between text-sm text-dark-500">
                   <div className="flex items-center gap-4">
-                    <span>{article.viewCount || 0} views</span>
+                    <span>{article.viewCount || 0} {translateText('views')}</span>
                     <span>{formatRelativeTime(article.createdAt)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Link
                       to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}
                       className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                      title="View news"
+                      title={translateText('View news')}
                     >
                       <ExternalLink className="w-4 h-4 text-dark-500" />
                     </Link>
                     <Link
                       to={`/dashboard/articles/${article._id}/insights`}
                       className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                      title="Insights"
+                      title={translateText('Insights')}
                     >
                       <BarChart3 className="w-4 h-4 text-dark-500" />
                     </Link>
@@ -921,7 +929,7 @@ export function MyArticlesPage() {
           {pagination && pagination.totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 text-sm">
               <span className="text-dark-500">
-                Page {pagination.page} of {pagination.totalPages} • {pagination.total} news
+                {translateText('Page')} {pagination.page} {translateText('of')} {pagination.totalPages} • {pagination.total} {translateText('news')}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -929,14 +937,14 @@ export function MyArticlesPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={pagination.page <= 1}
                 >
-                  Previous
+                  {translateText('Previous')}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
                   disabled={pagination.page >= pagination.totalPages}
                 >
-                  Next
+                  {translateText('Next')}
                 </Button>
               </div>
             </div>
@@ -945,9 +953,9 @@ export function MyArticlesPage() {
       ) : (
         <EmptyState
           icon={FileText}
-          title={isAdmin ? 'No news found' : 'No news yet'}
-          description={isAdmin ? 'Try adjusting your filters or create the first news item.' : 'Start writing your first news item.'}
-          action={<Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>New News</Button></Link>}
+          title={translateText(isAdmin ? 'No news found' : 'No news yet')}
+          description={translateText(isAdmin ? 'Try adjusting your filters or create the first news item.' : 'Start writing your first news item.')}
+          action={<Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>{translateText('New News')}</Button></Link>}
         />
       )}
 
@@ -956,9 +964,9 @@ export function MyArticlesPage() {
         isOpen={!!deleteModal}
         onClose={() => setDeleteModal(null)}
         onConfirm={handleDelete}
-        title="Delete News"
-        message="Are you sure you want to delete this news? This action cannot be undone."
-        confirmText="Delete"
+        title={translateText('Delete News')}
+        message={translateText('Are you sure you want to delete this news? This action cannot be undone.')}
+        confirmText={translateText('Delete')}
         variant="danger"
         isLoading={isDeleting}
         icon={Trash2}
@@ -968,6 +976,7 @@ export function MyArticlesPage() {
 }
 
 export function PendingArticlesPage() {
+  const { translateText } = useLanguage();
   const { data, isLoading } = usePendingArticles();
   const { mutate: approveArticle, isPending: isApproving } = useApproveArticle();
   const { mutate: rejectArticle, isPending: isRejecting } = useRejectArticle();
@@ -986,7 +995,7 @@ export function PendingArticlesPage() {
 
   const handleReject = () => {
     if (!rejectReason.trim()) {
-      setAlertModal({ isOpen: true, message: 'Please provide a reason for rejection' });
+      setAlertModal({ isOpen: true, message: translateText('Please provide a reason for rejection') });
       return;
     }
     rejectArticle({ id: rejectModal, reason: rejectReason }, {
@@ -1001,10 +1010,10 @@ export function PendingArticlesPage() {
 
   return (
     <>
-      <Helmet><title>Pending News - Bassac Post</title></Helmet>
+      <Helmet><title>{`${translateText('Pending News')} - Bassac Post`}</title></Helmet>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">Pending Review</h1>
-        <p className="text-dark-500">News awaiting your approval</p>
+        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{translateText('Pending Review')}</h1>
+        <p className="text-dark-500">{translateText('News awaiting your approval')}</p>
       </div>
       {data?.data?.length > 0 ? (
         <div className="space-y-4">
@@ -1031,24 +1040,24 @@ export function PendingArticlesPage() {
                           {article.title}
                         </Link>
                         <p className="text-dark-500 text-sm mb-2">
-                          By {article.author?.fullName || 'Unknown'} • {formatRelativeTime(article.createdAt)}
+                          {translateText('By')} {article.author?.fullName || translateText('Unknown')} • {formatRelativeTime(article.createdAt)}
                         </p>
                         <p className="text-dark-600 dark:text-dark-400 line-clamp-2">{article.excerpt}</p>
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <Link to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}>
-                        <Button variant="secondary" size="sm">View</Button>
+                        <Button variant="secondary" size="sm">{translateText('View')}</Button>
                       </Link>
-                      <Button variant="secondary" size="sm" onClick={() => setApproveModal(article._id)}>Approve</Button>
-                      <Button variant="danger" size="sm" onClick={() => setRejectModal(article._id)}>Reject</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setApproveModal(article._id)}>{translateText('Approve')}</Button>
+                      <Button variant="danger" size="sm" onClick={() => setRejectModal(article._id)}>{translateText('Reject')}</Button>
                     </div>
                   </div>
                 </div>
               ))}
         </div>
       ) : (
-        <EmptyState icon={CheckCircle} title="All caught up!" description="No news pending review" />
+        <EmptyState icon={CheckCircle} title={translateText('All caught up!')} description={translateText('No news pending review')} />
       )}
 
       {/* Approve Confirmation Modal */}
@@ -1056,20 +1065,20 @@ export function PendingArticlesPage() {
         isOpen={!!approveModal}
         onClose={() => setApproveModal(null)}
         onConfirm={handleApprove}
-        title="Approve News"
-        message="Are you sure you want to approve this news for publication?"
-        confirmText="Approve"
+        title={translateText('Approve News')}
+        message={translateText('Are you sure you want to approve this news for publication?')}
+        confirmText={translateText('Approve')}
         variant="primary"
         isLoading={isApproving}
         icon={CheckCircle}
       />
 
       {/* Reject Modal */}
-      <Modal isOpen={!!rejectModal} onClose={() => { setRejectModal(null); setRejectReason(''); }} title="Reject News">
-        <Textarea label="Rejection Reason" placeholder="Enter reason for rejection..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mb-4" />
+      <Modal isOpen={!!rejectModal} onClose={() => { setRejectModal(null); setRejectReason(''); }} title={translateText('Reject News')}>
+        <Textarea label={translateText('Rejection Reason')} placeholder={translateText('Enter reason for rejection...')} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mb-4" />
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => { setRejectModal(null); setRejectReason(''); }}>Cancel</Button>
-          <Button variant="danger" onClick={handleReject} isLoading={isRejecting}>Reject News</Button>
+          <Button variant="secondary" onClick={() => { setRejectModal(null); setRejectReason(''); }}>{translateText('Cancel')}</Button>
+          <Button variant="danger" onClick={handleReject} isLoading={isRejecting}>{translateText('Reject News')}</Button>
         </div>
       </Modal>
 
@@ -1077,7 +1086,7 @@ export function PendingArticlesPage() {
       <AlertModal
         isOpen={alertModal.isOpen}
         onClose={() => setAlertModal({ isOpen: false, message: '' })}
-        title="Validation Error"
+        title={translateText('Validation Error')}
         message={alertModal.message}
         variant="warning"
         icon={AlertCircle}
@@ -1150,6 +1159,7 @@ const renderProfileAvatarBlob = async ({ src, position, zoom, rotation }) => {
 };
 
 export function ProfilePage() {
+  const { translateText } = useLanguage();
   const { user, setUser } = useAuthStore();
   const { mutate: updateProfile, isPending } = useUpdateProfile();
   const [form, setForm] = useState({
@@ -1267,12 +1277,12 @@ export function ProfilePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+      toast.error(translateText('Please select an image file'));
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
+      toast.error(translateText('Image must be less than 5MB'));
       return;
     }
 
@@ -1295,7 +1305,7 @@ export function ProfilePage() {
       });
     } catch {
       URL.revokeObjectURL(previewUrl);
-      toast.error('Could not read this image');
+      toast.error(translateText('Could not read this image'));
     }
   };
 
@@ -1318,13 +1328,13 @@ export function ProfilePage() {
       const avatar = response?.data?.data?.avatar;
       if (avatar) {
         setUser({ ...user, avatar });
-        toast.success('Profile picture updated!');
+        toast.success(translateText('Profile picture updated!'));
         closeAvatarEditor();
       } else {
-        toast.error('Upload failed');
+        toast.error(translateText('Upload failed'));
       }
     } catch (error) {
-      toast.error('Upload failed');
+      toast.error(translateText('Upload failed'));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -1337,8 +1347,8 @@ export function ProfilePage() {
 
   return (
     <>
-      <Helmet><title>Profile - Bassac Post</title></Helmet>
-      <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">Profile</h1>
+      <Helmet><title>{`${translateText('Profile')} - Bassac Post`}</title></Helmet>
+      <h1 className="text-2xl font-bold text-dark-900 dark:text-white mb-6">{translateText('Profile')}</h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card p-6 text-center">
           <div className="relative inline-block mb-4">
@@ -1362,21 +1372,21 @@ export function ProfilePage() {
               />
             </label>
           </div>
-          <p className="mb-4 text-xs text-dark-500">Tap the camera icon to choose, crop, and update your photo.</p>
+          <p className="mb-4 text-xs text-dark-500">{translateText('Tap the camera icon to choose, crop, and update your photo.')}</p>
           
           <h2 className="text-2xl font-semibold text-dark-900 dark:text-white">{user?.fullName}</h2>
           <p className="text-dark-500">{user?.email}</p>
-          <p className="text-sm text-primary-600 capitalize mt-1">{user?.role}</p>
+          <p className="text-sm text-primary-600 capitalize mt-1">{translateText(user?.role)}</p>
         </div>
         <div className="lg:col-span-2 card p-6">
-          <h2 className="font-semibold text-dark-900 dark:text-white mb-4">Edit Profile</h2>
+          <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Edit Profile')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Input label="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
               <Input label="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
             </div>
-            <Textarea label="Bio" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Tell us about yourself..." />
-            <Button type="submit" isLoading={isPending}>Save Changes</Button>
+            <Textarea label={translateText('Bio')} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder={translateText('Tell us about yourself...')} />
+            <Button type="submit" isLoading={isPending}>{translateText('Save Changes')}</Button>
           </form>
         </div>
       </div>
@@ -1387,7 +1397,7 @@ export function ProfilePage() {
             closeAvatarEditor();
           }
         }}
-        title="Edit Profile Picture"
+        title={translateText('Edit Profile Picture')}
         size="lg"
       >
         <div className="space-y-6">
@@ -1430,13 +1440,13 @@ export function ProfilePage() {
               )}
               <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/70" />
             </div>
-            <p className="mt-2 text-center text-xs text-dark-500">Drag image to reposition inside the circle</p>
+            <p className="mt-2 text-center text-xs text-dark-500">{translateText('Drag image to reposition inside the circle')}</p>
           </div>
 
           <div className="space-y-4">
             <div>
               <div className="mb-1 flex items-center justify-between text-sm text-dark-600 dark:text-dark-300">
-                <span>Zoom</span>
+                <span>{translateText('Zoom')}</span>
                 <span>{avatarEditor.zoom.toFixed(2)}x</span>
               </div>
               <input
@@ -1452,7 +1462,7 @@ export function ProfilePage() {
 
             <div>
               <div className="mb-1 flex items-center justify-between text-sm text-dark-600 dark:text-dark-300">
-                <span>Rotation</span>
+                <span>{translateText('Rotation')}</span>
                 <span>{avatarEditor.rotation}&deg;</span>
               </div>
               <input
@@ -1478,7 +1488,7 @@ export function ProfilePage() {
               }}
               disabled={isUploadingAvatar}
             >
-              Cancel
+              {translateText('Cancel')}
             </Button>
             <Button
               type="button"
@@ -1487,14 +1497,14 @@ export function ProfilePage() {
               onClick={() => setAvatarEditor((prev) => ({ ...prev, position: { x: 0, y: 0 }, zoom: 1, rotation: 0 }))}
               disabled={isUploadingAvatar}
             >
-              Reset
+              {translateText('Reset')}
             </Button>
             <Button
               type="button"
               onClick={handleAvatarUpload}
               isLoading={isUploadingAvatar}
             >
-              Done & Update
+              {translateText('Done & Update')}
             </Button>
           </div>
         </div>

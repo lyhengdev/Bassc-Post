@@ -19,6 +19,7 @@ router.get('/featured', articleController.getFeaturedArticles);
 router.get('/latest', articleController.getLatestArticles);
 router.get('/search', searchArticlesValidator, validate, articleController.searchArticles);
 router.get('/category/:slug', articleController.getArticlesByCategory);
+router.get('/resolve/:slug', optionalAuth, articleController.resolveArticleBySlug);
 router.get('/slug/:slug', optionalAuth, articleController.getArticleBySlug);
 router.post('/:id/view', validateObjectId(), articleController.recordView);
 router.get('/:id/related', validateObjectId(), articleController.getRelatedArticles);

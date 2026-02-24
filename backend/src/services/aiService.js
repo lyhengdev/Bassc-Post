@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import crypto from 'crypto';
 import config from '../config/index.js';
 import { AILog } from '../models/Analytics.js';
 
@@ -6,12 +7,32 @@ class AIService {
   constructor() {
     this.client = null;
     this.isConfigured = false;
+    this.isOpenAIConfigured = false;
+    this.isAzureTranslatorConfigured = false;
+    this.azureTranslatorEndpoint = 'https://api.cognitive.microsofttranslator.com';
+    this.azureTranslatorKey = '';
+    this.azureTranslatorRegion = '';
     this.initialize();
   }
 
   initialize() {
+    this.azureTranslatorEndpoint = String(
+      config.azureTranslator?.endpoint || 'https://api.cognitive.microsofttranslator.com'
+    ).replace(/\/+$/, '');
+    this.azureTranslatorKey = config.azureTranslator?.key || '';
+    this.azureTranslatorRegion = config.azureTranslator?.region || '';
+    this.isAzureTranslatorConfigured = Boolean(this.azureTranslatorKey && this.azureTranslatorRegion);
+
+    if (this.isAzureTranslatorConfigured) {
+      console.log('✅ Azure Translator initialized');
+    } else {
+      console.warn('⚠️ Azure Translator not configured - article translation will use fallback provider');
+    }
+
     if (!config.openai.apiKey) {
-      console.warn('⚠️ OpenAI API key not configured - AI features will be mocked');
+      console.warn('⚠️ OpenAI API key not configured - non-translation AI features will be mocked');
+      this.isConfigured = false;
+      this.isOpenAIConfigured = false;
       return;
     }
 
@@ -19,8 +40,9 @@ class AIService {
       apiKey: config.openai.apiKey,
     });
 
+    this.isOpenAIConfigured = true;
     this.isConfigured = true;
-    console.log('✅ AI service initialized');
+    console.log('✅ OpenAI AI service initialized');
   }
 
   async logUsage(userId, action, data) {
@@ -369,6 +391,221 @@ Maintain the original meaning and voice.`,
         responseTime,
       });
 
+      throw error;
+    }
+  }
+
+  async translateTextsWithAzure(texts = [], options = {}, userId) {
+    const startTime = Date.now();
+    const { sourceLanguage = 'en', targetLanguage = 'km' } = options;
+    const fromLanguage = String(sourceLanguage || '').trim().toLowerCase();
+    const toLanguage = String(targetLanguage || 'km').trim().toLowerCase() || 'km';
+
+    try {
+      if (!this.isAzureTranslatorConfigured) {
+        throw new Error('Azure Translator is not configured');
+      }
+
+      const chunks = [];
+      let currentChunk = [];
+      let currentChunkChars = 0;
+      const maxItemsPerChunk = 100;
+      const maxCharsPerChunk = 45000;
+
+      texts.forEach((text) => {
+        const value = typeof text === 'string' ? text : String(text ?? '');
+        const valueLength = value.length;
+        const exceedsChunk = currentChunk.length >= maxItemsPerChunk
+          || (currentChunk.length > 0 && (currentChunkChars + valueLength) > maxCharsPerChunk);
+
+        if (exceedsChunk) {
+          chunks.push(currentChunk);
+          currentChunk = [];
+          currentChunkChars = 0;
+        }
+
+        currentChunk.push(value);
+        currentChunkChars += valueLength;
+      });
+
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+      }
+
+      const translatedTexts = [];
+
+      for (const chunk of chunks) {
+        const params = new URLSearchParams({ 'api-version': '3.0', to: toLanguage });
+        if (fromLanguage) {
+          params.set('from', fromLanguage);
+        }
+
+        const response = await fetch(`${this.azureTranslatorEndpoint}/translate?${params.toString()}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': this.azureTranslatorKey,
+            'Ocp-Apim-Subscription-Region': this.azureTranslatorRegion,
+            'X-ClientTraceId': crypto.randomUUID(),
+          },
+          body: JSON.stringify(chunk.map((text) => ({ Text: text }))),
+        });
+
+        if (!response.ok) {
+          let detail = '';
+          try {
+            const payload = await response.json();
+            detail = payload?.error?.message || payload?.message || '';
+          } catch {
+            detail = '';
+          }
+          throw new Error(
+            detail
+              ? `Azure Translator request failed (${response.status}): ${detail}`
+              : `Azure Translator request failed (${response.status})`
+          );
+        }
+
+        const payload = await response.json();
+        if (!Array.isArray(payload)) {
+          throw new Error('Azure Translator response format is invalid');
+        }
+
+        payload.forEach((item, index) => {
+          const translatedText = item?.translations?.[0]?.text;
+          translatedTexts.push(typeof translatedText === 'string' ? translatedText : chunk[index]);
+        });
+      }
+
+      const responseTime = Date.now() - startTime;
+      await this.logUsage(userId, 'translation-azure', {
+        model: 'azure-translator-v3',
+        success: true,
+        responseTime,
+        inputCharacters: texts.reduce((sum, text) => sum + String(text || '').length, 0),
+        outputCharacters: translatedTexts.reduce((sum, text) => sum + String(text || '').length, 0),
+      });
+
+      return {
+        success: true,
+        translations: translatedTexts,
+        provider: 'azure',
+      };
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      await this.logUsage(userId, 'translation-azure', {
+        model: 'azure-translator-v3',
+        success: false,
+        responseTime,
+        errorMessage: error.message,
+      });
+      throw error;
+    }
+  }
+
+  async translateTexts(texts = [], options = {}, userId) {
+    const startTime = Date.now();
+    const { sourceLanguage = 'en', targetLanguage = 'km' } = options;
+    const normalizedTexts = Array.isArray(texts)
+      ? texts.map((text) => (typeof text === 'string' ? text : String(text ?? '')))
+      : [];
+    const normalizedSourceLanguage = String(sourceLanguage || '').trim().toLowerCase();
+    const normalizedTargetLanguage = String(targetLanguage || 'km').trim().toLowerCase() || 'km';
+
+    try {
+      if (normalizedTexts.length === 0) {
+        return {
+          success: true,
+          translations: [],
+        };
+      }
+
+      if (normalizedSourceLanguage && normalizedSourceLanguage === normalizedTargetLanguage) {
+        return {
+          success: true,
+          translations: normalizedTexts,
+          message: 'Source and target languages are the same',
+        };
+      }
+
+      if (this.isAzureTranslatorConfigured) {
+        try {
+          return await this.translateTextsWithAzure(
+            normalizedTexts,
+            { sourceLanguage: normalizedSourceLanguage, targetLanguage: normalizedTargetLanguage },
+            userId
+          );
+        } catch (azureError) {
+          if (!this.isConfigured) {
+            throw azureError;
+          }
+          console.warn(`Azure translation failed, falling back to OpenAI: ${azureError.message}`);
+        }
+      }
+
+      if (!this.isConfigured) {
+        return {
+          success: true,
+          translations: normalizedTexts,
+          message: 'No translation provider configured - returning original text',
+        };
+      }
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator.
+Translate each input string from ${normalizedSourceLanguage || sourceLanguage} to ${normalizedTargetLanguage || targetLanguage}.
+Rules:
+- Keep the same array length and order.
+- Do not add, remove, merge, or split entries.
+- Keep URLs, HTML tags, and placeholders unchanged.
+- Preserve punctuation and formatting as much as possible.
+Return valid JSON:
+{
+  "translations": ["...", "..."]
+}`,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({ texts: normalizedTexts }),
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 3500,
+        response_format: { type: 'json_object' },
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const translated = Array.isArray(result.translations) ? result.translations : [];
+      const translations = normalizedTexts.map((text, index) => {
+        const candidate = translated[index];
+        return typeof candidate === 'string' && candidate.trim() ? candidate : text;
+      });
+
+      const responseTime = Date.now() - startTime;
+      await this.logUsage(userId, 'translation', {
+        inputTokens: response.usage.prompt_tokens,
+        outputTokens: response.usage.completion_tokens,
+        totalTokens: response.usage.total_tokens,
+        model: 'gpt-3.5-turbo',
+        success: true,
+        responseTime,
+      });
+
+      return {
+        success: true,
+        translations,
+      };
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      await this.logUsage(userId, 'translation', {
+        success: false,
+        errorMessage: error.message,
+        responseTime,
+      });
       throw error;
     }
   }

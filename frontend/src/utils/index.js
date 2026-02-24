@@ -1,6 +1,21 @@
 import { clsx } from 'clsx';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 
+export function getPreferredLanguageCode() {
+  if (typeof window === 'undefined') return 'en';
+  const stored = (localStorage.getItem('preferredLanguage') || localStorage.getItem('i18nextLng') || '').toLowerCase();
+  if (stored.startsWith('km')) return 'km';
+  if (stored.startsWith('zh')) return 'zh';
+  return 'en';
+}
+
+function getLocaleTag() {
+  const language = getPreferredLanguageCode();
+  if (language === 'km') return 'km-KH';
+  if (language === 'zh') return 'zh-CN';
+  return 'en-US';
+}
+
 // Combine class names
 export function cn(...inputs) {
   return clsx(inputs);
@@ -11,6 +26,13 @@ export function formatDate(date, formatStr = 'MMM d, yyyy') {
   if (!date) return '';
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (formatStr === 'MMM d, yyyy' && typeof Intl !== 'undefined') {
+      return new Intl.DateTimeFormat(getLocaleTag(), {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(dateObj);
+    }
     return format(dateObj, formatStr);
   } catch {
     return '';
@@ -22,6 +44,23 @@ export function formatRelativeTime(date) {
   if (!date) return '';
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat !== 'undefined') {
+      const rtf = new Intl.RelativeTimeFormat(getLocaleTag(), { numeric: 'auto' });
+      const diffSeconds = Math.round((dateObj.getTime() - Date.now()) / 1000);
+      const absSeconds = Math.abs(diffSeconds);
+
+      if (absSeconds < 60) return rtf.format(diffSeconds, 'second');
+      const diffMinutes = Math.round(diffSeconds / 60);
+      if (Math.abs(diffMinutes) < 60) return rtf.format(diffMinutes, 'minute');
+      const diffHours = Math.round(diffMinutes / 60);
+      if (Math.abs(diffHours) < 24) return rtf.format(diffHours, 'hour');
+      const diffDays = Math.round(diffHours / 24);
+      if (Math.abs(diffDays) < 30) return rtf.format(diffDays, 'day');
+      const diffMonths = Math.round(diffDays / 30);
+      if (Math.abs(diffMonths) < 12) return rtf.format(diffMonths, 'month');
+      const diffYears = Math.round(diffMonths / 12);
+      return rtf.format(diffYears, 'year');
+    }
     return formatDistanceToNow(dateObj, { addSuffix: true });
   } catch {
     return '';

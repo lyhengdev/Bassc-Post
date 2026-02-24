@@ -5,25 +5,43 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c6bd4a1f-cf94-4630-b9b3-459250876b8d" name="Changes" comment="--change-authenticate">
-      <change afterPath="$PROJECT_DIR$/backend/uploads/avatars/default_female.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/uploads/avatars/default_male.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/config/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/controllers/aiController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/aiController.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/controllers/articleController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/articleController.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/controllers/authController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/authController.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/controllers/userController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/userController.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/middleware/csrf.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/middleware/csrf.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/models/User.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/User.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/authRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/authRoutes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/server.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/utils/seed.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/utils/seed.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/validators/authValidator.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/validators/authValidator.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/validators/userValidator.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/validators/userValidator.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/middleware/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/middleware/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/models/Analytics.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/Analytics.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/aiRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/aiRoutes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/articleRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/articleRoutes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/shareRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/shareRoutes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/services/aiService.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/aiService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/utils/helpers.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/utils/helpers.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/ErrorBoundary.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/ErrorBoundary.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/LanguageSelector.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/LanguageSelector.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/NotificationDropdown.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/NotificationDropdown.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/index.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/Footer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/Footer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/Header.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/MobileNav.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/MobileNav.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/Sidebar.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/index.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useApi.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/useApi.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/ArticleEditorPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/ArticleEditorPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/CategoriesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/CategoriesPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/index.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/article-detail.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/article-detail.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/auth.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/auth.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/home.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/misc.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/misc.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/shared/rightSidebarAds.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/shared/rightSidebarAds.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/services/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/index.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -152,7 +170,7 @@
       <workItem from="1771480383958" duration="8203000" />
       <workItem from="1771638586392" duration="10624000" />
       <workItem from="1771740589566" duration="1671000" />
-      <workItem from="1771809115614" duration="20007000" />
+      <workItem from="1771809115614" duration="40302000" />
     </task>
     <task id="LOCAL-00001" summary="--change-authenticate">
       <option name="closed" value="true" />

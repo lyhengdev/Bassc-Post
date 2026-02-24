@@ -1,10 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Newspaper, Grid3X3, User, LayoutDashboard, Circle } from 'lucide-react';
 import { useCategories, usePublicSettings } from '../../hooks/useApi';
+import useLanguage from '../../hooks/useLanguage';
 import { cn } from '../../utils';
 
 export default function MobileNav() {
   const location = useLocation();
+  const { t, translateText } = useLanguage();
   const { data: settings } = usePublicSettings();
   const { data: categories } = useCategories();
 
@@ -64,9 +66,9 @@ export default function MobileNav() {
         target: item.target || '_self',
       }))
     : [
-        { href: '/', icon: Home, label: 'Discover' },
-        { href: '/articles', icon: Newspaper, label: 'News' },
-        { href: '/categories', icon: Grid3X3, label: 'Categories' },
+        { href: '/', icon: Home, label: t('nav.discover', 'Discover') },
+        { href: '/articles', icon: Newspaper, label: t('nav.news', 'News') },
+        { href: '/categories', icon: Grid3X3, label: t('nav.categories', 'Categories') },
       ];
 
   return (
@@ -88,7 +90,7 @@ export default function MobileNav() {
                 className={className}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-xs mt-1 font-medium">{item.label}</span>
+                <span className="text-xs mt-1 font-medium">{translateText(item.label)}</span>
               </a>
             );
           }
@@ -108,7 +110,7 @@ export default function MobileNav() {
               }
             >
               <item.icon className="w-5 h-5" />
-              <span className="text-xs mt-1 font-medium">{item.label}</span>
+              <span className="text-xs mt-1 font-medium">{translateText(item.label)}</span>
             </NavLink>
           );
         })}

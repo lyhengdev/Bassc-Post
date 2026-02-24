@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Menu, Home, Sun, Moon, X } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
+import LanguageSelector from '../common/LanguageSelector.jsx';
 import { useAuthStore, useThemeStore } from '../../stores/authStore';
 import { Avatar } from '../common/index.jsx';
 import { NotificationDropdown } from '../common/NotificationDropdown.jsx';
@@ -13,6 +14,63 @@ import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds
 import { BodyAd, PopupAdModal } from '../ads/index.js';
 import { cn, buildMediaUrl } from '../../utils';
 import { useIsFetching } from '@tanstack/react-query';
+import useLanguage, { translateCurrentText } from '../../hooks/useLanguage';
+
+const DASHBOARD_TEXT_NODE_ORIGINAL = new WeakMap();
+const DASHBOARD_ATTR_ORIGINAL_ATTR = {
+  placeholder: 'data-i18n-original-placeholder',
+  title: 'data-i18n-original-title',
+  'aria-label': 'data-i18n-original-aria-label',
+};
+const DASHBOARD_SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA']);
+
+function applyDashboardTranslations(root, translateText) {
+  if (!root || typeof translateText !== 'function') return;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    const parent = node.parentElement;
+    if (!parent || DASHBOARD_SKIP_TAGS.has(parent.tagName) || parent.closest('[data-no-auto-translate="true"]')) {
+      node = walker.nextNode();
+      continue;
+    }
+
+    const currentValue = node.textContent || '';
+    if (!currentValue.trim()) {
+      node = walker.nextNode();
+      continue;
+    }
+
+    const originalValue = DASHBOARD_TEXT_NODE_ORIGINAL.get(node) ?? currentValue;
+    if (!DASHBOARD_TEXT_NODE_ORIGINAL.has(node)) {
+      DASHBOARD_TEXT_NODE_ORIGINAL.set(node, currentValue);
+    }
+
+    const translatedValue = translateText(originalValue);
+    if (translatedValue !== currentValue) {
+      node.textContent = translatedValue;
+    }
+
+    node = walker.nextNode();
+  }
+
+  const attrSelector = '[placeholder], [title], [aria-label]';
+  root.querySelectorAll(attrSelector).forEach((element) => {
+    if (element.closest('[data-no-auto-translate="true"]')) return;
+    Object.entries(DASHBOARD_ATTR_ORIGINAL_ATTR).forEach(([attr, originalAttr]) => {
+      if (!element.hasAttribute(attr)) return;
+      if (!element.hasAttribute(originalAttr)) {
+        element.setAttribute(originalAttr, element.getAttribute(attr) || '');
+      }
+      const originalValue = element.getAttribute(originalAttr) || '';
+      const translatedValue = translateText(originalValue);
+      if (translatedValue && translatedValue !== element.getAttribute(attr)) {
+        element.setAttribute(attr, translatedValue);
+      }
+    });
+  });
+}
 
 function useGlobalLoaderVisibility() {
   // Only consider first-load queries (pending + fetching), not background refetches.
@@ -262,6 +320,7 @@ export function PublicLayout() {
 
 // Top Floating Banner Component
 function TopFloatingBanner({ settings }) {
+  const { translateText } = useLanguage();
   const [isDismissed, setIsDismissed] = useState(false);
   
   if (isDismissed || !settings?.enabled) return null;
@@ -287,7 +346,7 @@ function TopFloatingBanner({ settings }) {
             rel="noopener noreferrer sponsored"
             className="flex-1 h-full flex items-center justify-center"
           >
-            <img loading="lazy" src={resolvedImageUrl} alt="Ad" className="h-full max-w-full object-contain" />
+            <img loading="lazy" src={resolvedImageUrl} alt={translateText('Ad')} className="h-full max-w-full object-contain" />
           </a>
         ) : settings.content ? (
           <a 
@@ -300,7 +359,7 @@ function TopFloatingBanner({ settings }) {
           />
         ) : (
           <span className="flex-1 text-center font-medium" style={{ color: settings.textColor || '#ffffff' }}>
-            Advertisement
+            {translateText('Advertisement')}
           </span>
         )}
         
@@ -315,7 +374,7 @@ function TopFloatingBanner({ settings }) {
         )}
       </div>
       <span className="absolute top-1 right-2 text-xs opacity-50" style={{ color: settings.textColor || '#ffffff' }}>
-        Ad
+        {translateText('Ad')}
       </span>
     </div>
   );
@@ -323,6 +382,7 @@ function TopFloatingBanner({ settings }) {
 
 // Bottom Floating Banner Component  
 function BottomFloatingBanner({ settings }) {
+  const { translateText } = useLanguage();
   const [isDismissed, setIsDismissed] = useState(false);
   
   if (isDismissed || !settings?.enabled) return null;
@@ -348,7 +408,7 @@ function BottomFloatingBanner({ settings }) {
             rel="noopener noreferrer sponsored"
             className="flex-1 h-full flex items-center justify-center"
           >
-            <img loading="lazy" src={resolvedImageUrl} alt="Ad" className="h-full max-w-full object-contain" />
+            <img loading="lazy" src={resolvedImageUrl} alt={translateText('Ad')} className="h-full max-w-full object-contain" />
           </a>
         ) : settings.content ? (
           <a 
@@ -361,7 +421,7 @@ function BottomFloatingBanner({ settings }) {
           />
         ) : (
           <span className="flex-1 text-center font-medium" style={{ color: settings.textColor || '#ffffff' }}>
-            Advertisement
+            {translateText('Advertisement')}
           </span>
         )}
         
@@ -376,20 +436,21 @@ function BottomFloatingBanner({ settings }) {
         )}
       </div>
       <span className="absolute top-1 right-2 text-xs opacity-50" style={{ color: settings.textColor || '#ffffff' }}>
-        Ad
+        {translateText('Ad')}
       </span>
     </div>
   );
 }
 
 function FloatingAdBanner({ ad, onClose, onImpression, onClick }) {
+  const { translateText } = useLanguage();
   return (
     <div className="fixed bottom-4 left-0 right-0 z-50 px-4">
       <div className="relative mx-auto max-w-4xl rounded-xl bg-white dark:bg-dark-900 shadow-xl border border-dark-200 dark:border-dark-700 p-3">
         <button
           onClick={onClose}
           className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white dark:bg-dark-900 shadow flex items-center justify-center text-dark-500 hover:text-dark-700"
-          aria-label="Close ad"
+          aria-label={translateText('Close ad')}
         >
           <X className="w-4 h-4" />
         </button>
@@ -401,13 +462,59 @@ function FloatingAdBanner({ ad, onClose, onImpression, onClick }) {
 
 // ==================== DASHBOARD LAYOUT ====================
 export function DashboardLayout() {
+  const { t, translateText, language } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const showGlobalLoader = useGlobalLoaderVisibility();
+  const dashboardRootRef = useRef(null);
+
+  useEffect(() => {
+    const root = dashboardRootRef.current;
+    if (!root || typeof MutationObserver === 'undefined') return undefined;
+
+    let isApplying = false;
+    const runTranslation = () => {
+      if (isApplying) return;
+      isApplying = true;
+      try {
+        applyDashboardTranslations(root, translateCurrentText);
+      } finally {
+        isApplying = false;
+      }
+    };
+
+    runTranslation();
+    const observer = new MutationObserver(() => runTranslation());
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['placeholder', 'title', 'aria-label'],
+    });
+
+    return () => observer.disconnect();
+  }, [language, translateText]);
+
+  useEffect(() => {
+    const root = dashboardRootRef.current;
+    if (!root) return undefined;
+
+    const runTranslation = () => {
+      applyDashboardTranslations(root, translateCurrentText);
+    };
+
+    window.addEventListener('app:language-change', runTranslation);
+    window.addEventListener('languagechange', runTranslation);
+
+    return () => {
+      window.removeEventListener('app:language-change', runTranslation);
+      window.removeEventListener('languagechange', runTranslation);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-dark-50 dark:bg-dark-950 font-dashboard">
+    <div ref={dashboardRootRef} className="min-h-screen bg-dark-50 dark:bg-dark-950 font-dashboard">
       {showGlobalLoader && (
         <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gradient-to-r from-transparent via-primary-500 to-transparent animate-pulse pointer-events-none" />
       )}
@@ -435,12 +542,15 @@ export function DashboardLayout() {
                   <Home className="w-4 h-4" />
                 </Link>
                 <span>/</span>
-                <span className="text-dark-900 dark:text-white">Dashboard</span>
+                <span className="text-dark-900 dark:text-white">{t('nav.dashboard', 'Dashboard')}</span>
               </div>
             </div>
 
             {/* Right Side */}
             <div className="flex items-center gap-2">
+              {/* Language Selector */}
+              <LanguageSelector variant="compact" />
+
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
@@ -462,7 +572,7 @@ export function DashboardLayout() {
                   <p className="text-sm font-medium text-dark-900 dark:text-white">
                     {user?.fullName}
                   </p>
-                  <p className="text-xs text-dark-500 capitalize">{user?.role}</p>
+                  <p className="text-xs text-dark-500 capitalize">{translateText(user?.role)}</p>
                 </div>
                 <Avatar src={user?.avatar} name={user?.fullName} size="sm" />
               </div>

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import { getApiBaseUrl } from '../utils';
+import { getApiBaseUrl, getPreferredLanguageCode } from '../utils';
 
 const API_URL = getApiBaseUrl();
 
@@ -137,6 +137,16 @@ api.interceptors.response.use(
 // Initialize CSRF token on app load
 fetchCsrfToken().catch(() => {});
 
+function withLanguageParams(params = {}) {
+  const next = { ...(params || {}) };
+  if (next.language || next.lang) return next;
+  const language = getPreferredLanguageCode();
+  if (language) {
+    next.language = language;
+  }
+  return next;
+}
+
 // Auth API
 export const authAPI = {
   checkEmail: (email) => api.get('/auth/check-email', { params: { email } }),
@@ -151,22 +161,23 @@ export const authAPI = {
 
 // News API
 export const articlesAPI = {
-  getAll: (params) => api.get('/articles', { params }),
-  getFeatured: (limit = 5) => api.get('/articles/featured', { params: { limit } }),
-  getLatest: (limit = 10) => api.get('/articles/latest', { params: { limit } }),
+  getAll: (params) => api.get('/articles', { params: withLanguageParams(params) }),
+  getFeatured: (limit = 5, params = {}) => api.get('/articles/featured', { params: withLanguageParams({ limit, ...params }) }),
+  getLatest: (limit = 10, params = {}) => api.get('/articles/latest', { params: withLanguageParams({ limit, ...params }) }),
+  resolveBySlug: (slug, language) => api.get(`/articles/resolve/${slug}`, { params: { language } }),
   getBySlug: (slug) => api.get(`/articles/slug/${slug}`),
   getById: (id) => api.get(`/articles/id/${id}`),
-  getByCategory: (slug, params) => api.get(`/articles/category/${slug}`, {params }),
-  search: (params) => api.get('/articles/search', { params }),
-  getRelated: (id, limit = 4) => api.get(`/articles/${id}/related`, { params: { limit } }),
+  getByCategory: (slug, params) => api.get(`/articles/category/${slug}`, {params: withLanguageParams(params) }),
+  search: (params) => api.get('/articles/search', { params: withLanguageParams(params) }),
+  getRelated: (id, limit = 4, params = {}) => api.get(`/articles/${id}/related`, { params: withLanguageParams({ limit, ...params }) }),
   recordView: (id) => api.post(`/articles/${id}/view`),
   getInsights: (id, params) => api.get(`/articles/${id}/insights`, { params }),
-  getMy: (params) => api.get('/articles/my', { params }),
-  getAdmin: (params) => api.get('/articles/admin', { params }),
+  getMy: (params) => api.get('/articles/my', { params: withLanguageParams(params) }),
+  getAdmin: (params) => api.get('/articles/admin', { params: withLanguageParams(params) }),
   create: (data) => api.post('/articles', data),
   update: (id, data) => api.put(`/articles/${id}`, data),
   delete: (id) => api.delete(`/articles/${id}`),
-  getPending: (params) => api.get('/articles/pending', { params }),
+  getPending: (params) => api.get('/articles/pending', { params: withLanguageParams(params) }),
   approve: (id, notes) => api.put(`/articles/${id}/approve`, { notes }),
   reject: (id, reason) => api.put(`/articles/${id}/reject`, { reason }),
 };

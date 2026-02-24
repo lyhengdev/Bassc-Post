@@ -1,4 +1,4 @@
-import {Article, Category, Media, User} from '../models/index.js';
+import {Article, ArticleTranslation, Category, Media, User} from '../models/index.js';
 import {analyticsHelpers, PageView} from '../models/Analytics.js';
 import {sanitizeEditorContent, parsePaginationParams, generateHash, getClientIp} from '../utils/helpers.js';
 import emailService from '../services/emailService.js';
@@ -28,6 +28,129 @@ const syncFeaturedImageUsage = async (articleId, newUrl, oldUrl = null) => {
             await newMedia.trackUsage('Article', articleId);
         }
     }
+};
+
+const normalizeArticleLanguage = (value = '') => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw.startsWith('zh')) return 'zh';
+    if (raw.startsWith('km')) return 'km';
+    if (raw.startsWith('en')) return 'en';
+    return raw.split(/[-_]/)[0] || '';
+};
+
+const toPlainArticle = (article) => {
+    if (!article) return null;
+    if (typeof article.toObject === 'function') {
+        return article.toObject();
+    }
+    return article;
+};
+
+const normalizeLanguageList = (languages = [], fallback = '') => {
+    const set = new Set();
+    const normalizedFallback = normalizeArticleLanguage(fallback);
+    if (normalizedFallback) {
+        set.add(normalizedFallback);
+    }
+    if (Array.isArray(languages)) {
+        for (const value of languages) {
+            const normalized = normalizeArticleLanguage(value);
+            if (normalized) {
+                set.add(normalized);
+            }
+        }
+    }
+    return Array.from(set);
+};
+
+const applyPreferredLanguageToArticles = async (articles, requestedLanguageInput = '') => {
+    if (!Array.isArray(articles) || articles.length === 0) {
+        return [];
+    }
+
+    const requestedLanguage = normalizeArticleLanguage(requestedLanguageInput);
+    const normalizedArticles = articles
+        .map((item) => toPlainArticle(item))
+        .filter(Boolean);
+
+    if (normalizedArticles.length === 0) {
+        return [];
+    }
+
+    const articleIds = normalizedArticles
+        .map((item) => item?._id)
+        .filter(Boolean);
+
+    const translationByArticleId = new Map();
+    if (requestedLanguage && articleIds.length > 0) {
+        const translations = await ArticleTranslation.find({
+            articleId: {$in: articleIds},
+            language: requestedLanguage,
+        })
+            .select('articleId language slug title excerpt metaTitle metaDescription metaKeywords translationStatus updatedAt createdAt')
+            .sort({updatedAt: -1, createdAt: -1})
+            .lean();
+
+        const statusScore = {
+            published: 4,
+            review: 3,
+            in_progress: 2,
+            draft: 1,
+        };
+
+        for (const translation of translations) {
+            const key = String(translation.articleId);
+            const existing = translationByArticleId.get(key);
+            if (!existing) {
+                translationByArticleId.set(key, translation);
+                continue;
+            }
+
+            const existingScore = statusScore[existing.translationStatus] || 0;
+            const nextScore = statusScore[translation.translationStatus] || 0;
+            if (nextScore > existingScore) {
+                translationByArticleId.set(key, translation);
+            }
+        }
+    }
+
+    return normalizedArticles.map((article) => {
+        const baseLanguage = normalizeArticleLanguage(article.language) || 'en';
+        const translation = requestedLanguage ? translationByArticleId.get(String(article._id)) : null;
+        const availableLanguages = normalizeLanguageList(
+            translation ? [...(article.availableLanguages || []), requestedLanguage] : article.availableLanguages,
+            baseLanguage
+        );
+
+        if (!translation || requestedLanguage === baseLanguage) {
+            return {
+                ...article,
+                language: baseLanguage,
+                availableLanguages,
+                originalSlug: article.slug,
+                originalLanguage: baseLanguage,
+                isTranslation: false,
+            };
+        }
+
+        return {
+            ...article,
+            title: translation.title || article.title,
+            slug: translation.slug || article.slug,
+            excerpt: translation.excerpt ?? article.excerpt,
+            metaTitle: translation.metaTitle || article.metaTitle,
+            metaDescription: translation.metaDescription || article.metaDescription,
+            metaKeywords: Array.isArray(translation.metaKeywords) && translation.metaKeywords.length > 0
+                ? translation.metaKeywords
+                : article.metaKeywords,
+            language: requestedLanguage,
+            availableLanguages,
+            originalSlug: article.slug,
+            originalLanguage: baseLanguage,
+            isTranslation: true,
+        };
+    });
 };
 
 /**
@@ -113,9 +236,10 @@ export const createArticle = asyncHandler(async (req, res) => {
 export const getArticles = asyncHandler(async (req, res) => {
     const {page, limit, skip} = parsePaginationParams(req.query);
     const {category, tag, sortBy = 'publishedAt', sortOrder = 'desc', isBreaking, isFeatured} = req.query;
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     // Create cache key from query params
-    const cacheKey = `list:${page}:${limit}:${category || ''}:${tag || ''}:${sortBy}:${sortOrder}:${isBreaking || ''}:${isFeatured || ''}`;
+    const cacheKey = `list:${page}:${limit}:${category || ''}:${tag || ''}:${sortBy}:${sortOrder}:${isBreaking || ''}:${isFeatured || ''}:${requestedLanguage || ''}`;
     
     // Try cache first
     const cached = await cacheService.getArticleList(cacheKey);
@@ -158,11 +282,13 @@ export const getArticles = asyncHandler(async (req, res) => {
         Article.countDocuments(filter),
     ]);
 
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
+
     // Cache the result
     const pagination = {page, limit, total};
-    await cacheService.setArticleList(cacheKey, {articles, pagination}, config.cache.listTTL);
+    await cacheService.setArticleList(cacheKey, {articles: localizedArticles, pagination}, config.cache.listTTL);
 
-    return paginatedResponse(res, articles, pagination);
+    return paginatedResponse(res, localizedArticles, pagination);
 });
 
 /**
@@ -171,9 +297,10 @@ export const getArticles = asyncHandler(async (req, res) => {
  */
 export const getFeaturedArticles = asyncHandler(async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 5, 10);
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     // Try cache first
-    const cacheKey = `featured:${limit}`;
+    const cacheKey = `featured:${limit}:${requestedLanguage || ''}`;
     const cached = await cacheService.getArticleList(cacheKey);
     if (cached) {
         return successResponse(res, {articles: cached});
@@ -187,10 +314,12 @@ export const getFeaturedArticles = asyncHandler(async (req, res) => {
         .select('-content')
         .lean();
 
-    // Cache for 5 minutes
-    await cacheService.setArticleList(cacheKey, articles, config.cache.featuredTTL);
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
 
-    return successResponse(res, {articles});
+    // Cache for 5 minutes
+    await cacheService.setArticleList(cacheKey, localizedArticles, config.cache.featuredTTL);
+
+    return successResponse(res, {articles: localizedArticles});
 });
 
 /**
@@ -199,9 +328,10 @@ export const getFeaturedArticles = asyncHandler(async (req, res) => {
  */
 export const getLatestArticles = asyncHandler(async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 10, 20);
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     // Try cache first
-    const cacheKey = `latest:${limit}`;
+    const cacheKey = `latest:${limit}:${requestedLanguage || ''}`;
     const cached = await cacheService.getArticleList(cacheKey);
     if (cached) {
         return successResponse(res, {articles: cached});
@@ -215,10 +345,12 @@ export const getLatestArticles = asyncHandler(async (req, res) => {
         .select('-content')
         .lean();
 
-    // Cache for 3 minutes
-    await cacheService.setArticleList(cacheKey, articles, config.cache.listTTL);
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
 
-    return successResponse(res, {articles});
+    // Cache for 3 minutes
+    await cacheService.setArticleList(cacheKey, localizedArticles, config.cache.listTTL);
+
+    return successResponse(res, {articles: localizedArticles});
 });
 
 /**
@@ -247,6 +379,130 @@ export const getArticleBySlug = asyncHandler(async (req, res) => {
     await cacheService.setArticle(slug, article, config.cache.articleTTL);
 
     return successResponse(res, {article});
+});
+
+/**
+ * Resolve article by slug and preferred language (public)
+ * GET /api/articles/resolve/:slug?language=km
+ */
+export const resolveArticleBySlug = asyncHandler(async (req, res) => {
+    const {slug} = req.params;
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
+
+    let article = await Article.findOne({slug, status: 'published'})
+        .populate('author', 'firstName lastName avatar bio')
+        .populate('category', 'name slug color')
+        .lean();
+    let matchedLanguage = '';
+
+    if (article) {
+        matchedLanguage = normalizeArticleLanguage(article.language) || 'en';
+    } else {
+        const slugTranslation = await ArticleTranslation.findOne({slug}).lean();
+        if (!slugTranslation) {
+            return notFoundResponse(res, 'Article not found');
+        }
+
+        article = await Article.findOne({_id: slugTranslation.articleId, status: 'published'})
+            .populate('author', 'firstName lastName avatar bio')
+            .populate('category', 'name slug color')
+            .lean();
+        if (!article) {
+            return notFoundResponse(res, 'Article not found');
+        }
+
+        matchedLanguage = normalizeArticleLanguage(slugTranslation.language) || normalizeArticleLanguage(article.language) || 'en';
+    }
+
+    const baseLanguage = normalizeArticleLanguage(article.language) || 'en';
+    const allTranslations = await ArticleTranslation.find({
+        articleId: article._id,
+    })
+        .select('language slug title excerpt content metaTitle metaDescription metaKeywords translationStatus updatedAt createdAt')
+        .sort({updatedAt: -1, createdAt: -1})
+        .lean();
+
+    const statusScore = {
+        published: 4,
+        review: 3,
+        in_progress: 2,
+        draft: 1,
+    };
+
+    const translationsByLanguage = new Map();
+    for (const translation of allTranslations) {
+        const languageCode = normalizeArticleLanguage(translation.language);
+        if (!languageCode || languageCode === baseLanguage) {
+            continue;
+        }
+
+        const existing = translationsByLanguage.get(languageCode);
+        if (!existing) {
+            translationsByLanguage.set(languageCode, translation);
+            continue;
+        }
+
+        const existingScore = statusScore[existing.translationStatus] || 0;
+        const nextScore = statusScore[translation.translationStatus] || 0;
+        if (nextScore > existingScore) {
+            translationsByLanguage.set(languageCode, translation);
+        }
+    }
+
+    const targetLanguage = requestedLanguage || matchedLanguage || baseLanguage;
+    const selectedTranslation = targetLanguage !== baseLanguage ? translationsByLanguage.get(targetLanguage) : null;
+    const availableLanguages = Array.from(new Set([baseLanguage, ...Array.from(translationsByLanguage.keys())]));
+
+    const languageVersions = [
+        {language: baseLanguage, slug: article.slug, isOriginal: true},
+        ...Array.from(translationsByLanguage.entries()).map(([language, translation]) => ({
+            language,
+            slug: translation.slug,
+            isOriginal: false,
+        })),
+    ];
+
+    const resolvedArticle = selectedTranslation
+        ? {
+            ...article,
+            title: selectedTranslation.title || article.title,
+            slug: selectedTranslation.slug || article.slug,
+            excerpt: selectedTranslation.excerpt ?? article.excerpt,
+            content: selectedTranslation.content || article.content,
+            metaTitle: selectedTranslation.metaTitle || article.metaTitle,
+            metaDescription: selectedTranslation.metaDescription || article.metaDescription,
+            metaKeywords: Array.isArray(selectedTranslation.metaKeywords) && selectedTranslation.metaKeywords.length > 0
+                ? selectedTranslation.metaKeywords
+                : article.metaKeywords,
+            language: targetLanguage,
+            availableLanguages,
+            originalSlug: article.slug,
+            originalLanguage: baseLanguage,
+            isTranslation: true,
+        }
+        : {
+            ...article,
+            language: baseLanguage,
+            availableLanguages,
+            originalSlug: article.slug,
+            originalLanguage: baseLanguage,
+            isTranslation: false,
+        };
+
+    const resolvedLanguage = resolvedArticle.language || baseLanguage;
+    const resolvedSlug = resolvedArticle.slug || article.slug;
+
+    return successResponse(res, {
+        article: resolvedArticle,
+        language: {
+            requested: requestedLanguage || null,
+            resolved: resolvedLanguage,
+            usedFallback: Boolean(requestedLanguage && requestedLanguage !== resolvedLanguage),
+            available: availableLanguages,
+            versions: languageVersions,
+            resolvedSlug,
+        },
+    });
 });
 
 /**
@@ -419,6 +675,7 @@ export const deleteArticle = asyncHandler(async (req, res) => {
 export const getMyArticles = asyncHandler(async (req, res) => {
     const {page, limit, skip} = parsePaginationParams(req.query);
     const {status, sortBy = 'createdAt', sortOrder = 'desc'} = req.query;
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     const filter = {author: req.user._id};
     if (status) filter.status = status;
@@ -435,7 +692,8 @@ export const getMyArticles = asyncHandler(async (req, res) => {
         Article.countDocuments(filter),
     ]);
 
-    return paginatedResponse(res, articles, {page, limit, total});
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
+    return paginatedResponse(res, localizedArticles, {page, limit, total});
 });
 
 /**
@@ -445,6 +703,7 @@ export const getMyArticles = asyncHandler(async (req, res) => {
 export const getAllArticlesAdmin = asyncHandler(async (req, res) => {
     const { page, limit, skip } = parsePaginationParams(req.query);
     const { status, author, q, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     const filter = {};
     if (status) filter.status = status;
@@ -466,7 +725,8 @@ export const getAllArticlesAdmin = asyncHandler(async (req, res) => {
         Article.countDocuments(filter),
     ]);
 
-    return paginatedResponse(res, articles, { page, limit, total });
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
+    return paginatedResponse(res, localizedArticles, { page, limit, total });
 });
 
 /**
@@ -475,6 +735,7 @@ export const getAllArticlesAdmin = asyncHandler(async (req, res) => {
  */
 export const getPendingArticles = asyncHandler(async (req, res) => {
     const {page, limit, skip} = parsePaginationParams(req.query);
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     const [articles, total] = await Promise.all([
         Article.find({status: 'pending'})
@@ -487,7 +748,8 @@ export const getPendingArticles = asyncHandler(async (req, res) => {
         Article.countDocuments({status: 'pending'}),
     ]);
 
-    return paginatedResponse(res, articles, {page, limit, total});
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
+    return paginatedResponse(res, localizedArticles, {page, limit, total});
 });
 
 /**
@@ -512,6 +774,8 @@ export const approveArticle = asyncHandler(async (req, res) => {
     article.reviewedBy = req.user._id;
     article.reviewedAt = new Date();
     article.reviewNotes = notes || '';
+    article.content = sanitizeEditorContent(article.content);
+    article.markModified('content');
 
     await article.save();
 
@@ -557,6 +821,8 @@ export const rejectArticle = asyncHandler(async (req, res) => {
     article.reviewedBy = req.user._id;
     article.reviewedAt = new Date();
     article.rejectionReason = reason;
+    article.content = sanitizeEditorContent(article.content);
+    article.markModified('content');
 
     await article.save();
 
@@ -612,10 +878,12 @@ export const recordView = asyncHandler(async (req, res) => {
  */
 export const getRelatedArticles = asyncHandler(async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 4, 10);
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     const articles = await Article.findRelated(req.params.id, limit);
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
 
-    return successResponse(res, {articles});
+    return successResponse(res, {articles: localizedArticles});
 });
 
 /**
@@ -624,6 +892,7 @@ export const getRelatedArticles = asyncHandler(async (req, res) => {
  */
 export const searchArticles = asyncHandler(async (req, res) => {
     const {q} = req.query;
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
     const {page, limit, skip} = parsePaginationParams(req.query);
 
     if (!q || q.length < 2) {
@@ -642,11 +911,14 @@ export const searchArticles = asyncHandler(async (req, res) => {
             .sort({score: {$meta: 'textScore'}})
             .skip(skip)
             .limit(limit)
-            .select('-content'),
+            .select('-content')
+            .lean(),
         Article.countDocuments(filter),
     ]);
 
-    return paginatedResponse(res, articles, {page, limit, total});
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
+
+    return paginatedResponse(res, localizedArticles, {page, limit, total});
 });
 
 /**
@@ -655,6 +927,7 @@ export const searchArticles = asyncHandler(async (req, res) => {
  */
 export const getArticlesByCategory = asyncHandler(async (req, res) => {
     const {slug} = req.params;
+    const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
     const {page, limit, skip} = parsePaginationParams(req.query);
 
     const category = await Category.findOne({slug, isActive: true});
@@ -671,14 +944,17 @@ export const getArticlesByCategory = asyncHandler(async (req, res) => {
             .sort({publishedAt: -1})
             .skip(skip)
             .limit(limit)
-            .select('-content'),
+            .select('-content')
+            .lean(),
         Article.countDocuments(filter),
     ]);
+
+    const localizedArticles = await applyPreferredLanguageToArticles(articles, requestedLanguage);
 
     // Return category in data, articles for pagination wrapper
     return successResponse(res, {
         category,
-        articles,
+        articles: localizedArticles,
         pagination: {
             page,
             limit,
@@ -744,6 +1020,7 @@ export default {
     getFeaturedArticles,
     getLatestArticles,
     getArticleBySlug,
+    resolveArticleBySlug,
     getArticleById,
     updateArticle,
     deleteArticle,

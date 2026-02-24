@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { BodyAd } from '../../../components/ads/index.js';
+import useLanguage from '../../../hooks/useLanguage';
 
 export function SidebarAdSlot({ ads = [], ad, pageType, pageUrl, device, trackAdEvent }) {
+  const { translateText } = useLanguage();
   const list = Array.isArray(ads) && ads.length ? ads : ad ? [ad] : [];
 
   return (
     <div className="pr-1">
-      <div className="text-xs text-dark-400 mb-1">Ad</div>
+      <div className="text-xs text-dark-400 mb-1">{translateText('Ad')}</div>
       <div className="bg-dark-100 dark:bg-dark-800 rounded-lg overflow-hidden">
         {list.length ? (
           <div className="p-2 space-y-3">
@@ -43,7 +45,7 @@ export function SidebarAdSlot({ ads = [], ad, pageType, pageUrl, device, trackAd
         ) : (
           <div className="aspect-[300/600] flex items-center justify-center text-dark-400 text-sm">
             <div className="text-center p-4">
-              <p className="font-medium mb-2">Advertisement</p>
+              <p className="font-medium mb-2">{translateText('Advertisement')}</p>
               <p className="text-xs">300 x 600</p>
             </div>
           </div>

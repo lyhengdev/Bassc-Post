@@ -94,15 +94,20 @@ export const optionalAuth = async (req, res, next) => {
  * Authorize by role(s)
  */
 export const authorize = (...roles) => {
+  const normalizedRoles = roles
+    .flat()
+    .map((role) => String(role || '').trim())
+    .filter(Boolean);
+
   return (req, res, next) => {
     if (!req.user) {
       return unauthorizedResponse(res, 'Authentication required');
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!normalizedRoles.includes(req.user.role)) {
       return forbiddenResponse(
         res,
-        `Access denied. Required role(s): ${roles.join(', ')}`
+        `Access denied. Required role(s): ${normalizedRoles.join(', ')}`
       );
     }
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import config from '../config/index.js';
-import { Article } from '../models/index.js';
+import { Article, ArticleTranslation } from '../models/index.js';
 
 const router = Router();
 
@@ -74,6 +74,58 @@ const truncateText = (value = '', maxLength = 260) => {
   return `${normalized.slice(0, maxLength - 1).trim()}...`;
 };
 
+const normalizeLanguage = (value = '') => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return 'en';
+  if (raw.startsWith('zh')) return 'zh';
+  if (raw.startsWith('km')) return 'km';
+  if (raw.startsWith('en')) return 'en';
+  return raw.split(/[-_]/)[0] || 'en';
+};
+
+const OG_LOCALE_BY_LANGUAGE = {
+  en: 'en_US',
+  km: 'km_KH',
+  zh: 'zh_CN',
+};
+
+const resolveArticleByShareSlug = async (slug) => {
+  const baseArticle = await Article.findOne({ slug, status: 'published' })
+    .select('title excerpt metaTitle metaDescription content featuredImage publishedAt updatedAt slug author language')
+    .populate('author', 'firstName lastName fullName')
+    .lean();
+
+  if (baseArticle) {
+    return { article: baseArticle, shareSlug: baseArticle.slug };
+  }
+
+  const translation = await ArticleTranslation.findOne({ slug })
+    .select('articleId language slug title excerpt content metaTitle metaDescription translationStatus updatedAt createdAt')
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+  if (!translation) return null;
+
+  const originalArticle = await Article.findOne({ _id: translation.articleId, status: 'published' })
+    .select('title excerpt metaTitle metaDescription content featuredImage publishedAt updatedAt slug author language')
+    .populate('author', 'firstName lastName fullName')
+    .lean();
+  if (!originalArticle) return null;
+
+  const mergedArticle = {
+    ...originalArticle,
+    title: translation.title || originalArticle.title,
+    excerpt: translation.excerpt ?? originalArticle.excerpt,
+    content: translation.content || originalArticle.content,
+    metaTitle: translation.metaTitle || originalArticle.metaTitle,
+    metaDescription: translation.metaDescription || originalArticle.metaDescription,
+    slug: translation.slug || originalArticle.slug,
+    language: normalizeLanguage(translation.language || originalArticle.language),
+    originalSlug: originalArticle.slug,
+  };
+
+  return { article: mergedArticle, shareSlug: mergedArticle.slug };
+};
+
 router.get('/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -81,10 +133,8 @@ router.get('/:slug', async (req, res) => {
       return res.status(400).send('Missing slug');
     }
 
-    const article = await Article.findOne({ slug, status: 'published' })
-      .select('title excerpt metaTitle metaDescription content featuredImage publishedAt updatedAt slug author')
-      .populate('author', 'firstName lastName fullName')
-      .lean();
+    const resolvedArticle = await resolveArticleByShareSlug(slug);
+    const article = resolvedArticle?.article;
 
     if (!article) {
       return res.status(404).send('Article not found');
@@ -110,7 +160,7 @@ router.get('/:slug', async (req, res) => {
     const imageUrl = imagePath.startsWith('/uploads/')
       ? resolveUrl(imageBaseUrl, imagePath)
       : resolveUrl(siteUrl, imagePath);
-    const sharePath = String(req.originalUrl || req.url || `/share/${article.slug}`).split('?')[0] || `/share/${article.slug}`;
+    const sharePath = String(req.originalUrl || req.url || `/share/${resolvedArticle?.shareSlug || article.slug}`).split('?')[0] || `/share/${resolvedArticle?.shareSlug || article.slug}`;
     const shareUrl = resolveUrl(requestOrigin || siteUrl, sharePath);
     const articleUrl = resolveUrl(siteUrl, `/article/${article.slug}`);
     const authorName = article.author
@@ -118,6 +168,7 @@ router.get('/:slug', async (req, res) => {
       : '';
     const publishedTime = article.publishedAt ? new Date(article.publishedAt).toISOString() : '';
     const modifiedTime = article.updatedAt ? new Date(article.updatedAt).toISOString() : publishedTime;
+    const ogLocale = OG_LOCALE_BY_LANGUAGE[normalizeLanguage(article.language)] || 'en_US';
 
     const disableRedirect = req.query.preview === '1' || isSocialCrawler(req);
     const html = `<!doctype html>
@@ -141,7 +192,7 @@ router.get('/:slug', async (req, res) => {
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${escapeHtml(title)}" />
     <meta property="og:site_name" content="${escapeHtml(config.siteName || '')}" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale" content="${escapeHtml(ogLocale)}" />
     ${publishedTime ? `<meta property="article:published_time" content="${escapeHtml(publishedTime)}" />` : ''}
     ${modifiedTime ? `<meta property="article:modified_time" content="${escapeHtml(modifiedTime)}" />` : ''}
     ${authorName ? `<meta property="article:author" content="${escapeHtml(authorName)}" />` : ''}

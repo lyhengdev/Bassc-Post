@@ -11,8 +11,10 @@ import {
 } from 'lucide-react';
 import {useAuthStore, useThemeStore} from '../../stores/authStore';
 import {useLogout, useCategories, usePublicSettings} from '../../hooks/useApi';
+import useLanguage from '../../hooks/useLanguage';
 import {Avatar} from '../common/index.jsx';
 import {NotificationDropdown} from '../common/NotificationDropdown.jsx';
+import LanguageSelector from '../common/LanguageSelector.jsx';
 import {cn, buildMediaUrl} from '../../utils';
 
 const SEARCH_OVERLAY_ANIMATION_MS = 220;
@@ -29,6 +31,7 @@ export default function Header() {
     const location = useLocation();
     const {isAuthenticated, user} = useAuthStore();
     const {theme, toggleTheme} = useThemeStore();
+    const {t, translateText} = useLanguage();
     const {mutate: logout} = useLogout();
     const {data: categories} = useCategories();
     const {data: settings} = usePublicSettings();
@@ -49,10 +52,10 @@ export default function Header() {
         const baseMenu = Array.isArray(menuItems) && menuItems.length > 0
             ? [...menuItems].sort((a, b) => (a.order || 0) - (b.order || 0))
             : [
-                { label: 'News', url: '/articles', target: '_self' },
-                ...(canAccessDashboard ? [{ label: 'Dashboard', url: '/dashboard', target: '_self' }] : []),
-                { label: 'About', url: '/about', target: '_self' },
-                { label: 'Contact', url: '/contact', target: '_self' },
+                { label: t('nav.news', 'News'), url: '/articles', target: '_self' },
+                ...(canAccessDashboard ? [{ label: t('nav.dashboard', 'Dashboard'), url: '/dashboard', target: '_self' }] : []),
+                { label: t('nav.about', 'About'), url: '/about', target: '_self' },
+                { label: t('nav.contact', 'Contact'), url: '/contact', target: '_self' },
             ];
 
         const hasCategoriesTab = baseMenu.some((item) => {
@@ -72,10 +75,10 @@ export default function Header() {
 
         return [
             ...baseMenu.slice(0, insertAt),
-            { label: 'Categories', url: '/categories', target: '_self' },
+            { label: t('nav.categories', 'Categories'), url: '/categories', target: '_self' },
             ...baseMenu.slice(insertAt),
         ];
-    }, [settings?.menus?.header, canAccessDashboard]);
+    }, [settings?.menus?.header, canAccessDashboard, t]);
 
     const categorySlugById = useMemo(() => {
         const map = new Map();
@@ -136,6 +139,19 @@ export default function Header() {
         return currentPath === normalizedHref || currentPath.startsWith(`${normalizedHref}/`);
     };
 
+    const getLocalizedMenuLabel = (item, fallback = 'Link') => {
+        const href = normalizePath(getMenuHref(item));
+        const normalizedLabel = (item?.label || '').toString().trim().toLowerCase();
+
+        if (href === '/articles' || normalizedLabel === 'news') return t('nav.news', item?.label || fallback);
+        if (href === '/categories' || normalizedLabel === 'categories') return t('nav.categories', item?.label || fallback);
+        if (href === '/dashboard' || normalizedLabel === 'dashboard') return t('nav.dashboard', item?.label || fallback);
+        if (href === '/about' || normalizedLabel === 'about') return t('nav.about', item?.label || fallback);
+        if (href === '/contact' || normalizedLabel === 'contact') return t('nav.contact', item?.label || fallback);
+
+        return item?.label || fallback;
+    };
+
     const renderMenuLink = (
         item,
         className,
@@ -148,6 +164,7 @@ export default function Header() {
         const target = item.target || '_self';
         const isActive = !isExternal && isMenuItemActive(item, href);
         const resolvedClassName = cn(className, isActive ? activeClassName : inactiveClassName);
+        const localizedLabel = typeof label === 'string' ? translateText(label) : label;
 
         if (isExternal) {
             return (
@@ -157,7 +174,7 @@ export default function Header() {
                     rel={target === '_blank' ? 'noopener noreferrer' : undefined}
                     className={resolvedClassName}
                 >
-                    {label}
+                    {localizedLabel}
                 </a>
             );
         }
@@ -168,7 +185,7 @@ export default function Header() {
                 rel={target === '_blank' ? 'noopener noreferrer' : undefined}
                 className={resolvedClassName}
             >
-                {label}
+                {localizedLabel}
             </Link>
         );
     };
@@ -322,7 +339,7 @@ export default function Header() {
                                                 {renderMenuLink(
                                                     item,
                                                     'pb-1 border-b-2 transition-colors',
-                                                    item.label?.toUpperCase() || 'LINK'
+                                                    getLocalizedMenuLabel(item, 'LINK')
                                                 )}
                                             </span>
                                         );
@@ -332,7 +349,7 @@ export default function Header() {
                                             {renderMenuLink(
                                                 item,
                                                 'pb-1 border-b-2 transition-colors',
-                                                item.label?.toUpperCase() || 'MENU'
+                                                getLocalizedMenuLabel(item, 'MENU')
                                             )}
                                             <div className="absolute left-0 top-full pt-2 hidden group-hover:block">
                                                 <div className="min-w-[180px] rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 shadow-lg py-2">
@@ -341,7 +358,7 @@ export default function Header() {
                                                             {renderMenuLink(
                                                                 child,
                                                                 'block px-4 py-2 text-sm border-l-2 transition-colors',
-                                                                child.label || 'LINK',
+                                                                getLocalizedMenuLabel(child, 'LINK'),
                                                                 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-primary-500 dark:border-primary-400',
                                                                 'text-dark-600 dark:text-dark-300 border-transparent hover:bg-dark-100 dark:hover:bg-dark-800'
                                                             )}
@@ -357,13 +374,16 @@ export default function Header() {
                             {/* Divider */}
                             <div className="hidden md:block w-px h-6 bg-dark-200 dark:bg-dark-700 mx-2" />
 
+                            {/* Language */}
+                            <LanguageSelector variant="compact" />
+
                             {/* Search */}
                             {showSearchToggle && (
                                 <button
                                     onClick={openSearchOverlay}
                                     className="p-2 text-dark-500 hover:text-dark-900 dark:hover:text-white transition-colors"
-                                    aria-label="Open search"
-                                    title="Search (Ctrl/Cmd + K)"
+                                    aria-label={t('search.open', 'Open search')}
+                                    title={`${t('search.button', 'Search')} (Ctrl/Cmd + K)`}
                                 >
                                     <Search className="w-5 h-5"/>
                                 </button>
@@ -401,22 +421,22 @@ export default function Header() {
                                                     </div>
                                                     {canAccessDashboard && (
                                                         <Link to="/dashboard" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
-                                                            <LayoutDashboard className="w-4 h-4"/> Dashboard
+                                                            <LayoutDashboard className="w-4 h-4"/> {t('nav.dashboard', 'Dashboard')}
                                                         </Link>
                                                     )}
                                                     <Link to={profilePath} className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
-                                                        <User className="w-4 h-4"/> Profile
+                                                        <User className="w-4 h-4"/> {t('nav.profile', 'Profile')}
                                                     </Link>
                                                     <div className="md:hidden">
                                                         <Link to="/about" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
-                                                            About
+                                                            {t('nav.about', 'About')}
                                                         </Link>
                                                         <Link to="/contact" className="flex items-center gap-2 px-4 py-2 text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800" onClick={closeUserMenu}>
-                                                            Contact
+                                                            {t('nav.contact', 'Contact')}
                                                         </Link>
                                                     </div>
                                                     <button onClick={() => { closeUserMenu(); logout(); }} className="flex items-center gap-2 w-full px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950">
-                                                        <LogOut className="w-4 h-4"/> Logout
+                                                        <LogOut className="w-4 h-4"/> {t('auth.logout', 'Logout')}
                                                     </button>
                                                 </div>
                                             </>
@@ -425,7 +445,7 @@ export default function Header() {
                                 </>
                             ) : (
                                 <Link to="/login" className="px-3 py-2 md:px-4 md:py-2 bg-primary-600 text-white text-xs md:text-sm font-medium rounded hover:bg-primary-700 transition-colors">
-                                    SIGN IN
+                                    {t('auth.signIn', 'SIGN IN')}
                                 </Link>
                             )}
 
@@ -448,7 +468,7 @@ export default function Header() {
                                         : 'text-dark-600 dark:text-dark-300 border-transparent hover:text-primary-700 dark:hover:text-primary-300'
                                 )}
                             >
-                                DISCOVER
+                                {t('nav.discover', 'DISCOVER')}
                             </NavLink>
                             {categories?.map((cat) => (
                                 <Link
@@ -492,7 +512,7 @@ export default function Header() {
                                         <input
                                             ref={searchInputRef}
                                             type="text"
-                                            placeholder="Search news, topics, categories..."
+                                            placeholder={t('search.placeholder', 'Search news, topics, categories...')}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             className="w-full rounded-full border border-dark-200 dark:border-dark-600 bg-dark-50 dark:bg-dark-800 py-3 pl-12 pr-10 text-dark-900 dark:text-white placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -502,7 +522,7 @@ export default function Header() {
                                                 type="button"
                                                 onClick={() => setSearchQuery('')}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-dark-200 dark:hover:bg-dark-700"
-                                                aria-label="Clear search"
+                                                aria-label={t('common.clearSearch', 'Clear search')}
                                             >
                                                 <X className="w-4 h-4 text-dark-400" />
                                             </button>
@@ -512,22 +532,22 @@ export default function Header() {
                                         type="submit"
                                         className="inline-flex items-center justify-center rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
                                     >
-                                        Search
+                                        {t('search.button', 'Search')}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={closeSearchOverlay}
                                         className="hidden sm:inline-flex items-center justify-center rounded-full border border-dark-200 dark:border-dark-700 px-4 py-2.5 text-sm font-semibold text-dark-600 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors"
                                     >
-                                        Close
+                                        {t('search.close', 'Close')}
                                     </button>
                                 </div>
                             </form>
 
                             <div className="space-y-4 p-4 sm:p-5">
                                 <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-dark-400">Quick Jump</p>
-                                    <span className="hidden sm:inline text-xs text-dark-400">Press <kbd className="rounded bg-dark-100 dark:bg-dark-800 px-1.5 py-0.5">Esc</kbd> to close</span>
+                                    <p className="text-xs uppercase tracking-[0.2em] text-dark-400">{t('search.quickJump', 'Quick Jump')}</p>
+                                    <span className="hidden sm:inline text-xs text-dark-400">{t('search.escToClose', 'Press Esc to close')}</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <Link
@@ -535,27 +555,27 @@ export default function Header() {
                                         onClick={closeSearchOverlay}
                                         className="rounded-full bg-dark-100 dark:bg-dark-800 px-3 py-1.5 text-sm text-dark-700 dark:text-dark-200 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
                                     >
-                                        All News
+                                        {t('search.allNews', 'All News')}
                                     </Link>
                                     <Link
                                         to="/categories"
                                         onClick={closeSearchOverlay}
                                         className="rounded-full bg-dark-100 dark:bg-dark-800 px-3 py-1.5 text-sm text-dark-700 dark:text-dark-200 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
                                     >
-                                        Categories
+                                        {t('nav.categories', 'Categories')}
                                     </Link>
                                     <Link
                                         to="/about"
                                         onClick={closeSearchOverlay}
                                         className="rounded-full bg-dark-100 dark:bg-dark-800 px-3 py-1.5 text-sm text-dark-700 dark:text-dark-200 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors"
                                     >
-                                        About
+                                        {t('nav.about', 'About')}
                                     </Link>
                                 </div>
 
                                 {Array.isArray(categories) && categories.length > 0 && (
                                     <div>
-                                        <p className="text-xs uppercase tracking-[0.2em] text-dark-400 mb-2">Trending Topics</p>
+                                        <p className="text-xs uppercase tracking-[0.2em] text-dark-400 mb-2">{t('search.trendingTopics', 'Trending Topics')}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {categories.slice(0, 10).map((cat) => (
                                                 <Link

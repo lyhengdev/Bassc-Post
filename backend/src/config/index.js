@@ -68,6 +68,13 @@ const config = {
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
   },
+
+  // Azure Translator
+  azureTranslator: {
+    key: process.env.AZURE_TRANSLATOR_KEY,
+    region: process.env.AZURE_TRANSLATOR_REGION,
+    endpoint: process.env.AZURE_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com',
+  },
   
   // File Upload
   upload: {

@@ -1,6 +1,7 @@
 import {Link, useLocation} from 'react-router-dom';
 import {Facebook, Twitter, Instagram, Youtube, Linkedin, Github, Mail, MapPin, Phone, Send, MessageCircle, Hash} from 'lucide-react';
 import { useCategories, usePublicSettings } from '../../hooks/useApi';
+import useLanguage from '../../hooks/useLanguage';
 import { BodyAd } from '../ads/index.js';
 import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
 import { buildMediaUrl } from '../../utils';
@@ -18,6 +19,7 @@ const SOCIAL_ICONS = {
 };
 
 export default function Footer() {
+    const { t, translateText } = useLanguage();
     const { data: settings } = usePublicSettings();
     const { data: categories } = useCategories();
     const location = useLocation();
@@ -27,15 +29,15 @@ export default function Footer() {
 
     const links = {
         company: [
-            {label: 'About Us', href: '/about'},
-            {label: 'Contact', href: '/contact'},
+            {label: t('footer.aboutUs', 'About Us'), href: '/about'},
+            {label: t('nav.contact', 'Contact'), href: '/contact'},
         ],
         resources: [
-            {label: 'News', href: '/articles'},
+            {label: t('nav.news', 'News'), href: '/articles'},
         ],
         legal: [
-            {label: 'Privacy Policy', href: '/privacy'},
-            {label: 'Terms of Service', href: '/terms'},
+            {label: t('footer.privacy', 'Privacy Policy'), href: '/privacy'},
+            {label: t('footer.terms', 'Terms of Service'), href: '/terms'},
         ],
     };
 
@@ -54,11 +56,11 @@ export default function Footer() {
         ];
 
     const siteName = settings?.siteName || 'Bassac Post';
-    const siteDescription = settings?.siteDescription || 'Your trusted source for quality news, insightful articles, and in-depth coverage of the stories that matter.';
+    const siteDescription = settings?.siteDescription || translateText('Your trusted source for quality news, insightful articles, and in-depth coverage of the stories that matter.');
     const siteLogo = settings?.siteLogo;
     const siteEmail = settings?.siteEmail || 'hello@bassacmedia.com';
     const sitePhone = settings?.sitePhone || '+855 12 345 678';
-    const siteAddress = settings?.siteAddress || 'Phnom Penh, Cambodia';
+    const siteAddress = settings?.siteAddress || translateText('Phnom Penh, Cambodia');
     const footerSettings = settings?.footerSettings || {};
     const searchParams = new URLSearchParams(location.search);
     const pageType = location.pathname === '/'
@@ -103,6 +105,17 @@ export default function Footer() {
       const isExternal = /^https?:\/\//.test(href);
       const target = item.target || '_self';
       const className = 'text-sm hover:text-white transition-colors';
+      const normalizedHref = String(href || '').split('#')[0].split('?')[0];
+      const normalizedLabel = String(item.label || '').trim().toLowerCase();
+      let localizedLabel = item.label || 'Link';
+
+      if (normalizedHref === '/articles' || normalizedLabel === 'news') localizedLabel = t('nav.news', localizedLabel);
+      if (normalizedHref === '/categories' || normalizedLabel === 'categories') localizedLabel = t('nav.categories', localizedLabel);
+      if (normalizedHref === '/about' || normalizedLabel === 'about' || normalizedLabel === 'about us') localizedLabel = t('footer.aboutUs', localizedLabel);
+      if (normalizedHref === '/contact' || normalizedLabel === 'contact') localizedLabel = t('nav.contact', localizedLabel);
+      if (normalizedHref === '/privacy' || normalizedLabel === 'privacy policy') localizedLabel = t('footer.privacy', localizedLabel);
+      if (normalizedHref === '/terms' || normalizedLabel === 'terms of service') localizedLabel = t('footer.terms', localizedLabel);
+      localizedLabel = translateText(localizedLabel);
       if (isExternal) {
         return (
           <a
@@ -111,7 +124,7 @@ export default function Footer() {
             rel={target === '_blank' ? 'noopener noreferrer' : undefined}
             className={className}
           >
-            {item.label || 'Link'}
+            {localizedLabel}
           </a>
         );
       }
@@ -122,7 +135,7 @@ export default function Footer() {
           rel={target === '_blank' ? 'noopener noreferrer' : undefined}
           className={className}
         >
-          {item.label || 'Link'}
+          {localizedLabel}
         </Link>
       );
     };
@@ -138,15 +151,15 @@ export default function Footer() {
           items: item.children,
         }))
       : footerMenu.length > 0
-        ? [{ title: 'Links', items: footerMenu }]
+        ? [{ title: t('footer.links', 'Links'), items: footerMenu }]
         : [
-            { title: 'Company', items: links.company },
-            { title: 'Resources', items: links.resources },
-            { title: 'Legal', items: links.legal },
+            { title: t('footer.company', 'Company'), items: links.company },
+            { title: t('footer.resources', 'Resources'), items: links.resources },
+            { title: t('footer.legal', 'Legal'), items: links.legal },
           ];
 
     const copyrightTemplate = footerSettings.copyrightText || '© {year} {siteName}. All rights reserved.';
-    const copyrightText = copyrightTemplate
+    const copyrightText = translateText(copyrightTemplate)
       .replace('{year}', String(currentYear))
       .replace('{siteName}', siteName);
 
@@ -244,7 +257,7 @@ export default function Footer() {
 
                     {footerColumns.map((column) => (
                       <div key={column.title}>
-                        <h3 className="font-semibold text-white mb-4">{column.title}</h3>
+                        <h3 className="font-semibold text-white mb-4">{translateText(column.title)}</h3>
                         <ul className="space-y-3">
                           {column.items.map((item) => {
                             return (
@@ -273,7 +286,7 @@ export default function Footer() {
                             href={social.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            aria-label={social.label}
+                            aria-label={translateText(social.label)}
                             className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
                           >
                             <social.icon className="w-5 h-5"/>
