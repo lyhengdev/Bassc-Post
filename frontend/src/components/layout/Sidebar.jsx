@@ -45,13 +45,13 @@ export default function Sidebar({ isOpen, onClose }) {
       items: [
         {
           icon: FileText,
-          label: 'My News',
+          label: 'My Posts',
           href: '/dashboard/articles',
           roles: ['writer', 'editor', 'admin'],
         },
         {
           icon: PenTool,
-          label: 'New News',
+          label: 'New Post',
           href: '/dashboard/articles/new',
           roles: ['writer', 'editor', 'admin'],
         },

@@ -39,6 +39,33 @@ const normalizeArticleLanguage = (value = '') => {
     return raw.split(/[-_]/)[0] || '';
 };
 
+const normalizePostType = (value = 'news') => {
+    const raw = String(value || '').trim().toLowerCase();
+    return raw === 'video' ? 'video' : 'news';
+};
+
+const normalizeVideoUrl = (value = '') => String(value || '').trim();
+
+const buildVideoFallbackContent = ({ title = '', excerpt = '', videoUrl = '' } = {}) => {
+    const summary = excerpt || title || 'Video post';
+    return {
+        time: Date.now(),
+        blocks: [
+            {
+                id: `video-summary-${Date.now().toString(36)}`,
+                type: 'paragraph',
+                data: { text: summary },
+            },
+            {
+                id: `video-link-${Date.now().toString(36)}`,
+                type: 'paragraph',
+                data: { text: videoUrl ? `<a href="${videoUrl}" target="_blank" rel="noopener noreferrer">${videoUrl}</a>` : '' },
+            },
+        ],
+        version: '2.28.2',
+    };
+};
+
 const toPlainArticle = (article) => {
     if (!article) return null;
     if (typeof article.toObject === 'function') {
@@ -158,7 +185,27 @@ const applyPreferredLanguageToArticles = async (articles, requestedLanguageInput
  * POST /api/articles
  */
 export const createArticle = asyncHandler(async (req, res) => {
-    const {title, content, excerpt, category, tags, metaTitle, metaDescription, featuredImage, status, isFeatured, isBreaking} = req.body;
+    const {
+        title,
+        content,
+        excerpt,
+        category,
+        tags,
+        metaTitle,
+        metaDescription,
+        featuredImage,
+        status,
+        isFeatured,
+        isBreaking,
+        postType,
+        videoUrl,
+    } = req.body;
+    const normalizedPostType = normalizePostType(postType);
+    const normalizedVideoUrl = normalizedPostType === 'video' ? normalizeVideoUrl(videoUrl) : '';
+
+    if (normalizedPostType === 'video' && !normalizedVideoUrl) {
+        return badRequestResponse(res, 'Video URL is required for video posts');
+    }
 
     // Verify category exists
     const categoryExists = await Category.findById(category);
@@ -167,7 +214,16 @@ export const createArticle = asyncHandler(async (req, res) => {
     }
 
     // Sanitize content
-    const sanitizedContent = sanitizeEditorContent(content);
+    let sanitizedContent = sanitizeEditorContent(content);
+    const hasBlocks = Array.isArray(sanitizedContent?.blocks) && sanitizedContent.blocks.length > 0;
+    if (!hasBlocks && normalizedPostType === 'video') {
+        sanitizedContent = sanitizeEditorContent(
+            buildVideoFallbackContent({ title, excerpt, videoUrl: normalizedVideoUrl })
+        );
+    }
+    if (!Array.isArray(sanitizedContent?.blocks) || sanitizedContent.blocks.length === 0) {
+        return badRequestResponse(res, 'Article content is required');
+    }
 
     // Determine article status - default to draft, respect user input
     let articleStatus = status || 'draft';
@@ -191,6 +247,8 @@ export const createArticle = asyncHandler(async (req, res) => {
         metaTitle,
         metaDescription,
         featuredImage,
+        postType: normalizedPostType,
+        videoUrl: normalizedVideoUrl,
         author: req.user._id,
         status: articleStatus,
         publishedAt,
@@ -235,11 +293,12 @@ export const createArticle = asyncHandler(async (req, res) => {
  */
 export const getArticles = asyncHandler(async (req, res) => {
     const {page, limit, skip} = parsePaginationParams(req.query);
-    const {category, tag, sortBy = 'publishedAt', sortOrder = 'desc', isBreaking, isFeatured} = req.query;
+    const {category, tag, sortBy = 'publishedAt', sortOrder = 'desc', isBreaking, isFeatured, postType} = req.query;
     const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
+    const normalizedPostType = postType ? normalizePostType(postType) : '';
 
     // Create cache key from query params
-    const cacheKey = `list:${page}:${limit}:${category || ''}:${tag || ''}:${sortBy}:${sortOrder}:${isBreaking || ''}:${isFeatured || ''}:${requestedLanguage || ''}`;
+    const cacheKey = `list:${page}:${limit}:${category || ''}:${tag || ''}:${sortBy}:${sortOrder}:${isBreaking || ''}:${isFeatured || ''}:${normalizedPostType || ''}:${requestedLanguage || ''}`;
     
     // Try cache first
     const cached = await cacheService.getArticleList(cacheKey);
@@ -266,6 +325,9 @@ export const getArticles = asyncHandler(async (req, res) => {
     // Filter by isFeatured
     if (isFeatured === 'true') {
         filter.isFeatured = true;
+    }
+    if (normalizedPostType) {
+        filter.postType = normalizedPostType;
     }
 
     const sort = {[sortBy]: sortOrder === 'asc' ? 1 : -1};
@@ -559,7 +621,8 @@ export const updateArticle = asyncHandler(async (req, res) => {
     const {
         title, content, excerpt, category, tags, 
         metaTitle, metaDescription, featuredImage, featuredImagePosition,
-        featuredImagePositionY, featuredImageAlt, status, isFeatured, isBreaking
+        featuredImagePositionY, featuredImageAlt, status, isFeatured, isBreaking,
+        postType, videoUrl
     } = req.body;
 
     if (title) article.title = title;
@@ -579,6 +642,30 @@ export const updateArticle = asyncHandler(async (req, res) => {
     if (featuredImagePosition !== undefined) article.featuredImagePosition = featuredImagePosition;
     if (featuredImagePositionY !== undefined) article.featuredImagePositionY = featuredImagePositionY;
     if (featuredImageAlt !== undefined) article.featuredImageAlt = featuredImageAlt;
+    if (postType !== undefined) {
+        article.postType = normalizePostType(postType);
+    }
+    if (videoUrl !== undefined) {
+        article.videoUrl = normalizeVideoUrl(videoUrl);
+    }
+    if (article.postType !== 'video') {
+        article.videoUrl = '';
+    }
+    if (article.postType === 'video' && !article.videoUrl) {
+        return badRequestResponse(res, 'Video URL is required for video posts');
+    }
+    if (article.postType === 'video') {
+        const hasBlocks = Array.isArray(article.content?.blocks) && article.content.blocks.length > 0;
+        if (!hasBlocks) {
+            article.content = sanitizeEditorContent(
+                buildVideoFallbackContent({
+                    title: article.title,
+                    excerpt: article.excerpt,
+                    videoUrl: article.videoUrl,
+                })
+            );
+        }
+    }
 
     // Featured and breaking flags - only admin/editor can change
     if (isAdminOrEditor) {
@@ -674,11 +761,12 @@ export const deleteArticle = asyncHandler(async (req, res) => {
  */
 export const getMyArticles = asyncHandler(async (req, res) => {
     const {page, limit, skip} = parsePaginationParams(req.query);
-    const {status, sortBy = 'createdAt', sortOrder = 'desc'} = req.query;
+    const {status, postType, sortBy = 'createdAt', sortOrder = 'desc'} = req.query;
     const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     const filter = {author: req.user._id};
     if (status) filter.status = status;
+    if (postType) filter.postType = normalizePostType(postType);
 
     const sort = {[sortBy]: sortOrder === 'asc' ? 1 : -1};
 
@@ -702,12 +790,13 @@ export const getMyArticles = asyncHandler(async (req, res) => {
  */
 export const getAllArticlesAdmin = asyncHandler(async (req, res) => {
     const { page, limit, skip } = parsePaginationParams(req.query);
-    const { status, author, q, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const { status, author, q, postType, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     const requestedLanguage = normalizeArticleLanguage(req.query.language || req.query.lang);
 
     const filter = {};
     if (status) filter.status = status;
     if (author) filter.author = author;
+    if (postType) filter.postType = normalizePostType(postType);
     if (q) {
         filter.title = { $regex: q, $options: 'i' };
     }

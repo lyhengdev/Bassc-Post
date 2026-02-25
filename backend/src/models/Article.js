@@ -100,6 +100,17 @@ const articleSchema = new mongoose.Schema(
             maxlength: [500, 'Excerpt cannot exceed 500 characters'],
             default: '',
         },
+        postType: {
+            type: String,
+            enum: ['news', 'video'],
+            default: 'news',
+            index: true,
+        },
+        videoUrl: {
+            type: String,
+            default: '',
+            maxlength: [1200, 'Video URL cannot exceed 1200 characters'],
+        },
         content: {
             type: editorContentSchema,
             required: [true, 'Article content is required'],
@@ -218,6 +229,7 @@ const articleSchema = new mongoose.Schema(
 articleSchema.index({ status: 1, publishedAt: -1 }); // Published articles sorted by date
 articleSchema.index({ status: 1, isFeatured: 1, publishedAt: -1 }); // Featured articles
 articleSchema.index({ status: 1, isBreaking: 1, publishedAt: -1 }); // Breaking news
+articleSchema.index({ status: 1, postType: 1, publishedAt: -1 }); // News vs video
 
 // Category + status + date (category pages)
 articleSchema.index({ category: 1, status: 1, publishedAt: -1 });

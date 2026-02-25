@@ -99,6 +99,7 @@ export function PublicLayout() {
   const { data: settings } = usePublicSettings();
   const [isMobile, setIsMobile] = useState(false);
   const location = useLocation();
+  const isImmersiveVideoRoute = /^\/videos\/?$/.test(location.pathname || '');
   const device = useDeviceType();
   const { mutate: trackAdEvent } = useTrackAdEvent();
   const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
@@ -204,16 +205,16 @@ export function PublicLayout() {
   }, [popupAd?._id, location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col font-public">
+    <div className={cn('min-h-screen flex flex-col font-public', isImmersiveVideoRoute && 'bg-black')}>
       {showGlobalLoader && (
         <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gradient-to-r from-transparent via-primary-500 to-transparent animate-pulse pointer-events-none" />
       )}
       {/* Top Floating Banner - Above Header */}
-      {settings && hasTopBanner && (
+      {!isImmersiveVideoRoute && settings && hasTopBanner && (
         <TopFloatingBanner settings={floatingBanner} />
       )}
       
-      {headerAd && (
+      {!isImmersiveVideoRoute && headerAd && (
         <div className="border-b border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900">
           <div className="container-custom py-3">
             <BodyAd
@@ -243,31 +244,33 @@ export function PublicLayout() {
         </div>
       )}
 
-      <Header />
+      {!isImmersiveVideoRoute && <Header />}
 
       
       {/* Main content with padding for mobile bottom nav */}
-      <main className="flex-grow pb-16 md:pb-0">
+      <main className={cn('flex-grow', isImmersiveVideoRoute ? 'pb-0' : 'pb-16 md:pb-0')}>
         <Outlet />
       </main>
       
       
       {/* Footer - hidden on mobile when bottom nav is shown */}
-      <div className="hidden md:block">
-        <Footer />
-      </div>
+      {!isImmersiveVideoRoute && (
+        <div className="hidden md:block">
+          <Footer />
+        </div>
+      )}
       
       {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {!isImmersiveVideoRoute && <MobileNav />}
       
       {/* Bottom Floating Banner - Above mobile nav on mobile */}
-      {settings && hasBottomBanner && (
+      {!isImmersiveVideoRoute && settings && hasBottomBanner && (
         <div className={cn(isMobile && 'mb-16')}>
           <BottomFloatingBanner settings={floatingBanner} />
         </div>
       )}
 
-      {!isSettingsBannerActive && floatingAd && !isFloatingDismissed && (
+      {!isImmersiveVideoRoute && !isSettingsBannerActive && floatingAd && !isFloatingDismissed && (
         <FloatingAdBanner
           ad={floatingAd}
           onClose={() => setIsFloatingDismissed(true)}
@@ -291,28 +294,30 @@ export function PublicLayout() {
         />
       )}
 
-      <PopupAdModal
-        ad={popupAd}
-        isOpen={isPopupOpen}
-        onClose={() => setIsPopupOpen(false)}
-        onImpression={(adData) => trackAdEvent({
-          adId: adData._id,
-          type: 'impression',
-          pageType,
-          pageUrl,
-          device,
-          placement: adData.placement
-        })}
-        onClick={(adData, meta) => trackAdEvent({
-          adId: adData._id,
-          type: 'click',
-          pageType,
-          pageUrl,
-          device,
-          placement: adData.placement,
-          eventTimestamp: meta?.eventTimestamp
-        })}
-      />
+      {!isImmersiveVideoRoute && (
+        <PopupAdModal
+          ad={popupAd}
+          isOpen={isPopupOpen}
+          onClose={() => setIsPopupOpen(false)}
+          onImpression={(adData) => trackAdEvent({
+            adId: adData._id,
+            type: 'impression',
+            pageType,
+            pageUrl,
+            device,
+            placement: adData.placement
+          })}
+          onClick={(adData, meta) => trackAdEvent({
+            adId: adData._id,
+            type: 'click',
+            pageType,
+            pageUrl,
+            device,
+            placement: adData.placement,
+            eventTimestamp: meta?.eventTimestamp
+          })}
+        />
+      )}
       
     </div>
   );

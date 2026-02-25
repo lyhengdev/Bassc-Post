@@ -78,7 +78,18 @@ const homeSectionSchema = new mongoose.Schema({
     sidebarTitle: { type: String, default: 'More Stories' },
     imageUrl: { type: String, default: '' },
     linkUrl: { type: String, default: '' },
+    videoUrl: { type: String, default: '' },
     altText: { type: String, default: '' },
+    viewAllLabel: { type: String, default: 'View all' },
+    viewAllUrl: { type: String, default: '' },
+    videos: [{
+      id: { type: String, default: '' },
+      headline: { type: String, default: '' },
+      facebookUrl: { type: String, default: '' },
+      description: { type: String, default: '' },
+      publishedAt: { type: String, default: '' },
+      display: { type: String, enum: ['auto', 'landscape', 'reel'], default: 'auto' }
+    }],
     position: { type: String, default: 'horizontal' },
     adId: { type: String, default: '' },
     fallbackImageUrl: { type: String, default: '' },

@@ -14,6 +14,7 @@ import {
 
 const HomePage = lazy(() => import('./pages/public/home.jsx').then((m) => ({ default: m.HomePage })));
 const ArticlesPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.ArticlesPage })));
+const VideosPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.VideosPage })));
 const ArticlePage = lazy(() => import('./pages/public/article-detail.jsx').then((m) => ({ default: m.ArticlePage })));
 const CategoryPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.CategoryPage })));
 const CategoriesListPage = lazy(() => import('./pages/public/articles.jsx').then((m) => ({ default: m.CategoriesListPage })));
@@ -191,6 +192,7 @@ export default function App() {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/articles" element={<ArticlesPage />} />
+            <Route path="/videos" element={<VideosPage />} />
             <Route path="/article/:slug" element={<ArticlePage />} />
             <Route path="/share/:slug" element={<ShareRedirectRoute />} />
             <Route path="/category/:slug" element={<CategoryPage />} />

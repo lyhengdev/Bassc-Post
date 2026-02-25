@@ -24,6 +24,100 @@ const HOME_TYPE = {
     cardTitleAll: 'text-base sm:text-lg lg:text-lg font-semibold text-dark-900 dark:text-white mt-1 leading-snug headline-hover line-clamp-2',
 };
 
+function normalizeExternalUrl(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function normalizeFacebookUrl(value) {
+  const normalized = normalizeExternalUrl(value);
+  if (!normalized) return '';
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const isFacebookHost = hostname === 'fb.watch' || hostname.endsWith('facebook.com');
+    return isFacebookHost ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function detectFacebookContentType(videoUrl) {
+  const normalized = normalizeFacebookUrl(videoUrl);
+  if (!normalized) return 'unknown';
+
+  try {
+    const parsed = new URL(normalized);
+    const path = parsed.pathname.toLowerCase();
+    const hasVideoQuery = parsed.searchParams.has('v');
+    const isFbWatchHost = parsed.hostname.toLowerCase().replace(/^www\./, '') === 'fb.watch';
+    const isReel = path.includes('/reel/') || path.includes('/reels/');
+    if (isReel) return 'reel';
+    if (isFbWatchHost || path.includes('/videos/') || path === '/watch' || path.startsWith('/watch/') || hasVideoQuery) {
+      return 'video';
+    }
+    return 'post';
+  } catch {
+    return 'unknown';
+  }
+}
+
+function resolveVideoDisplayMode(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : 'auto';
+  if (normalized === 'reel' || normalized === 'landscape' || normalized === 'auto') return normalized;
+  return 'auto';
+}
+
+function buildFacebookEmbedConfig(videoUrl, display = 'auto') {
+  const normalized = normalizeFacebookUrl(videoUrl);
+  if (!normalized) return null;
+
+  const contentType = detectFacebookContentType(normalized);
+  const displayMode = resolveVideoDisplayMode(display);
+  const isReel = displayMode === 'reel' || (displayMode === 'auto' && contentType === 'reel');
+  const params = new URLSearchParams({ href: normalized });
+
+  if (contentType === 'post') {
+    params.set('show_text', 'true');
+    return {
+      src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
+      contentType,
+      aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[4/5]',
+    };
+  }
+
+  params.set('show_text', 'false');
+  params.set('autoplay', 'false');
+  params.set('mute', 'false');
+  return {
+    src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
+    contentType,
+    aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[16/9]',
+  };
+}
+
+function formatVideoDate(value) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 const SectionHeader = ({ eyebrow, title, subtitle, link, linkText = 'View all' }) => (
     <SectionHeaderInner eyebrow={eyebrow} title={title} subtitle={subtitle} link={link} linkText={linkText} />
 );
@@ -1077,6 +1171,190 @@ function CategorySpotlightSection({ section }) {
   );
 }
 
+function VideoSection({ section }) {
+  const { translateText } = useLanguage();
+  const [failedEmbeds, setFailedEmbeds] = useState({});
+  const rawLimit = Number(section?.settings?.limit);
+  const displayLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 4;
+  const { data: videoData, isLoading: isVideoLoading } = useArticles({
+    page: 1,
+    limit: displayLimit,
+    postType: 'video',
+    sortBy: 'publishedAt',
+    sortOrder: 'desc',
+  }, { placeholderData: keepPreviousData });
+  const videoArticles = videoData?.data?.articles || [];
+  const normalizedVideos = videoArticles
+    .map((article, index) => {
+      const facebookUrl = normalizeFacebookUrl(article?.videoUrl || '');
+      const contentType = detectFacebookContentType(facebookUrl);
+      const defaultHeadline = contentType === 'reel'
+        ? translateText('Facebook Reel')
+        : contentType === 'post'
+          ? translateText('Facebook Post')
+          : translateText('Facebook Video');
+      const headline = String(article?.title || '').trim();
+
+      return {
+        id: article?._id || article?.slug || `${section?.id || 'video'}-${index}`,
+        facebookUrl,
+        headline: headline || `${defaultHeadline} ${index + 1}`,
+        description: String(article?.excerpt || '').trim(),
+        publishedAt: article?.publishedAt || article?.createdAt || '',
+        display: 'auto',
+      };
+    })
+    .filter((item) => item.facebookUrl)
+    .slice(0, displayLimit);
+  const resetKey = normalizedVideos.map((item) => `${item.id}:${item.facebookUrl}:${item.display}`).join('|');
+
+  useEffect(() => {
+    setFailedEmbeds({});
+  }, [resetKey]);
+
+  const featuredIndex = normalizedVideos.findIndex((item) => {
+    const embedConfig = buildFacebookEmbedConfig(item.facebookUrl, item.display);
+    return embedConfig?.aspectClass !== 'aspect-[9/16]';
+  });
+  const resolvedFeaturedIndex = featuredIndex >= 0 ? featuredIndex : 0;
+  const featuredVideo = normalizedVideos[resolvedFeaturedIndex];
+  const moreVideos = normalizedVideos.filter((_, index) => index !== resolvedFeaturedIndex);
+  const showHeader = section?.showTitle !== false;
+  const resolvedTitle = section?.title || translateText('Latest Videos');
+  const resolvedSubtitle = section?.subtitle || translateText('Facebook posts, videos, and reels in one place');
+  const viewAllUrl = normalizeExternalUrl(section?.settings?.viewAllUrl || '');
+  const viewAllLabel = (section?.settings?.viewAllLabel || '').trim() || translateText('View all');
+
+  const renderVideoEmbed = (video, { eager = false } = {}) => {
+    const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, video.display);
+    const isFailed = Boolean(failedEmbeds[video.id]);
+    if (!embedConfig || isFailed) {
+      const fallbackAspectClass = embedConfig?.aspectClass || (video.display === 'reel' ? 'aspect-[9/16]' : 'aspect-[16/9]');
+      return (
+        <div className={`${fallbackAspectClass} bg-dark-100 dark:bg-dark-800 flex items-center justify-center p-4 text-center`}>
+          <div>
+            <p className="text-sm text-dark-500">{translateText('This video cannot be embedded right now.')}</p>
+            <a
+              href={video.facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1 text-sm link-primary"
+            >
+              {translateText('Open on Facebook')} <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`${embedConfig.aspectClass} bg-black`}>
+        <iframe
+          title={video.headline}
+          src={embedConfig.src}
+          className="w-full h-full border-0"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          allowFullScreen
+          loading={eager ? 'eager' : 'lazy'}
+          referrerPolicy="origin-when-cross-origin"
+          onError={() => {
+            setFailedEmbeds((prev) => (prev[video.id] ? prev : { ...prev, [video.id]: true }));
+          }}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {showHeader && (
+        <div className="flex items-end justify-between mb-5">
+          <div>
+            <p className={HOME_TYPE.eyebrow}>{translateText('Videos')}</p>
+            <h2 className={`${HOME_TYPE.sectionTitle} mt-1 leading-tight`}>
+              {resolvedTitle}
+            </h2>
+            {resolvedSubtitle && (
+              <p className={`${HOME_TYPE.sectionSubtitle} mt-1 max-w-xl`}>{resolvedSubtitle}</p>
+            )}
+          </div>
+          {viewAllUrl ? (
+            <a
+              href={viewAllUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium flex items-center gap-1 link-muted"
+            >
+              {viewAllLabel} <ArrowRight className="w-4 h-4" />
+            </a>
+          ) : (
+            <Link to="/videos" className="text-sm font-medium flex items-center gap-1 link-muted">
+              {viewAllLabel} <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
+      )}
+
+      {isVideoLoading && normalizedVideos.length === 0 ? (
+        <p className="text-dark-500 text-center py-8">{translateText('Loading more...')}</p>
+      ) : !normalizedVideos.length ? (
+        <p className="text-dark-500 text-center py-8">{translateText('No video posts yet')}</p>
+      ) : (
+        <>
+          <article className="rounded-2xl overflow-hidden border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900">
+            {renderVideoEmbed(featuredVideo, { eager: true })}
+            <div className="p-4 sm:p-5">
+              <a href={featuredVideo.facebookUrl} target="_blank" rel="noopener noreferrer">
+                <h3 className={HOME_TYPE.bigTitle}>{featuredVideo.headline}</h3>
+              </a>
+              {featuredVideo.description && (
+                <p className={`${HOME_TYPE.body} mt-2 line-clamp-3`}>{featuredVideo.description}</p>
+              )}
+              <div className="mt-3 flex items-center gap-3 text-xs text-dark-400">
+                <a href={featuredVideo.facebookUrl} target="_blank" rel="noopener noreferrer" className="link-primary">
+                  {translateText('View on Facebook')}
+                </a>
+                {formatVideoDate(featuredVideo.publishedAt) && (
+                  <span>{formatVideoDate(featuredVideo.publishedAt)}</span>
+                )}
+              </div>
+            </div>
+          </article>
+
+          {moreVideos.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+              {moreVideos.map((video) => (
+                <article
+                  key={video.id}
+                  className="rounded-2xl overflow-hidden border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900"
+                >
+                  {renderVideoEmbed(video)}
+                  <div className="p-4">
+                    <a href={video.facebookUrl} target="_blank" rel="noopener noreferrer">
+                      <h4 className={HOME_TYPE.cardTitleAll}>{video.headline}</h4>
+                    </a>
+                    {video.description && (
+                      <p className="text-sm text-dark-500 mt-2 line-clamp-2">{video.description}</p>
+                    )}
+                    <div className="mt-3 flex items-center gap-3 text-xs text-dark-400">
+                      <a href={video.facebookUrl} target="_blank" rel="noopener noreferrer" className="link-primary">
+                        {translateText('View on Facebook')}
+                      </a>
+                      {formatVideoDate(video.publishedAt) && (
+                        <span>{formatVideoDate(video.publishedAt)}</span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // Render dynamic section based on type
 function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved }) {
   const { translateText } = useLanguage();
@@ -1122,8 +1400,15 @@ function DynamicSection({ section, excludeArticleIds = [], onArticlesResolved })
 
     case 'newsletter_signup':
     case 'ad_banner':
-    case 'video':
       return null;
+
+    case 'video':
+    case 'video_section':
+      return (
+        <div className="mb-2">
+          <VideoSection section={section} />
+        </div>
+      );
 
     case 'custom_html':
       return <CustomHtmlSection section={section} />;

@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { 
   Layout, Plus, Trash2, Save, Eye,
   Newspaper, Grid3X3, List, TrendingUp, Star, Zap,
-  User, Code, ChevronDown, ChevronUp,
+  User, Code, ChevronDown, ChevronUp, Play,
   Columns, LayoutGrid
 } from 'lucide-react';
 import { useSiteSettings, useUpdateHomepageSections, useCategories } from '../../hooks/useApi';
@@ -22,6 +22,7 @@ const SECTION_TYPES = [
   { type: 'category_grid', label: 'Category Grid', icon: Grid3X3, description: 'Browse all categories' },
   { type: 'category_spotlight', label: 'Category Spotlight', icon: Star, description: 'Highlight a specific category' },
   { type: 'editor_picks', label: "Editor's Picks", icon: User, description: 'Curated selections' },
+  { type: 'video', label: 'Video Section', icon: Play, description: 'Published video posts (Post Type: Video)' },
   { type: 'custom_html', label: 'Custom HTML', icon: Code, description: 'Custom content block' },
 ];
 
@@ -29,6 +30,8 @@ const SECTION_TYPES_BY_ID = SECTION_TYPES.reduce((acc, item) => {
   acc[item.type] = item;
   return acc;
 }, {});
+
+const resolveSectionType = (type) => (type === 'video_section' ? 'video' : type);
 
 const DEFAULT_SETTINGS_BY_TYPE = {
   breaking_news: { limit: 6 },
@@ -42,7 +45,17 @@ const DEFAULT_SETTINGS_BY_TYPE = {
   category_grid: { limit: 18 },
   category_spotlight: { limit: 4, categorySlug: '' },
   editor_picks: { limit: 4 },
+  video: {
+    limit: 4,
+    viewAllLabel: 'View all',
+    viewAllUrl: '',
+  },
   custom_html: { customHtml: '' },
+};
+
+const getDefaultSettingsForType = (type) => {
+  const normalizedType = resolveSectionType(type);
+  return { ...(DEFAULT_SETTINGS_BY_TYPE[normalizedType] || { limit: 6 }) };
 };
 
 export function HomepageBuilderPage() {
@@ -82,7 +95,7 @@ export function HomepageBuilderPage() {
       subtitle: '',
       enabled: true,
       order: sections.length,
-      settings: { ...(DEFAULT_SETTINGS_BY_TYPE[type] || { limit: 6 }) }
+      settings: getDefaultSettingsForType(type)
     };
     setSections([...sections, newSection]);
     setShowAddModal(false);
@@ -177,7 +190,8 @@ export function HomepageBuilderPage() {
             ) : (
               <div className="divide-y divide-dark-200 dark:divide-dark-700">
                 {sections.sort((a, b) => a.order - b.order).map((section, index) => {
-                  const sectionType = SECTION_TYPES_BY_ID[section.type];
+                  const normalizedType = resolveSectionType(section.type);
+                  const sectionType = SECTION_TYPES_BY_ID[normalizedType];
                   const Icon = sectionType?.icon || Layout;
                   const isExpanded = expandedSections[section.id];
                   const categorySlug = section.settings?.categorySlug || section.settings?.category || '';
@@ -193,7 +207,8 @@ export function HomepageBuilderPage() {
                   const metaItems = [
                     limitValue !== null ? `Items: ${limitValue}` : null,
                     categoryLabel ? `Category: ${categoryLabel}` : null,
-                    section.type === 'grid_with_sidebar' ? `Sidebar: ${section.settings?.sidebarTitle || 'More Stories'}` : null,
+                    normalizedType === 'grid_with_sidebar' ? `Sidebar: ${section.settings?.sidebarTitle || 'More Stories'}` : null,
+                    normalizedType === 'video' ? 'Source: Published video posts' : null,
                     section.enabled && betweenSectionsIndex !== null ? `Between Sections Index: ${betweenSectionsIndex}` : null,
                   ].filter(Boolean);
                   
@@ -275,18 +290,21 @@ export function HomepageBuilderPage() {
                             <Input label="Section Title" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
                             <Input label="Subtitle" value={section.subtitle || ''} onChange={(e) => updateSection(section.id, { subtitle: e.target.value })} />
                             
-                            {section.type !== 'custom_html' && (
+                            {normalizedType !== 'custom_html' && (
                               <Input
                                 type="number"
                                 label="Items"
                                 value={section.settings?.limit ?? 6}
-                                onChange={(e) => updateSectionSettings(section.id, 'limit', parseInt(e.target.value))}
+                                onChange={(e) => {
+                                  const parsed = Number.parseInt(e.target.value, 10);
+                                  updateSectionSettings(section.id, 'limit', Number.isFinite(parsed) ? parsed : 1);
+                                }}
                                 min={1}
                                 max={50}
                               />
                             )}
 
-                            {['news_list', 'category_spotlight'].includes(section.type) && (
+                            {['news_list', 'category_spotlight'].includes(normalizedType) && (
                               <div className="sm:col-span-2">
                                 <label className="label">Category</label>
                                 <select value={section.settings?.categorySlug || section.settings?.category || ''} onChange={(e) => {
@@ -300,11 +318,33 @@ export function HomepageBuilderPage() {
                               </div>
                             )}
 
-                            {section.type === 'grid_with_sidebar' && (
+                            {normalizedType === 'grid_with_sidebar' && (
                               <Input label="Sidebar Title" value={section.settings?.sidebarTitle || 'More Stories'} onChange={(e) => updateSectionSettings(section.id, 'sidebarTitle', e.target.value)} />
                             )}
 
-                            {section.type === 'custom_html' && (
+                            {normalizedType === 'video' && (
+                              <div className="sm:col-span-2 rounded-xl border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 p-3 sm:p-4 space-y-4">
+                                <p className="text-xs text-dark-500">
+                                  This section automatically pulls from published posts with Post Type set to Video.
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <Input
+                                    label="View All Label"
+                                    value={section.settings?.viewAllLabel || ''}
+                                    onChange={(e) => updateSectionSettings(section.id, 'viewAllLabel', e.target.value)}
+                                    placeholder="View all"
+                                  />
+                                  <Input
+                                    label="View All URL (optional)"
+                                    value={section.settings?.viewAllUrl || ''}
+                                    onChange={(e) => updateSectionSettings(section.id, 'viewAllUrl', e.target.value)}
+                                    placeholder="https://facebook.com/your-page/videos"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {normalizedType === 'custom_html' && (
                               <div className="sm:col-span-2">
                                 <label className="label">Custom HTML</label>
                                 <textarea value={section.settings?.customHtml || ''} onChange={(e) => updateSectionSettings(section.id, 'customHtml', e.target.value)} className="input font-mono text-sm" rows={6} placeholder="<div>...</div>" />
@@ -337,7 +377,7 @@ export function HomepageBuilderPage() {
           </p>
           <div className="bg-dark-100 dark:bg-dark-800 rounded-lg p-3 space-y-3">
             {sections.filter(s => s.enabled).sort((a, b) => a.order - b.order).map(section => {
-              const sectionType = SECTION_TYPES_BY_ID[section.type];
+              const sectionType = SECTION_TYPES_BY_ID[resolveSectionType(section.type)];
               const Icon = sectionType?.icon || Layout;
               return (
                 <div key={section.id} className="bg-white dark:bg-dark-900 rounded-lg p-3 border-l-4 border-primary-600">

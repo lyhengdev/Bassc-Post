@@ -17,6 +17,7 @@ const SECTION_TYPES = [
   'popular',
   'editor_picks',
   'video',
+  'video_section',
   'newsletter',
   'newsletter_signup',
   'custom_html',

@@ -318,7 +318,7 @@ export function DashboardHome() {
   let statCards = [];
   if (role === 'admin') {
     statCards = [
-      { label: 'Total News', value: stats.totalArticles || 0, icon: FileText, bgColor: 'bg-primary-100 dark:bg-primary-900/30', iconColor: 'text-primary-600' },
+      { label: 'Total Posts', value: stats.totalArticles || 0, icon: FileText, bgColor: 'bg-primary-100 dark:bg-primary-900/30', iconColor: 'text-primary-600' },
       { label: 'Published', value: stats.publishedArticles || 0, icon: CheckCircle, bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', iconColor: 'text-emerald-600' },
       { label: 'Pending', value: stats.pendingArticles || 0, icon: Clock, bgColor: 'bg-amber-100 dark:bg-amber-900/30', iconColor: 'text-amber-600' },
       { label: 'Total Views', value: stats.totalViews || 0, icon: Eye, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600' },
@@ -332,7 +332,7 @@ export function DashboardHome() {
     ];
   } else {
     statCards = [
-      { label: 'My News', value: stats.totalArticles || 0, icon: FileText, bgColor: 'bg-primary-100 dark:bg-primary-900/30', iconColor: 'text-primary-600' },
+      { label: 'My Posts', value: stats.totalArticles || 0, icon: FileText, bgColor: 'bg-primary-100 dark:bg-primary-900/30', iconColor: 'text-primary-600' },
       { label: 'Published', value: stats.publishedArticles || 0, icon: CheckCircle, bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', iconColor: 'text-emerald-600' },
       { label: 'Drafts', value: stats.draftArticles || 0, icon: PenTool, bgColor: 'bg-dark-100 dark:bg-dark-800', iconColor: 'text-dark-600' },
       { label: 'Total Views', value: stats.totalViews || 0, icon: Eye, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600' },
@@ -652,14 +652,14 @@ export function DashboardHome() {
                 })}
               </div>
             ) : (
-              <p className="text-dark-500 text-center py-4">{translateText('No top news yet')}</p>
+              <p className="text-dark-500 text-center py-4">{translateText('No top posts yet')}</p>
             )}
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="card p-6">
-            <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Recent News')}</h2>
+            <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Recent Posts')}</h2>
             {recentItems.length > 0 ? (
               <div className="space-y-3">
                 {recentItems.map((article) => (
@@ -673,7 +673,7 @@ export function DashboardHome() {
                 ))}
               </div>
             ) : (
-              <p className="text-dark-500 text-center py-4">{translateText('No recent news')}</p>
+              <p className="text-dark-500 text-center py-4">{translateText('No recent posts')}</p>
             )}
           </div>
 
@@ -682,16 +682,16 @@ export function DashboardHome() {
             <div className="space-y-3">
               <Link to="/dashboard/articles/new" className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors">
                 <Plus className="w-5 h-5" />
-                <span className="font-medium">{translateText('Write New News')}</span>
+                <span className="font-medium">{translateText('Write New Post')}</span>
               </Link>
               <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors">
                 <FileText className="w-5 h-5" />
-                <span className="font-medium">{translateText('View My News')}</span>
+                <span className="font-medium">{translateText('View My Posts')}</span>
               </Link>
               {(role === 'editor' || role === 'admin') && (
                 <Link to="/dashboard/pending" className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors">
                   <Clock className="w-5 h-5" />
-                  <span className="font-medium">{translateText('Review Pending News')}</span>
+                  <span className="font-medium">{translateText('Review Pending Posts')}</span>
                 </Link>
               )}
               {role === 'admin' && (
@@ -703,7 +703,7 @@ export function DashboardHome() {
               {role === 'admin' && (
                 <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors">
                   <BarChart3 className="w-5 h-5" />
-                  <span className="font-medium">{translateText('News Insights')}</span>
+                  <span className="font-medium">{translateText('Post Insights')}</span>
                 </Link>
               )}
             </div>
@@ -720,13 +720,15 @@ export function MyArticlesPage() {
   const isUserReady = !!user;
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [postTypeFilter, setPostTypeFilter] = useState('');
   const [search, setSearch] = useState('');
   const params = useMemo(() => ({
     page,
     limit: 10,
     status: statusFilter || undefined,
+    postType: postTypeFilter || undefined,
     q: search || undefined,
-  }), [page, statusFilter, search]);
+  }), [page, statusFilter, postTypeFilter, search]);
   const isAdmin = user?.role === 'admin';
   // Always call both hooks - React rule: hooks must be called in the same order
   const adminQuery = useAdminArticles(params, { enabled: isUserReady && isAdmin });
@@ -751,21 +753,21 @@ export function MyArticlesPage() {
 
   return (
     <>
-      <Helmet><title>{`${translateText(isAdmin ? 'All News' : 'My News')} - Bassac Post`}</title></Helmet>
+      <Helmet><title>{`${translateText(isAdmin ? 'All Posts' : 'My Posts')} - Bassac Post`}</title></Helmet>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{translateText(isAdmin ? 'All News' : 'My News')}</h1>
+          <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{translateText(isAdmin ? 'All Posts' : 'My Posts')}</h1>
           <p className="text-dark-500 text-sm">
-            {translateText(isAdmin ? 'Review and manage every news item across the newsroom.' : 'Drafts, submissions, and published stories in one place.')}
+            {translateText(isAdmin ? 'Review and manage every post across the newsroom.' : 'Drafts, submissions, and published stories in one place.')}
           </p>
         </div>
         <Link to="/dashboard/articles/new">
-          <Button leftIcon={<Plus className="w-4 h-4" />}>{translateText('New News')}</Button>
+          <Button leftIcon={<Plus className="w-4 h-4" />}>{translateText('New Post')}</Button>
         </Link>
       </div>
 
       <div className="card p-4 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <Input
               label={t('common.search', 'Search')}
@@ -793,6 +795,21 @@ export function MyArticlesPage() {
               <option value="published">{translateText('Published')}</option>
               <option value="rejected">{translateText('Rejected')}</option>
               <option value="archived">{translateText('Archived')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">{translateText('Post Type')}</label>
+            <select
+              value={postTypeFilter}
+              onChange={(e) => {
+                setPostTypeFilter(e.target.value);
+                setPage(1);
+              }}
+              className="input"
+            >
+              <option value="">{translateText('All types')}</option>
+              <option value="news">{translateText('News')}</option>
+              <option value="video">{translateText('Video')}</option>
             </select>
           </div>
         </div>
@@ -836,6 +853,11 @@ export function MyArticlesPage() {
                           >
                             {article.title}
                           </Link>
+                          {article.postType === 'video' && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                              {translateText('Video')}
+                            </span>
+                          )}
                         </div>
                       </td>
                       {isAdmin && (
@@ -851,7 +873,7 @@ export function MyArticlesPage() {
                           <Link
                             to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}
                             className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                            title={translateText('View news')}
+                            title={translateText('View post')}
                           >
                             <ExternalLink className="w-4 h-4 text-dark-500" />
                           </Link>
@@ -891,6 +913,11 @@ export function MyArticlesPage() {
                     <span className="font-medium text-dark-900 dark:text-white line-clamp-2 headline-hover">
                       {article.title}
                     </span>
+                    {article.postType === 'video' && (
+                      <span className="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                        {translateText('Video')}
+                      </span>
+                    )}
                   </Link>
                   <StatusBadge status={article.status} />
                 </div>
@@ -908,7 +935,7 @@ export function MyArticlesPage() {
                     <Link
                       to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}
                       className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                      title={translateText('View news')}
+                      title={translateText('View post')}
                     >
                       <ExternalLink className="w-4 h-4 text-dark-500" />
                     </Link>
@@ -929,7 +956,7 @@ export function MyArticlesPage() {
           {pagination && pagination.totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 text-sm">
               <span className="text-dark-500">
-                {translateText('Page')} {pagination.page} {translateText('of')} {pagination.totalPages} • {pagination.total} {translateText('news')}
+                {translateText('Page')} {pagination.page} {translateText('of')} {pagination.totalPages} • {pagination.total} {translateText('posts')}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -953,9 +980,9 @@ export function MyArticlesPage() {
       ) : (
         <EmptyState
           icon={FileText}
-          title={translateText(isAdmin ? 'No news found' : 'No news yet')}
-          description={translateText(isAdmin ? 'Try adjusting your filters or create the first news item.' : 'Start writing your first news item.')}
-          action={<Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>{translateText('New News')}</Button></Link>}
+          title={translateText(isAdmin ? 'No posts found' : 'No posts yet')}
+          description={translateText(isAdmin ? 'Try adjusting your filters or create the first post.' : 'Start writing your first post.')}
+          action={<Link to="/dashboard/articles/new"><Button leftIcon={<Plus className="w-4 h-4" />}>{translateText('New Post')}</Button></Link>}
         />
       )}
 
@@ -964,8 +991,8 @@ export function MyArticlesPage() {
         isOpen={!!deleteModal}
         onClose={() => setDeleteModal(null)}
         onConfirm={handleDelete}
-        title={translateText('Delete News')}
-        message={translateText('Are you sure you want to delete this news? This action cannot be undone.')}
+        title={translateText('Delete Post')}
+        message={translateText('Are you sure you want to delete this post? This action cannot be undone.')}
         confirmText={translateText('Delete')}
         variant="danger"
         isLoading={isDeleting}
@@ -1010,10 +1037,10 @@ export function PendingArticlesPage() {
 
   return (
     <>
-      <Helmet><title>{`${translateText('Pending News')} - Bassac Post`}</title></Helmet>
+      <Helmet><title>{`${translateText('Pending Posts')} - Bassac Post`}</title></Helmet>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{translateText('Pending Review')}</h1>
-        <p className="text-dark-500">{translateText('News awaiting your approval')}</p>
+        <p className="text-dark-500">{translateText('Posts awaiting your approval')}</p>
       </div>
       {data?.data?.length > 0 ? (
         <div className="space-y-4">
@@ -1057,7 +1084,7 @@ export function PendingArticlesPage() {
               ))}
         </div>
       ) : (
-        <EmptyState icon={CheckCircle} title={translateText('All caught up!')} description={translateText('No news pending review')} />
+        <EmptyState icon={CheckCircle} title={translateText('All caught up!')} description={translateText('No posts pending review')} />
       )}
 
       {/* Approve Confirmation Modal */}
@@ -1065,8 +1092,8 @@ export function PendingArticlesPage() {
         isOpen={!!approveModal}
         onClose={() => setApproveModal(null)}
         onConfirm={handleApprove}
-        title={translateText('Approve News')}
-        message={translateText('Are you sure you want to approve this news for publication?')}
+        title={translateText('Approve Post')}
+        message={translateText('Are you sure you want to approve this post for publication?')}
         confirmText={translateText('Approve')}
         variant="primary"
         isLoading={isApproving}
@@ -1074,11 +1101,11 @@ export function PendingArticlesPage() {
       />
 
       {/* Reject Modal */}
-      <Modal isOpen={!!rejectModal} onClose={() => { setRejectModal(null); setRejectReason(''); }} title={translateText('Reject News')}>
+      <Modal isOpen={!!rejectModal} onClose={() => { setRejectModal(null); setRejectReason(''); }} title={translateText('Reject Post')}>
         <Textarea label={translateText('Rejection Reason')} placeholder={translateText('Enter reason for rejection...')} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mb-4" />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => { setRejectModal(null); setRejectReason(''); }}>{translateText('Cancel')}</Button>
-          <Button variant="danger" onClick={handleReject} isLoading={isRejecting}>{translateText('Reject News')}</Button>
+          <Button variant="danger" onClick={handleReject} isLoading={isRejecting}>{translateText('Reject Post')}</Button>
         </div>
       </Modal>
 

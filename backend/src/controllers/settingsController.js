@@ -19,7 +19,8 @@ export const getSettings = asyncHandler(async (req, res) => {
  * PUT /api/settings
  */
 export const updateSettings = asyncHandler(async (req, res) => {
-  const settings = await SiteSettings.updateSettings(req.body);
+  const payload = { ...req.body };
+  const settings = await SiteSettings.updateSettings(payload);
   return successResponse(res, { settings }, 'Settings updated successfully');
 });
 

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowRight, Clock, Eye, Search, X, TrendingUp, User, ArrowUpRight } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -16,6 +16,79 @@ import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAd
 import useLanguage from '../../hooks/useLanguage';
 
 // ==================== HOME PAGE ====================
+
+function normalizeExternalUrl(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function normalizeFacebookUrl(value) {
+  const normalized = normalizeExternalUrl(value);
+  if (!normalized) return '';
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    return hostname === 'fb.watch' || hostname.endsWith('facebook.com') ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function detectFacebookContentType(videoUrl) {
+  const normalized = normalizeFacebookUrl(videoUrl);
+  if (!normalized) return 'unknown';
+
+  try {
+    const parsed = new URL(normalized);
+    const path = parsed.pathname.toLowerCase();
+    const hasVideoQuery = parsed.searchParams.has('v');
+    const isFbWatchHost = parsed.hostname.toLowerCase().replace(/^www\./, '') === 'fb.watch';
+    const isReel = path.includes('/reel/') || path.includes('/reels/');
+    if (isReel) return 'reel';
+    if (isFbWatchHost || path.includes('/videos/') || path === '/watch' || path.startsWith('/watch/') || hasVideoQuery) {
+      return 'video';
+    }
+    return 'post';
+  } catch {
+    return 'unknown';
+  }
+}
+
+function buildFacebookEmbedConfig(videoUrl, { forceReel = false, autoplay = false } = {}) {
+  const normalized = normalizeFacebookUrl(videoUrl);
+  if (!normalized) return null;
+
+  const contentType = detectFacebookContentType(normalized);
+  const isReel = forceReel || contentType === 'reel';
+  const params = new URLSearchParams({ href: normalized });
+
+  if (contentType === 'post') {
+    params.set('show_text', 'true');
+    return {
+      src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
+      aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[4/5]',
+    };
+  }
+
+  params.set('show_text', 'false');
+  params.set('autoplay', autoplay ? 'true' : 'false');
+  params.set('mute', 'false');
+  return {
+    src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
+    aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[16/9]',
+  };
+}
 
 function ArticleCardNews({ article }) {
   const { translateText } = useLanguage();
@@ -157,11 +230,13 @@ function SearchFeedCard({ article }) {
 
 // ==================== ARTICLES PAGE ====================
 export function ArticlesPage() {
+  const navigate = useNavigate();
   const { t, translateText, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const hasLegacyVideoFeed = searchParams.get('feed') === 'video';
   const categorySlug = searchParams.get('category') || '';
   const searchQuery = searchParams.get('q') || '';
+  const [search, setSearch] = useState(searchQuery);
   const loadMoreRef = useRef(null);
   const limit = 10;
 
@@ -187,6 +262,7 @@ export function ArticlesPage() {
       return { ...response.data, __page: pageParam };
     },
     initialPageParam: 1,
+    enabled: !hasLegacyVideoFeed,
     getNextPageParam: (lastPage) => {
       const pagination = lastPage.pagination || lastPage.data?.pagination;
       if (pagination?.page && pagination?.pages) {
@@ -267,6 +343,12 @@ export function ArticlesPage() {
   }, [searchQuery]);
 
   useEffect(() => {
+    if (hasLegacyVideoFeed) {
+      navigate('/videos', { replace: true });
+    }
+  }, [hasLegacyVideoFeed, navigate]);
+
+  useEffect(() => {
     if (!hasNextPage || isFetchingNextPage) return undefined;
     const target = loadMoreRef.current;
     if (!target) return undefined;
@@ -313,6 +395,10 @@ export function ArticlesPage() {
     setSearchParams(params);
   };
 
+  if (hasLegacyVideoFeed) {
+    return null;
+  }
+
   return (
     <>
       <Helmet><title>{`${t('nav.news', 'News')} - Bassac Post`}</title></Helmet>
@@ -358,8 +444,12 @@ export function ArticlesPage() {
               </section>
             ) : (
               <div className="mb-6">
-                <h1 className="text-2xl lg:text-2xl font-bold text-dark-900 dark:text-white mb-2">{t('articles.newsFeed', 'News Feed')}</h1>
-                <p className="text-dark-500">{translateText('Find stories faster with search and category filters.')}</p>
+                <h1 className="text-2xl lg:text-2xl font-bold text-dark-900 dark:text-white mb-2">
+                  {t('articles.newsFeed', 'News Feed')}
+                </h1>
+                <p className="text-dark-500">
+                  {translateText('Find stories faster with search and category filters.')}
+                </p>
               </div>
             )}
 
@@ -391,7 +481,11 @@ export function ArticlesPage() {
 
             {/* Results */}
             {isLoading ? (
-              <div className={isSearchMode ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'}>
+              <div className={
+                isSearchMode
+                  ? 'space-y-4'
+                  : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+              }>
                 {[...Array(isSearchMode ? 6 : 9)].map((_, i) => (
                   isSearchMode ? (
                     <div key={i} className="bg-white dark:bg-dark-900 rounded-xl border border-dark-100 dark:border-dark-800 shadow-sm p-3 sm:p-4">
@@ -407,7 +501,7 @@ export function ArticlesPage() {
                     </div>
                   ) : (
                     <div key={i} className="bg-white dark:bg-dark-900 rounded-2xl overflow-hidden border border-dark-100 dark:border-dark-800 shadow-sm">
-                      <div className="aspect-[16/10] skeleton" />
+                      <div className={cn('aspect-[16/10]', 'skeleton')} />
                       <div className="p-5 space-y-3">
                         <div className="h-5 skeleton rounded w-24" />
                         <div className="h-6 skeleton rounded w-5/6" />
@@ -427,7 +521,7 @@ export function ArticlesPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-	                  {articles.map((article, index) => (
+		                  {articles.map((article, index) => (
 	                    <Fragment key={article._id}>
 	                      <ArticleCardNews article={article} />
 	                      {(() => {
@@ -483,7 +577,9 @@ export function ArticlesPage() {
             ) : (
               <div className="rounded-2xl border border-dark-100 dark:border-dark-800 bg-white dark:bg-dark-900 text-center py-16 px-6">
                 <Search className="w-10 h-10 mx-auto text-dark-400 mb-3" />
-                <p className="text-dark-700 dark:text-dark-200 text-lg font-semibold">{t('articles.noNewsFound', 'No news found')}</p>
+                <p className="text-dark-700 dark:text-dark-200 text-lg font-semibold">
+                  {t('articles.noNewsFound', 'No news found')}
+                </p>
                 {searchQuery && (
                   <button
                     onClick={() => {
@@ -515,6 +611,365 @@ export function ArticlesPage() {
           </aside>
         </div>
       </div>
+    </>
+  );
+}
+
+// ==================== VIDEOS PAGE (REELS STYLE) ====================
+export function VideosPage() {
+  const { t, translateText, language } = useLanguage();
+  const reelsViewportRef = useRef(null);
+  const transitionFrameRef = useRef(null);
+  const queuedAdvanceIndexRef = useRef(null);
+  const wheelLockRef = useRef(false);
+  const touchStartYRef = useRef(0);
+  const touchActiveRef = useRef(false);
+  const touchLockRef = useRef(false);
+  const WHEEL_LOCK_MS = 50;
+  const TOUCH_LOCK_MS = 50;
+  const SWIPE_THRESHOLD_PX = 14;
+  const PREFETCH_BUFFER = 3;
+  const STEP_ANIMATION_MS = 80;
+  const limit = 8;
+  const [failedEmbeds, setFailedEmbeds] = useState({});
+
+  const {
+    data: videosPages,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['videos', 'infinite', { limit, language }],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await articlesAPI.getAll({
+        page: pageParam,
+        limit,
+        language,
+        postType: 'video',
+        sortBy: 'publishedAt',
+        sortOrder: 'desc',
+      });
+      return { ...response.data, __page: pageParam };
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const pagination = lastPage.pagination || lastPage.data?.pagination;
+      if (pagination?.page && pagination?.pages) {
+        return pagination.page < pagination.pages ? pagination.page + 1 : undefined;
+      }
+      const page = lastPage.__page || 1;
+      const items = lastPage.data?.articles || lastPage.data || lastPage.articles || [];
+      return items.length >= limit ? page + 1 : undefined;
+    },
+  });
+
+  const allArticles = videosPages?.pages?.flatMap((page) => (
+    page?.data?.articles || page?.data || page?.articles || []
+  )) || [];
+  const videos = allArticles
+    .map((article, index) => {
+      const facebookUrl = normalizeFacebookUrl(article?.videoUrl || '');
+      return {
+        id: article?._id || article?.slug || `video-${index}`,
+        facebookUrl,
+        title: article?.title || '',
+        excerpt: article?.excerpt || '',
+        slug: article?.slug || '',
+        publishedAt: article?.publishedAt || article?.createdAt || '',
+        category: article?.category || null,
+      };
+    })
+    .filter((item) => item.facebookUrl);
+  const resetKey = videos.map((video) => `${video.id}:${video.facebookUrl}`).join('|');
+
+  useEffect(() => {
+    setFailedEmbeds({});
+  }, [resetKey]);
+
+  const isControlTarget = (target) => {
+    if (typeof Element === 'undefined' || !target) return false;
+    if (target instanceof Element) {
+      return Boolean(target.closest('[data-reels-control="true"]'));
+    }
+    if (typeof Node !== 'undefined' && target instanceof Node && target.parentElement) {
+      return Boolean(target.parentElement.closest('[data-reels-control="true"]'));
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (transitionFrameRef.current) {
+        window.cancelAnimationFrame(transitionFrameRef.current);
+      }
+    };
+  }, []);
+
+  const jumpToReel = (index, { animate = true } = {}) => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport) return;
+    const itemHeight = viewport.clientHeight || 1;
+    const boundedIndex = Math.max(0, Math.min(videos.length - 1, index));
+    const targetTop = boundedIndex * itemHeight;
+
+    if (!animate) {
+      viewport.scrollTop = targetTop;
+      return;
+    }
+
+    if (transitionFrameRef.current) {
+      window.cancelAnimationFrame(transitionFrameRef.current);
+    }
+
+    const startTop = viewport.scrollTop;
+    const distance = targetTop - startTop;
+    if (Math.abs(distance) < 1) {
+      viewport.scrollTop = targetTop;
+      return;
+    }
+
+    const startTime = window.performance.now();
+    const step = (timestamp) => {
+      const progress = Math.min(1, (timestamp - startTime) / STEP_ANIMATION_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      viewport.scrollTop = startTop + distance * eased;
+      if (progress < 1) {
+        transitionFrameRef.current = window.requestAnimationFrame(step);
+      } else {
+        transitionFrameRef.current = null;
+      }
+    };
+
+    transitionFrameRef.current = window.requestAnimationFrame(step);
+  };
+
+  useEffect(() => {
+    const queuedIndex = queuedAdvanceIndexRef.current;
+    if (queuedIndex == null) return;
+    if (queuedIndex <= videos.length - 1) {
+      jumpToReel(queuedIndex);
+      queuedAdvanceIndexRef.current = null;
+    }
+  }, [videos.length]);
+
+  const moveReelByStep = (direction) => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport || videos.length < 2) return;
+
+    const itemHeight = viewport.clientHeight || 1;
+    const currentIndex = Math.round(viewport.scrollTop / itemHeight);
+    const nextIndex = Math.max(0, Math.min(videos.length - 1, currentIndex + direction));
+
+    if (nextIndex === currentIndex) {
+      if (direction > 0 && hasNextPage && !isFetchingNextPage) {
+        queuedAdvanceIndexRef.current = currentIndex + 1;
+        fetchNextPage();
+      }
+      return;
+    }
+
+    jumpToReel(nextIndex);
+
+    if (direction > 0 && hasNextPage && !isFetchingNextPage) {
+      const remainingAfterNext = videos.length - 1 - nextIndex;
+      if (remainingAfterNext <= PREFETCH_BUFFER) {
+        fetchNextPage();
+      }
+    }
+  };
+
+  const handleReelsWheel = (event) => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport || videos.length < 2) return;
+    if (isControlTarget(event.target)) return;
+    if (Math.abs(event.deltaY) < 4) return;
+
+    event.preventDefault();
+    if (wheelLockRef.current) return;
+
+    const direction = event.deltaY > 0 ? 1 : -1;
+    wheelLockRef.current = true;
+    moveReelByStep(direction);
+    window.setTimeout(() => {
+      wheelLockRef.current = false;
+    }, WHEEL_LOCK_MS);
+  };
+
+  const handleReelsTouchStart = (event) => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport || videos.length < 2) return;
+    if (!event.touches?.length) return;
+    if (isControlTarget(event.target)) {
+      touchActiveRef.current = false;
+      return;
+    }
+
+    touchStartYRef.current = event.touches[0].clientY;
+    touchActiveRef.current = true;
+  };
+
+  const handleReelsTouchMove = (event) => {
+    if (touchActiveRef.current) {
+      event.preventDefault();
+    }
+  };
+
+  const handleReelsTouchEnd = (event) => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport || videos.length < 2) return;
+    if (!touchActiveRef.current || !event.changedTouches?.length) return;
+    if (isControlTarget(event.target)) {
+      touchActiveRef.current = false;
+      return;
+    }
+
+    touchActiveRef.current = false;
+    const endY = event.changedTouches[0].clientY;
+    const deltaY = touchStartYRef.current - endY;
+    if (Math.abs(deltaY) < SWIPE_THRESHOLD_PX) return;
+    if (touchLockRef.current) return;
+
+    const direction = deltaY > 0 ? 1 : -1;
+    touchLockRef.current = true;
+    moveReelByStep(direction);
+    window.setTimeout(() => {
+      touchLockRef.current = false;
+    }, TOUCH_LOCK_MS);
+  };
+
+  const renderVideoEmbed = (video) => {
+    const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, { forceReel: true, autoplay: true });
+    const isFailed = Boolean(failedEmbeds[video.id]);
+
+    if (!embedConfig || isFailed) {
+      return (
+        <div className="h-full w-full bg-dark-100 dark:bg-dark-800 flex items-center justify-center p-4 text-center">
+          <div>
+            <p className="text-sm text-dark-500">{translateText('This video cannot be embedded right now.')}</p>
+            <a
+              href={video.facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1 text-sm link-primary"
+            >
+              {translateText('Open on Facebook')} <ArrowUpRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="h-full w-full bg-black">
+        <iframe
+          title={video.title || 'Video'}
+          src={embedConfig.src}
+          className="w-full h-full border-0"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="origin-when-cross-origin"
+          onError={() => setFailedEmbeds((prev) => (prev[video.id] ? prev : { ...prev, [video.id]: true }))}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <Helmet><title>{`${t('nav.video', 'Video')} - Bassac Post`}</title></Helmet>
+
+      <div className="min-h-[100dvh] bg-black">
+        {isLoading ? (
+          <div className="mx-auto w-full max-w-[460px] h-[100dvh]">
+            <div className="h-full w-full skeleton sm:rounded-2xl" />
+          </div>
+        ) : videos.length > 0 ? (
+          <div className="mx-auto w-full max-w-[460px] h-[100dvh]">
+            <div
+              ref={reelsViewportRef}
+              onWheel={handleReelsWheel}
+              onTouchStart={handleReelsTouchStart}
+              onTouchMove={handleReelsTouchMove}
+              onTouchEnd={handleReelsTouchEnd}
+              onTouchCancel={() => { touchActiveRef.current = false; }}
+              className="relative h-[100dvh] overflow-y-scroll no-scrollbar overscroll-y-none touch-pan-y snap-y snap-mandatory bg-black sm:rounded-2xl sm:border sm:border-dark-800 sm:shadow-xl"
+            >
+              <div className="pointer-events-none sticky top-0 z-30 h-0">
+                <div className="pointer-events-auto flex items-center justify-between p-3">
+                  <Link
+                    to="/"
+                    data-reels-control="true"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/50 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-black/70 transition-colors"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                    {translateText('Back')}
+                  </Link>
+                  <Link
+                    to="/articles"
+                    data-reels-control="true"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/50 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-black/70 transition-colors"
+                  >
+                    {translateText('News')}
+                  </Link>
+                </div>
+              </div>
+
+              {videos.map((video) => (
+                <article
+                  key={video.id}
+                  className="relative h-[100dvh] snap-start snap-always"
+                >
+                  {renderVideoEmbed(video)}
+
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-4 pb-4 pt-10 text-white">
+                    {video.category?.name && (
+                      <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold bg-white/15 text-white backdrop-blur">
+                        {video.category.name}
+                      </span>
+                    )}
+                    {video.slug ? (
+                      <Link to={`/article/${video.slug}`} data-reels-control="true">
+                        <h2 className="mt-2 text-base font-semibold text-white headline-hover">
+                          {video.title}
+                        </h2>
+                      </Link>
+                    ) : (
+                      <h2 className="mt-2 text-base font-semibold text-white">
+                        {video.title}
+                      </h2>
+                    )}
+                    <div className="mt-3 flex items-center justify-between gap-2 text-xs text-white/75">
+                      <a
+                        href={video.facebookUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-reels-control="true"
+                        className="inline-flex items-center gap-1 text-primary-300 hover:text-primary-200"
+                      >
+                        {translateText('Open on Facebook')} <ArrowUpRight className="w-3.5 h-3.5" />
+                      </a>
+                      <span>{formatRelativeTime(video.publishedAt)}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              {isFetchingNextPage && (
+                <div className="flex items-center justify-center py-4 text-xs text-white/80 bg-black/70">
+                  {t('common.loadingMore', 'Loading more...')}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="h-[100dvh] flex items-center justify-center px-6 text-center">
+            <p className="text-white text-lg font-semibold">{translateText('No video posts yet')}</p>
+          </div>
+        )}
+      </div>
+
     </>
   );
 }

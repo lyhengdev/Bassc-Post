@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Save, Send, Eye, Image as ImageIcon, X, ArrowLeft, BarChart3, Languages, CheckCircle } from 'lucide-react';
+import { Save, Send, Eye, Image as ImageIcon, X, ArrowLeft, BarChart3, Languages, CheckCircle, ExternalLink, FileText, Clapperboard } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCreateArticle, useUpdateArticle, useArticleById, useCategories, useUploadMedia, useAI } from '../../hooks/useApi';
 import { Button, Input, ContentLoader } from '../../components/common/index.jsx';
@@ -32,6 +32,8 @@ export function ArticleEditorPage() {
 
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
+  const [postType, setPostType] = useState('news');
+  const [videoUrl, setVideoUrl] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [featuredImage, setFeaturedImage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
@@ -40,6 +42,7 @@ export function ArticleEditorPage() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isBreaking, setIsBreaking] = useState(false);
   const [editorData, setEditorData] = useState({ blocks: [] });
+  const [hasEditorContent, setHasEditorContent] = useState(false);
   const editorContentRef = useRef({ blocks: [] });
   const [isEditorReady, setIsEditorReady] = useState(!id);
   const [translationLanguage, setTranslationLanguage] = useState('km');
@@ -60,6 +63,81 @@ export function ArticleEditorPage() {
     }));
     return { ...normalized, blocks: withIds };
   };
+
+  const normalizeExternalUrl = (value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return '';
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+      const parsed = new URL(withProtocol);
+      if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+      return parsed.toString();
+    } catch {
+      return '';
+    }
+  };
+
+  const normalizeFacebookUrl = (value) => {
+    const normalized = normalizeExternalUrl(value);
+    if (!normalized) return '';
+    try {
+      const parsed = new URL(normalized);
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+      if (host === 'fb.watch' || host.endsWith('facebook.com')) {
+        return parsed.toString();
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  };
+
+  const detectFacebookContentType = (url) => {
+    const normalized = normalizeFacebookUrl(url);
+    if (!normalized) return 'unknown';
+    try {
+      const parsed = new URL(normalized);
+      const path = parsed.pathname.toLowerCase();
+      if (path.includes('/reel/') || path.includes('/reels/')) return 'reel';
+      if (path.includes('/videos/') || path.startsWith('/watch') || parsed.searchParams.has('v')) return 'video';
+      return 'post';
+    } catch {
+      return 'unknown';
+    }
+  };
+
+  const buildFacebookEmbedConfig = (url) => {
+    const normalized = normalizeFacebookUrl(url);
+    if (!normalized) return null;
+    const type = detectFacebookContentType(normalized);
+    const params = new URLSearchParams({ href: normalized });
+    if (type === 'post') {
+      params.set('show_text', 'true');
+      return {
+        src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
+        aspectClass: 'aspect-[4/5]',
+      };
+    }
+    params.set('show_text', 'false');
+    params.set('autoplay', 'false');
+    params.set('mute', 'false');
+    return {
+      src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
+      aspectClass: type === 'reel' ? 'aspect-[9/16]' : 'aspect-[16/9]',
+    };
+  };
+
+  const buildVideoFallbackContent = () => ({
+    time: Date.now(),
+    blocks: [
+      {
+        id: `video-summary-${Date.now().toString(36)}`,
+        type: 'paragraph',
+        data: { text: excerpt.trim() || title.trim() || 'Video post' },
+      },
+    ],
+    version: '2.28.2',
+  });
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: articleResponse, isLoading: isLoadingArticle, isError: isArticleError } = useArticleById(id);
@@ -109,6 +187,11 @@ export function ArticleEditorPage() {
   const editableTranslationLanguages = TRANSLATION_LANGUAGES.filter((lang) => lang.code !== baseLanguage);
   const selectedTranslation = translations.find((item) => item.language === translationLanguage);
   const translationEditorKey = `${id || 'new'}-${translationLanguage}-${selectedTranslation?._id || 'new'}-${selectedTranslation?.updatedAt || '0'}-${translationEditorNonce}`;
+  const normalizedVideoUrl = postType === 'video' ? normalizeFacebookUrl(videoUrl) : '';
+  const videoEmbed = postType === 'video' ? buildFacebookEmbedConfig(normalizedVideoUrl) : null;
+  const videoUrlError = postType === 'video' && videoUrl.trim() && !normalizedVideoUrl
+    ? translateText('Use a valid Facebook link (post/video/reel)')
+    : '';
 
   const getSourceContentForTranslation = async () => {
     if (editorRef.current?.save) {
@@ -139,7 +222,7 @@ export function ArticleEditorPage() {
 
     const sourceContent = await getSourceContentForTranslation();
     if (!sourceContent?.blocks?.length) {
-      if (!silent) toast.error(translateText('Source news content is required before translation'));
+      if (!silent) toast.error(translateText('Source post content is required before translation'));
       return;
     }
 
@@ -199,6 +282,8 @@ export function ArticleEditorPage() {
       const article = articleResponse.data.article;
       setTitle(article.title || '');
       setExcerpt(article.excerpt || '');
+      setPostType(article.postType || 'news');
+      setVideoUrl(article.videoUrl || '');
       setCategoryId(article.category?._id || '');
       setFeaturedImage(article.featuredImage || '');
       setImagePreview(article.featuredImage || '');
@@ -208,6 +293,7 @@ export function ArticleEditorPage() {
       const content = normalizeContent(article.content);
       setEditorData(content);
       editorContentRef.current = content;
+      setHasEditorContent(Array.isArray(content?.blocks) && content.blocks.length > 0);
       setTranslationTitle(article.title || '');
       setTranslationExcerpt(article.excerpt || '');
       setIsEditorReady(true);
@@ -296,6 +382,7 @@ export function ArticleEditorPage() {
 
   const handleEditorChange = (data) => {
     editorContentRef.current = data;
+    setHasEditorContent(Array.isArray(data?.blocks) && data.blocks.length > 0);
   };
 
   const handleTranslationEditorChange = (data) => {
@@ -323,6 +410,15 @@ export function ArticleEditorPage() {
       return false;
     }
 
+    if (postType === 'video') {
+      const normalized = normalizeFacebookUrl(videoUrl);
+      if (!normalized) {
+        toast.error(translateText('Valid Facebook video URL is required for video posts'));
+        return false;
+      }
+      setVideoUrl(normalized);
+    }
+
     return true;
   };
 
@@ -331,16 +427,24 @@ export function ArticleEditorPage() {
 
     try {
       const content = await editorRef.current?.save();
+      const hasBlocks = !!(content && Array.isArray(content.blocks) && content.blocks.length > 0);
+      const finalContent = hasBlocks
+        ? content
+        : postType === 'video'
+          ? buildVideoFallbackContent()
+          : null;
 
-      if (!content || !content.blocks || content.blocks.length === 0) {
-        toast.error(translateText('News content is required'));
+      if (!finalContent) {
+        toast.error(translateText('Post content is required'));
         return;
       }
 
       const articleData = {
         title: title.trim(),
         excerpt: excerpt.trim(),
-        content,
+        content: finalContent,
+        postType,
+        videoUrl: postType === 'video' ? normalizeFacebookUrl(videoUrl) : '',
         category: categoryId,
         featuredImage,
         tags,
@@ -350,7 +454,7 @@ export function ArticleEditorPage() {
       };
 
       const onSuccess = () => {
-        const message = status === 'draft' ? translateText('Draft saved successfully') : translateText('News submitted for review');
+        const message = status === 'draft' ? translateText('Draft saved successfully') : translateText('Post submitted for review');
         toast.success(message);
         navigate('/dashboard/articles');
       };
@@ -362,7 +466,7 @@ export function ArticleEditorPage() {
       }
     } catch (error) {
       console.error('Save error:', error);
-      toast.error(translateText('Failed to save news'));
+      toast.error(translateText('Failed to save post'));
     }
   };
 
@@ -373,6 +477,8 @@ export function ArticleEditorPage() {
         title,
         excerpt,
         content,
+        postType,
+        videoUrl: postType === 'video' ? normalizeFacebookUrl(videoUrl) : '',
         featuredImage,
         tags
       }));
@@ -399,7 +505,7 @@ export function ArticleEditorPage() {
       const savedContent = await translationEditorRef.current?.save();
       const content = normalizeContent(savedContent || translationContentRef.current);
       if (!content?.blocks?.length) {
-        toast.error(translateText('News content is required for translation'));
+        toast.error(translateText('Post content is required for translation'));
         return;
       }
 
@@ -416,10 +522,23 @@ export function ArticleEditorPage() {
     }
   };
 
+  const requiredFields = postType === 'video'
+    ? [
+      { key: 'title', label: translateText('Post Title'), done: Boolean(title.trim()) },
+      { key: 'category', label: translateText('Category'), done: Boolean(categoryId) },
+      { key: 'videoUrl', label: translateText('Facebook URL'), done: Boolean(normalizedVideoUrl) },
+    ]
+    : [
+      { key: 'title', label: translateText('Post Title'), done: Boolean(title.trim()) },
+      { key: 'category', label: translateText('Category'), done: Boolean(categoryId) },
+      { key: 'content', label: translateText('Post Content'), done: hasEditorContent },
+    ];
+  const completedRequiredCount = requiredFields.filter((field) => field.done).length;
+
   return (
     <>
       <Helmet>
-        <title>{`${translateText(id ? 'Edit News' : 'New News')} - Bassac Post`}</title>
+        <title>{`${translateText(id ? 'Edit Post' : 'New Post')} - Bassac Post`}</title>
       </Helmet>
 
       {/* Header */}
@@ -435,7 +554,7 @@ export function ArticleEditorPage() {
           </Button>
           <div>
             <h1 className="text-2xl sm:text-2xl font-bold text-dark-900 dark:text-white">
-              {translateText(id ? 'Edit News' : 'New News')}
+              {translateText(id ? 'Edit Post' : 'New Post')}
             </h1>
             <p className="text-sm text-dark-500">{translateText('Create and publish amazing content')}</p>
           </div>
@@ -477,10 +596,118 @@ export function ArticleEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
         {/* Main Editor */}
         <div className="lg:col-span-2 space-y-6">
+          <div className="card p-4 sm:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div>
+                  <label className="label mb-1">{translateText('Post Type *')}</label>
+                  <p className="text-xs text-dark-500">
+                    {translateText('Select type first. Required fields update automatically.')}
+                  </p>
+                </div>
+                <div className="inline-flex rounded-xl border border-dark-200 dark:border-dark-700 p-1 bg-dark-50 dark:bg-dark-800">
+                  <button
+                    type="button"
+                    onClick={() => setPostType('news')}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${postType === 'news'
+                      ? 'bg-white dark:bg-dark-900 text-primary-700 dark:text-primary-300 shadow-sm'
+                      : 'text-dark-600 dark:text-dark-300 hover:text-dark-900 dark:hover:text-white'
+                      }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    {translateText('News')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('video')}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${postType === 'video'
+                      ? 'bg-white dark:bg-dark-900 text-primary-700 dark:text-primary-300 shadow-sm'
+                      : 'text-dark-600 dark:text-dark-300 hover:text-dark-900 dark:hover:text-white'
+                      }`}
+                  >
+                    <Clapperboard className="w-4 h-4" />
+                    {translateText('Video')}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-dark-200 dark:border-dark-700 p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-dark-900 dark:text-white">{translateText('Required Fields')}</p>
+                  <span className="text-xs text-dark-500">
+                    {completedRequiredCount}/{requiredFields.length} {translateText('completed')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {requiredFields.map((field) => (
+                    <div
+                      key={field.key}
+                      className={`rounded-lg px-3 py-2 text-sm border ${field.done
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300'
+                        : 'border-dark-200 bg-dark-50 text-dark-600 dark:border-dark-700 dark:bg-dark-800/60 dark:text-dark-300'
+                        }`}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        {field.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {postType === 'video' && (
+                <div className="rounded-xl border border-primary-200 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 p-3 sm:p-4">
+                  <Input
+                    label="Facebook URL *"
+                    placeholder="https://www.facebook.com/.../videos/..."
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    onBlur={(e) => {
+                      const normalized = normalizeExternalUrl(e.target.value);
+                      if (normalized) {
+                        setVideoUrl(normalized);
+                      }
+                    }}
+                    error={videoUrlError}
+                  />
+                  <p className="text-xs text-dark-500 mt-2">
+                    {translateText('Paste a public Facebook video, reel, or post link')}
+                  </p>
+                  {videoEmbed && (
+                    <div className="mt-3 rounded-xl border border-dark-200 dark:border-dark-700 overflow-hidden bg-white dark:bg-dark-900">
+                      <div className={videoEmbed.aspectClass}>
+                        <iframe
+                          title={translateText('Video preview')}
+                          src={videoEmbed.src}
+                          className="w-full h-full border-0"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="origin-when-cross-origin"
+                        />
+                      </div>
+                      <div className="p-3 bg-dark-50 dark:bg-dark-800/60">
+                        <a
+                          href={normalizedVideoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm link-primary"
+                        >
+                          {translateText('Open on Facebook')} <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Title */}
           <div className="card p-4 sm:p-6">
             <Input
-              label={translateText('News Title *')}
+              label={translateText('Post Title *')}
               placeholder={translateText('Enter a compelling title...')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -530,7 +757,7 @@ export function ArticleEditorPage() {
               <div className="border-2 border-dashed border-dark-200 dark:border-dark-700 rounded-lg p-8 text-center hover:border-primary-400 dark:hover:border-primary-600 transition-colors">
                 <ImageIcon className="w-12 h-12 mx-auto mb-3 text-dark-400" />
                 <p className="text-dark-600 dark:text-dark-400 mb-3">
-                  {translateText('Upload a featured image for your news')}
+                  {translateText('Upload a featured image for your post')}
                 </p>
                 <p className="text-xs text-dark-500 mb-3">
                   {translateText('JPG, PNG or WEBP. Max 5MB.')}
@@ -555,12 +782,20 @@ export function ArticleEditorPage() {
           {/* Editor.js Container */}
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <label className="label mb-0">{translateText('News Content *')}</label>
-              <p className="text-xs text-dark-500">{translateText('Use rich text formatting')}</p>
+              <label className="label mb-0">
+                {postType === 'video'
+                  ? translateText('Post Content (optional for video)')
+                  : translateText('Post Content *')}
+              </label>
+              <p className="text-xs text-dark-500">
+                {postType === 'video'
+                  ? translateText('Optional caption or context for this video post')
+                  : translateText('Use rich text formatting')}
+              </p>
             </div>
             {isEditMode && isArticleError && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {translateText('Failed to load news content. Please refresh or try again.')}
+                {translateText('Failed to load post content. Please refresh or try again.')}
               </div>
             )}
             {isEditMode && !isEditorReady ? (
@@ -571,14 +806,24 @@ export function ArticleEditorPage() {
                 key={isEditMode ? id : 'new'}
                 data={editorData}
                 onChange={handleEditorChange}
-                placeholder={translateText('Start writing your news...')}
+                placeholder={postType === 'video'
+                  ? translateText('Optional caption, context, or transcript...')
+                  : translateText('Start writing your post...')}
               />
             )}
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
-                {translateText('Tip: Use "/" to see formatting options. Drag blocks to reorder them.')}
-              </p>
-            </div>
+            {postType === 'video' ? (
+              <div className="mt-3 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+                <p className="text-sm text-primary-800 dark:text-primary-300">
+                  {translateText('If left empty, excerpt/title will be used as fallback content automatically.')}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  {translateText('Tip: Use "/" to see formatting options. Drag blocks to reorder them.')}
+                </p>
+              </div>
+            )}
           </div>
 
           {isEditMode && canManageTranslations && editableTranslationLanguages.length > 0 && (
@@ -683,7 +928,7 @@ export function ArticleEditorPage() {
           <div className="card p-4 sm:p-6">
             <label className="label">{translateText('Excerpt')}</label>
             <textarea
-              placeholder={translateText('Brief description of your news (shown in previews)')}
+              placeholder={translateText('Brief description of your post (shown in previews)')}
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
               className="input min-h-[100px]"
@@ -759,7 +1004,7 @@ export function ArticleEditorPage() {
 
           {/* Options */}
           <div className="card p-4 sm:p-6 space-y-3">
-            <label className="label">{translateText('News Options')}</label>
+            <label className="label">{translateText('Post Options')}</label>
             <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-dark-50 dark:hover:bg-dark-800 rounded-lg">
               <input
                 type="checkbox"
@@ -768,7 +1013,7 @@ export function ArticleEditorPage() {
                 className="w-4 h-4 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
               />
               <div>
-                <span className="text-dark-700 dark:text-dark-300 font-medium">{translateText('Featured News')}</span>
+                <span className="text-dark-700 dark:text-dark-300 font-medium">{translateText('Featured Post')}</span>
                 <p className="text-xs text-dark-500">{translateText('Show in featured section')}</p>
               </div>
             </label>
@@ -780,8 +1025,8 @@ export function ArticleEditorPage() {
                 className="w-4 h-4 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
               />
               <div>
-                <span className="text-dark-700 dark:text-dark-300 font-medium">{translateText('Breaking News')}</span>
-                <p className="text-xs text-dark-500">{translateText('Mark as breaking news')}</p>
+                <span className="text-dark-700 dark:text-dark-300 font-medium">{translateText('Breaking Post')}</span>
+                <p className="text-xs text-dark-500">{translateText('Mark as breaking content')}</p>
               </div>
             </label>
           </div>
@@ -793,14 +1038,14 @@ export function ArticleEditorPage() {
               <div className="flex justify-between">
                 <span>{translateText('Status')}:</span>
                 <span className="font-medium">
-                  {id ? translateText(articleResponse?.data?.status) : translateText('Draft')}
+                  {id ? translateText(articleResponse?.data?.article?.status) : translateText('Draft')}
                 </span>
               </div>
-              {id && articleResponse?.data?.createdAt && (
+              {id && articleResponse?.data?.article?.createdAt && (
                 <div className="flex justify-between">
                   <span>{translateText('Created')}:</span>
                   <span className="font-medium">
-                    {new Date(articleResponse.data.createdAt).toLocaleDateString()}
+                    {new Date(articleResponse.data.article.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               )}

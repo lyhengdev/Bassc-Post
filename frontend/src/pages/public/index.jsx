@@ -1,5 +1,5 @@
 export { HomePage } from './home.jsx';
-export { ArticlesPage, CategoriesListPage, CategoryPage } from './articles.jsx';
+export { ArticlesPage, VideosPage, CategoriesListPage, CategoryPage } from './articles.jsx';
 export { ArticlePage } from './article-detail.jsx';
 export {
   LoginPage,

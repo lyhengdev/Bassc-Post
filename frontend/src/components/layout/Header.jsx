@@ -46,37 +46,104 @@ export default function Header() {
     const isSticky = headerSettings.sticky !== false;
     const canAccessDashboard = isAuthenticated && ['admin', 'editor', 'writer'].includes(user?.role);
 
+    const normalizeLegacyVideoHref = (value = '/') => {
+        const raw = String(value || '/').trim();
+        if (!raw) return '/';
+
+        try {
+            const parsed = /^https?:\/\//i.test(raw)
+                ? new URL(raw)
+                : new URL(raw, 'https://bassac.local');
+            const pathname = parsed.pathname.length > 1 && parsed.pathname.endsWith('/')
+                ? parsed.pathname.slice(0, -1)
+                : parsed.pathname || '/';
+
+            if (pathname === '/articles' && parsed.searchParams.get('feed') === 'video') {
+                if (/^https?:\/\//i.test(raw)) {
+                    parsed.pathname = '/videos';
+                    parsed.search = '';
+                    return parsed.toString();
+                }
+                return '/videos';
+            }
+
+            return raw;
+        } catch {
+            return raw;
+        }
+    };
+
     const headerMenu = useMemo(() => {
         const normalize = (value) => (value || '').toString().trim().toLowerCase();
+        const resolvePath = (value) => {
+            const href = normalizeLegacyVideoHref(value || '/');
+            try {
+                const parsed = /^https?:\/\//i.test(href) ? new URL(href) : new URL(href, 'https://bassac.local');
+                const path = parsed.pathname || '/';
+                return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+            } catch {
+                const path = String(href || '/').split('#')[0].split('?')[0];
+                if (!path.startsWith('/')) return `/${path}`;
+                return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+            }
+        };
         const menuItems = settings?.menus?.header;
         const baseMenu = Array.isArray(menuItems) && menuItems.length > 0
             ? [...menuItems].sort((a, b) => (a.order || 0) - (b.order || 0))
             : [
                 { label: t('nav.news', 'News'), url: '/articles', target: '_self' },
+                { label: t('nav.video', 'Video'), url: '/videos', target: '_self' },
                 ...(canAccessDashboard ? [{ label: t('nav.dashboard', 'Dashboard'), url: '/dashboard', target: '_self' }] : []),
                 { label: t('nav.about', 'About'), url: '/about', target: '_self' },
                 { label: t('nav.contact', 'Contact'), url: '/contact', target: '_self' },
             ];
 
-        const hasCategoriesTab = baseMenu.some((item) => {
+        const hasVideoTab = baseMenu.some((item) => {
             const label = normalize(item?.label);
-            const url = normalize(item?.url);
-            return label === 'categories' || url === '/categories';
+            const path = resolvePath(item?.url);
+            return label === 'video' || path === '/videos';
         });
 
-        if (hasCategoriesTab) return baseMenu;
+        const menuWithVideo = hasVideoTab
+            ? baseMenu
+            : (() => {
+                const newsIndex = baseMenu.findIndex((item) => {
+                    const label = normalize(item?.label);
+                    const path = resolvePath(item?.url);
+                    return label === 'news' || path === '/articles';
+                });
+                const insertAt = newsIndex >= 0 ? newsIndex + 1 : 1;
+                return [
+                    ...baseMenu.slice(0, insertAt),
+                    { label: t('nav.video', 'Video'), url: '/videos', target: '_self' },
+                    ...baseMenu.slice(insertAt),
+                ];
+            })();
 
-        const newsIndex = baseMenu.findIndex((item) => {
+        const hasCategoriesTab = menuWithVideo.some((item) => {
             const label = normalize(item?.label);
-            const url = normalize(item?.url);
-            return label === 'news' || url === '/articles';
+            const path = resolvePath(item?.url);
+            return label === 'categories' || path === '/categories';
         });
-        const insertAt = newsIndex >= 0 ? newsIndex + 1 : 1;
+
+        if (hasCategoriesTab) return menuWithVideo;
+
+        const videoIndex = menuWithVideo.findIndex((item) => {
+            const label = normalize(item?.label);
+            const path = resolvePath(item?.url);
+            return label === 'video' || path === '/videos';
+        });
+        const newsIndex = menuWithVideo.findIndex((item) => {
+            const label = normalize(item?.label);
+            const path = resolvePath(item?.url);
+            return label === 'news' || path === '/articles';
+        });
+        const insertAt = videoIndex >= 0 ? videoIndex + 1 : (newsIndex >= 0 ? newsIndex + 1 : 1);
 
         return [
-            ...baseMenu.slice(0, insertAt),
+            ...menuWithVideo.slice(0, insertAt),
             { label: t('nav.categories', 'Categories'), url: '/categories', target: '_self' },
-            ...baseMenu.slice(insertAt),
+            ...menuWithVideo.slice(insertAt),
         ];
     }, [settings?.menus?.header, canAccessDashboard, t]);
 
@@ -95,9 +162,9 @@ export default function Header() {
             return slug ? `/category/${slug}` : '/categories';
         }
         if (item.type === 'page') {
-            return item.url || '/';
+            return normalizeLegacyVideoHref(item.url || '/');
         }
-        return item.url || '/';
+        return normalizeLegacyVideoHref(item.url || '/');
     };
 
     const normalizePath = (value = '/') => {
@@ -113,7 +180,12 @@ export default function Header() {
         const normalizedLabel = (item?.label || '').toString().trim().toLowerCase();
 
         if (normalizedHref === '/articles' || normalizedLabel === 'news') {
+            if (currentPath === '/videos') return false;
             return currentPath === '/articles' || currentPath.startsWith('/article/');
+        }
+
+        if (normalizedHref === '/videos' || normalizedLabel === 'video') {
+            return currentPath === '/videos';
         }
 
         if (normalizedHref === '/categories' || normalizedLabel === 'categories') {
@@ -144,6 +216,7 @@ export default function Header() {
         const normalizedLabel = (item?.label || '').toString().trim().toLowerCase();
 
         if (href === '/articles' || normalizedLabel === 'news') return t('nav.news', item?.label || fallback);
+        if (href === '/videos' || normalizedLabel === 'video') return t('nav.video', item?.label || fallback);
         if (href === '/categories' || normalizedLabel === 'categories') return t('nav.categories', item?.label || fallback);
         if (href === '/dashboard' || normalizedLabel === 'dashboard') return t('nav.dashboard', item?.label || fallback);
         if (href === '/about' || normalizedLabel === 'about') return t('nav.about', item?.label || fallback);

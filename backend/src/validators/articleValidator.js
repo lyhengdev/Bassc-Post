@@ -8,13 +8,52 @@ export const createArticleValidator = [
     .isLength({ max: 200 })
     .withMessage('Title cannot exceed 200 characters'),
   body('content')
-    .notEmpty()
-    .withMessage('Content is required')
-    .isObject()
-    .withMessage('Content must be a valid Editor.js object'),
+    .custom((value, { req }) => {
+      const type = String(req.body?.postType || 'news').toLowerCase();
+      if (type === 'video' && (value === undefined || value === null || value === '')) {
+        return true;
+      }
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('Content must be a valid Editor.js object');
+      }
+      return true;
+    }),
   body('content.blocks')
-    .isArray({ min: 1 })
-    .withMessage('Content must have at least one block'),
+    .custom((value, { req }) => {
+      const type = String(req.body?.postType || 'news').toLowerCase();
+      if (type === 'video' && (value === undefined || value === null)) {
+        return true;
+      }
+      if (!Array.isArray(value) || value.length < 1) {
+        throw new Error('Content must have at least one block');
+      }
+      return true;
+    }),
+  body('postType')
+    .optional()
+    .isIn(['news', 'video'])
+    .withMessage('Invalid post type'),
+  body('videoUrl')
+    .trim()
+    .isLength({ max: 1200 })
+    .withMessage('Video URL cannot exceed 1200 characters')
+    .custom((value, { req }) => {
+      const type = String(req.body?.postType || 'news').toLowerCase();
+      const trimmed = String(value || '').trim();
+      if (type !== 'video' && !trimmed) return true;
+      if (type === 'video' && !trimmed) {
+        throw new Error('Video URL is required for video posts');
+      }
+      try {
+        const parsed = new URL(trimmed);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          throw new Error('Video URL must use http or https');
+        }
+      } catch {
+        throw new Error('Video URL must be a valid URL');
+      }
+      return true;
+    }),
   body('category')
     .notEmpty()
     .withMessage('Category is required')
@@ -88,6 +127,28 @@ export const updateArticleValidator = [
     .optional()
     .isIn(['draft', 'pending', 'published', 'rejected', 'archived'])
     .withMessage('Invalid status value'),
+  body('postType')
+    .optional()
+    .isIn(['news', 'video'])
+    .withMessage('Invalid post type'),
+  body('videoUrl')
+    .optional()
+    .trim()
+    .isLength({ max: 1200 })
+    .withMessage('Video URL cannot exceed 1200 characters')
+    .custom((value) => {
+      const trimmed = String(value || '').trim();
+      if (!trimmed) return true;
+      try {
+        const parsed = new URL(trimmed);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          throw new Error('Video URL must use http or https');
+        }
+      } catch {
+        throw new Error('Video URL must be a valid URL');
+      }
+      return true;
+    }),
 ];
 
 export const listArticlesValidator = [
@@ -133,6 +194,10 @@ export const listArticlesValidator = [
     .optional()
     .isIn(['true', 'false'])
     .withMessage('isFeatured must be true or false'),
+  query('postType')
+    .optional()
+    .isIn(['news', 'video'])
+    .withMessage('postType must be news or video'),
 ];
 
 export const searchArticlesValidator = [

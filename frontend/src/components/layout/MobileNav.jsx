@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Newspaper, Grid3X3, User, LayoutDashboard, Circle } from 'lucide-react';
+import { Home, Newspaper, Grid3X3, User, LayoutDashboard, Circle, Clapperboard } from 'lucide-react';
 import { useCategories, usePublicSettings } from '../../hooks/useApi';
 import useLanguage from '../../hooks/useLanguage';
 import { cn } from '../../utils';
@@ -34,6 +34,35 @@ export default function MobileNav() {
     account: User,
     profile: User,
     dashboard: LayoutDashboard,
+    video: Clapperboard,
+    videos: Clapperboard,
+  };
+
+  const normalizeLegacyVideoHref = (value = '/') => {
+    const raw = String(value || '/').trim();
+    if (!raw) return '/';
+
+    try {
+      const parsed = /^https?:\/\//i.test(raw)
+        ? new URL(raw)
+        : new URL(raw, 'https://bassac.local');
+      const pathname = parsed.pathname.length > 1 && parsed.pathname.endsWith('/')
+        ? parsed.pathname.slice(0, -1)
+        : parsed.pathname || '/';
+
+      if (pathname === '/articles' && parsed.searchParams.get('feed') === 'video') {
+        if (/^https?:\/\//i.test(raw)) {
+          parsed.pathname = '/videos';
+          parsed.search = '';
+          return parsed.toString();
+        }
+        return '/videos';
+      }
+
+      return raw;
+    } catch {
+      return raw;
+    }
   };
 
   const getMenuHref = (item) => {
@@ -43,9 +72,16 @@ export default function MobileNav() {
       return slug ? `/category/${slug}` : '/categories';
     }
     if (item.type === 'page') {
-      return item.url || '/';
+      return normalizeLegacyVideoHref(item.url || '/');
     }
-    return item.url || '/';
+    return normalizeLegacyVideoHref(item.url || '/');
+  };
+
+  const normalizePath = (value = '/') => {
+    const path = String(value || '/').split('#')[0].split('?')[0];
+    if (!path.startsWith('/')) return `/${path}`;
+    if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
+    return path;
   };
 
   const getMenuIcon = (item) => {
@@ -59,15 +95,37 @@ export default function MobileNav() {
     : null;
 
   const navItems = mobileMenu
-    ? mobileMenu.map((item) => ({
-        href: getMenuHref(item),
-        icon: getMenuIcon(item),
-        label: item.label || 'Link',
-        target: item.target || '_self',
-      }))
+    ? (() => {
+        const mappedItems = mobileMenu.map((item) => ({
+          href: getMenuHref(item),
+          icon: getMenuIcon(item),
+          label: item.label || 'Link',
+          target: item.target || '_self',
+        }));
+        const hasVideo = mappedItems.some((item) => {
+          const href = normalizePath(item.href || '/');
+          const label = String(item.label || '').trim().toLowerCase();
+          return href === '/videos' || label === 'video' || label === 'videos';
+        });
+        if (hasVideo) return mappedItems;
+
+        const newsIndex = mappedItems.findIndex((item) => {
+          const href = normalizePath(item.href || '/');
+          const label = String(item.label || '').trim().toLowerCase();
+          return href === '/articles' || label === 'news';
+        });
+        const insertAt = newsIndex >= 0 ? newsIndex + 1 : Math.min(1, mappedItems.length);
+        const videoItem = { href: '/videos', icon: Clapperboard, label: t('nav.video', 'Video'), target: '_self' };
+        return [
+          ...mappedItems.slice(0, insertAt),
+          videoItem,
+          ...mappedItems.slice(insertAt),
+        ];
+      })()
     : [
         { href: '/', icon: Home, label: t('nav.discover', 'Discover') },
         { href: '/articles', icon: Newspaper, label: t('nav.news', 'News') },
+        { href: '/videos', icon: Clapperboard, label: t('nav.video', 'Video') },
         { href: '/categories', icon: Grid3X3, label: t('nav.categories', 'Categories') },
       ];
 
