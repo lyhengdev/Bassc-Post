@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowRight, Clock, Eye, Search, X, TrendingUp, User, ArrowUpRight } from 'lucide-react';
@@ -15,6 +15,26 @@ import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../
 import { buildFacebookEmbedConfig, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
 import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
 import useLanguage from '../../hooks/useLanguage';
+
+const REEL_MOTION_PRESETS = {
+  snappy: {
+    wheelLockMs: 180,
+    touchLockMs: 140,
+    swipeThresholdPx: 20,
+    wheelStepDeltaPx: 14,
+    stepAnimationMs: 130,
+  },
+  cinematic: {
+    wheelLockMs: 320,
+    touchLockMs: 240,
+    swipeThresholdPx: 32,
+    wheelStepDeltaPx: 22,
+    stepAnimationMs: 240,
+  },
+};
+
+// Change this in one place to tune reels feel.
+const ACTIVE_REEL_MOTION_PRESET = 'cinematic';
 
 // ==================== HOME PAGE ====================
 
@@ -546,21 +566,46 @@ export function ArticlesPage() {
 // ==================== VIDEOS PAGE (REELS STYLE) ====================
 export function VideosPage() {
   const { t, translateText, language } = useLanguage();
+  const motionPreset = REEL_MOTION_PRESETS[ACTIVE_REEL_MOTION_PRESET] || REEL_MOTION_PRESETS.snappy;
   const reelsViewportRef = useRef(null);
   const transitionFrameRef = useRef(null);
   const queuedAdvanceIndexRef = useRef(null);
   const wheelLockRef = useRef(false);
+  const scrollAnimatingRef = useRef(false);
   const touchStartYRef = useRef(0);
   const touchActiveRef = useRef(false);
   const touchLockRef = useRef(false);
-  const WHEEL_LOCK_MS = 50;
-  const TOUCH_LOCK_MS = 50;
-  const SWIPE_THRESHOLD_PX = 14;
+  const autoplayRetryTimerRef = useRef(null);
+  const hasUserGestureRef = useRef(false);
+  const WHEEL_LOCK_MS = motionPreset.wheelLockMs;
+  const TOUCH_LOCK_MS = motionPreset.touchLockMs;
+  const SWIPE_THRESHOLD_PX = motionPreset.swipeThresholdPx;
+  const WHEEL_STEP_DELTA_PX = motionPreset.wheelStepDeltaPx;
   const PREFETCH_BUFFER = 3;
-  const STEP_ANIMATION_MS = 80;
+  const EMBED_PRELOAD_RADIUS = 1;
+  const STEP_ANIMATION_MS = motionPreset.stepAnimationMs;
   const limit = 8;
   const [failedEmbeds, setFailedEmbeds] = useState({});
   const [activeReelIndex, setActiveReelIndex] = useState(0);
+  const [playSession, setPlaySession] = useState(1);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const [showAutoplayPrompt, setShowAutoplayPrompt] = useState(true);
+  const [loadingEmbeds, setLoadingEmbeds] = useState({});
+  const [saveDataEnabled, setSaveDataEnabled] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [needsGesture, setNeedsGesture] = useState(true);
+  const mutedAutoplayStartedRef = useRef(false);
+
+  const queueAutoplayRetry = useCallback((delay = 0) => {
+    if (typeof window === 'undefined') return;
+    if (autoplayRetryTimerRef.current) {
+      window.clearTimeout(autoplayRetryTimerRef.current);
+    }
+    autoplayRetryTimerRef.current = window.setTimeout(() => {
+      autoplayRetryTimerRef.current = null;
+      setPlaySession((value) => value + 1);
+    }, Math.max(0, delay));
+  }, []);
 
   const {
     data: videosPages,
@@ -611,10 +656,22 @@ export function VideosPage() {
     })
     .filter((item) => item.facebookUrl);
   const resetKey = videos.map((video) => `${video.id}:${video.facebookUrl}`).join('|');
+  const activeVideoId = useMemo(() => videos[activeReelIndex]?.id, [videos, activeReelIndex]);
 
   useEffect(() => {
     setFailedEmbeds({});
     setActiveReelIndex(0);
+    setPlaySession(1);
+    setShowSwipeHint(true);
+    setShowAutoplayPrompt(true);
+    setLoadingEmbeds({});
+    setIsMuted(true);
+    setNeedsGesture(true);
+    hasUserGestureRef.current = false;
+    if (autoplayRetryTimerRef.current) {
+      window.clearTimeout(autoplayRetryTimerRef.current);
+      autoplayRetryTimerRef.current = null;
+    }
   }, [resetKey]);
 
   useEffect(() => {
@@ -639,7 +696,40 @@ export function VideosPage() {
       if (transitionFrameRef.current) {
         window.cancelAnimationFrame(transitionFrameRef.current);
       }
+      if (autoplayRetryTimerRef.current) {
+        window.clearTimeout(autoplayRetryTimerRef.current);
+        autoplayRetryTimerRef.current = null;
+      }
     };
+  }, []);
+
+  useEffect(() => {
+    const handleResumePlayback = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!hasUserGestureRef.current) return;
+      queueAutoplayRetry();
+    };
+
+    const handleOnline = () => {
+      if (!hasUserGestureRef.current) return;
+      queueAutoplayRetry(50);
+    };
+
+    document.addEventListener('visibilitychange', handleResumePlayback);
+    window.addEventListener('focus', handleResumePlayback);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', handleResumePlayback);
+      window.removeEventListener('focus', handleResumePlayback);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [queueAutoplayRetry]);
+
+  useEffect(() => {
+    const connection = typeof navigator !== 'undefined' ? navigator.connection || navigator.webkitConnection || navigator.mozConnection : null;
+    if (connection && typeof connection.saveData === 'boolean') {
+      setSaveDataEnabled(Boolean(connection.saveData));
+    }
   }, []);
 
   const jumpToReel = (index, { animate = true } = {}) => {
@@ -659,10 +749,12 @@ export function VideosPage() {
       window.cancelAnimationFrame(transitionFrameRef.current);
     }
 
+    scrollAnimatingRef.current = true;
     const startTop = viewport.scrollTop;
     const distance = targetTop - startTop;
     if (Math.abs(distance) < 1) {
       viewport.scrollTop = targetTop;
+      scrollAnimatingRef.current = false;
       return;
     }
 
@@ -675,6 +767,7 @@ export function VideosPage() {
         transitionFrameRef.current = window.requestAnimationFrame(step);
       } else {
         transitionFrameRef.current = null;
+        scrollAnimatingRef.current = false;
       }
     };
 
@@ -693,9 +786,10 @@ export function VideosPage() {
   const moveReelByStep = (direction) => {
     const viewport = reelsViewportRef.current;
     if (!viewport || videos.length < 2) return;
+    if (scrollAnimatingRef.current) return;
 
     const itemHeight = viewport.clientHeight || 1;
-    const currentIndex = Math.round(viewport.scrollTop / itemHeight);
+    const currentIndex = activeReelIndex;
     const nextIndex = Math.max(0, Math.min(videos.length - 1, currentIndex + direction));
 
     if (nextIndex === currentIndex) {
@@ -719,12 +813,14 @@ export function VideosPage() {
   const handleReelsWheel = (event) => {
     const viewport = reelsViewportRef.current;
     if (!viewport || videos.length < 2) return;
+    if (scrollAnimatingRef.current) return;
     if (isControlTarget(event.target)) return;
-    if (Math.abs(event.deltaY) < 4) return;
+    if (Math.abs(event.deltaY) < WHEEL_STEP_DELTA_PX) return;
 
     event.preventDefault();
     if (wheelLockRef.current) return;
 
+    startPlayback();
     const direction = event.deltaY > 0 ? 1 : -1;
     wheelLockRef.current = true;
     moveReelByStep(direction);
@@ -736,12 +832,14 @@ export function VideosPage() {
   const handleReelsTouchStart = (event) => {
     const viewport = reelsViewportRef.current;
     if (!viewport || videos.length < 2) return;
+    if (scrollAnimatingRef.current) return;
     if (!event.touches?.length) return;
     if (isControlTarget(event.target)) {
       touchActiveRef.current = false;
       return;
     }
 
+    startPlayback();
     touchStartYRef.current = event.touches[0].clientY;
     touchActiveRef.current = true;
   };
@@ -755,6 +853,7 @@ export function VideosPage() {
   const handleReelsTouchEnd = (event) => {
     const viewport = reelsViewportRef.current;
     if (!viewport || videos.length < 2) return;
+    if (scrollAnimatingRef.current) return;
     if (!touchActiveRef.current || !event.changedTouches?.length) return;
     if (isControlTarget(event.target)) {
       touchActiveRef.current = false;
@@ -780,16 +879,119 @@ export function VideosPage() {
     if (!viewport) return;
     const itemHeight = viewport.clientHeight || 1;
     const nextIndex = Math.max(0, Math.min(videos.length - 1, Math.round(viewport.scrollTop / itemHeight)));
+    if (nextIndex !== activeReelIndex) {
+      startPlayback();
+    }
     setActiveReelIndex(nextIndex);
   };
 
-  const renderVideoEmbed = (video, { isActive = false } = {}) => {
+  const handleReelsKeyDown = (event) => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport || videos.length < 1) return;
+    if (scrollAnimatingRef.current) return;
+    if (isControlTarget(event.target)) return;
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+      event.preventDefault();
+      startPlayback();
+      moveReelByStep(1);
+      return;
+    }
+
+    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+      event.preventDefault();
+      startPlayback();
+      moveReelByStep(-1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      startPlayback();
+      jumpToReel(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      startPlayback();
+      jumpToReel(videos.length - 1);
+    }
+  };
+
+  useEffect(() => {
+    // Retry after snap animation settles so Facebook iframe gets the active reel in-view.
+    if (!hasUserGestureRef.current) return;
+    queueAutoplayRetry(STEP_ANIMATION_MS + 40);
+  }, [activeReelIndex, queueAutoplayRetry]);
+
+  useEffect(() => {
+    if (!activeVideoId) return;
+    // Mark the active reel as loading when it first becomes active or when we restart playback.
+    setLoadingEmbeds((prev) => {
+      if (prev[activeVideoId] === true) return prev;
+      return { ...prev, [activeVideoId]: true };
+    });
+  }, [activeVideoId, playSession, isMuted]);
+
+  const startPlayback = () => {
+    if (hasUserGestureRef.current) return;
+    hasUserGestureRef.current = true;
+    setShowSwipeHint(false);
+    if (!isMuted) {
+      setShowAutoplayPrompt(false);
+    }
+    setNeedsGesture(false);
+    queueAutoplayRetry();
+  };
+
+  const retryEmbed = (videoId) => {
+    setFailedEmbeds((prev) => {
+      const next = { ...prev };
+      delete next[videoId];
+      return next;
+    });
+    setLoadingEmbeds((prev) => ({ ...prev, [videoId]: true }));
+    setPlaySession((value) => value + 1);
+  };
+
+  useEffect(() => {
+    if (!hasUserGestureRef.current) return;
+    // Ensure currently active iframe restarts with the new mute state.
+    queueAutoplayRetry(0);
+  }, [isMuted, queueAutoplayRetry]);
+
+  useEffect(() => {
+    if (!isMuted) setShowAutoplayPrompt(false);
+  }, [isMuted]);
+
+  // On mobile (and desktop) allow muted autoplay without a gesture; browsers permit muted autoplay.
+  useEffect(() => {
+    if (mutedAutoplayStartedRef.current) return;
+    if (!isMuted) return;
+    if (videos.length < 1) return;
+    mutedAutoplayStartedRef.current = true;
+    hasUserGestureRef.current = true; // allows autoplay retries
+    setNeedsGesture(false);
+    setShowSwipeHint(false);
+    queueAutoplayRetry(0);
+  }, [isMuted, videos.length, queueAutoplayRetry]);
+
+  const renderVideoEmbed = (video, { isActive = false, shouldRenderIframe = true, isMuted: muted = true } = {}) => {
+    const localMuteKey = muted ? 'muted' : 'unmuted';
     const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, {
       forceReel: true,
       autoplay: isActive,
-      mute: isActive,
+      mute: muted,
+      cacheKey: isActive ? `${video.id}-${playSession}-${localMuteKey}` : `${video.id}-idle-${localMuteKey}`,
     });
     const isFailed = Boolean(failedEmbeds[video.id]);
+    const isLoading = loadingEmbeds[video.id] !== false;
+
+    if (!shouldRenderIframe) {
+      return <div className="h-full w-full bg-black" aria-hidden="true" />;
+    }
 
     if (!embedConfig || isFailed) {
       return (
@@ -804,6 +1006,15 @@ export function VideosPage() {
             >
               {translateText('Open on Facebook')} <ArrowUpRight className="w-4 h-4" />
             </a>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full bg-dark-900 text-white px-3 py-1 text-xs border border-white/20 hover:bg-dark-800 transition-colors"
+                onClick={() => retryEmbed(video.id)}
+              >
+                {translateText('Retry')}
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -811,9 +1022,9 @@ export function VideosPage() {
 
     return (
       <div className="h-full w-full bg-black flex items-center justify-center">
-        <div className="h-full max-w-full aspect-[9/16]">
+        <div className="relative h-full max-w-full aspect-[9/16]">
           <iframe
-            key={`${video.id}-${isActive ? 'active' : 'idle'}`}
+            key={`${video.id}-${isActive ? `active-${playSession}` : 'idle'}`}
             title={video.title || 'Video'}
             src={embedConfig.src}
             className="w-full h-full border-0"
@@ -821,8 +1032,14 @@ export function VideosPage() {
             allowFullScreen
             loading={isActive ? 'eager' : 'lazy'}
             referrerPolicy="origin-when-cross-origin"
+            onLoad={() => setLoadingEmbeds((prev) => ({ ...prev, [video.id]: false }))}
             onError={() => setFailedEmbeds((prev) => (prev[video.id] ? prev : { ...prev, [video.id]: true }))}
           />
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <div className="h-10 w-10 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -842,12 +1059,19 @@ export function VideosPage() {
             <div
               ref={reelsViewportRef}
               onWheel={handleReelsWheel}
+              onPointerDownCapture={() => {
+                startPlayback();
+                if (isMuted) setIsMuted(false);
+              }}
               onTouchStart={handleReelsTouchStart}
               onTouchMove={handleReelsTouchMove}
               onTouchEnd={handleReelsTouchEnd}
               onScroll={handleReelsScroll}
+              onKeyDown={handleReelsKeyDown}
               onTouchCancel={() => { touchActiveRef.current = false; }}
-              className="relative h-[100dvh] overflow-y-scroll no-scrollbar overscroll-y-none touch-pan-y snap-y snap-mandatory bg-black sm:rounded-2xl sm:border sm:border-dark-800 sm:shadow-xl"
+              tabIndex={0}
+              aria-label={translateText('Reels player')}
+              className="relative h-[100dvh] overflow-y-scroll no-scrollbar overscroll-y-none touch-pan-y snap-y snap-mandatory bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/70 sm:rounded-2xl sm:border sm:border-dark-800 sm:shadow-xl"
             >
               <div className="pointer-events-none sticky top-0 z-30 h-0">
                 <div className="pointer-events-auto flex items-center justify-between p-3">
@@ -867,43 +1091,92 @@ export function VideosPage() {
                     {translateText('News')}
                   </Link>
                 </div>
+                <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center px-3">
+                  <div className="rounded-full border border-white/25 bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
+                    {`${activeReelIndex + 1} / ${videos.length}`}
+                  </div>
+                </div>
               </div>
 
-              {videos.map((video) => (
+              {showSwipeHint && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-20 flex justify-center px-3 transition-opacity duration-300">
+                  <div className="rounded-full bg-black/60 text-white/90 text-xs font-medium px-3 py-1.5 shadow-lg backdrop-blur">
+                    {translateText('Swipe up for next, down for previous')}
+                  </div>
+                </div>
+              )}
+
+              {showAutoplayPrompt && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center px-3 transition-opacity duration-300">
+                  <div className="rounded-full bg-black/70 text-white/90 text-xs font-medium px-3 py-1.5 shadow-lg backdrop-blur">
+                    {translateText(isMuted
+                      ? 'Tap once to unmute and keep sound on'
+                      : 'Autoplay with sound is on')}
+                  </div>
+                </div>
+              )}
+
+              {videos.map((video, index) => (
                 <article
                   key={video.id}
                   className="relative h-[100dvh] snap-start snap-always"
                 >
-                  {renderVideoEmbed(video, { isActive: videos[activeReelIndex]?.id === video.id })}
+                  {needsGesture && (
+                    <button
+                      type="button"
+                      className="absolute inset-0 z-20 bg-transparent"
+                      onClick={() => {
+                        startPlayback();
+                        if (isMuted) setIsMuted(false);
+                      }}
+                      aria-label={translateText('Start playing video')}
+                    />
+                  )}
+                  {video.slug && (
+                    <Link
+                      to={`/article/${video.slug}`}
+                      data-reels-control="true"
+                      className="absolute inset-x-0 top-0 h-16 sm:h-20 z-30 bg-gradient-to-b from-black/30 via-black/5 to-transparent text-transparent"
+                      aria-label={translateText('Open video details')}
+                    />
+                  )}
 
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-4 pb-4 pt-10 text-white">
-                    {video.category?.name && (
-                      <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold bg-white/15 text-white backdrop-blur">
-                        {video.category.name}
-                      </span>
-                    )}
-                    {video.slug ? (
-                      <Link to={`/article/${video.slug}`} data-reels-control="true">
-                        <h2 className="mt-2 text-base font-semibold text-white headline-hover">
+                  {renderVideoEmbed(video, {
+                    isActive: index === activeReelIndex,
+                    shouldRenderIframe: Math.abs(index - activeReelIndex) <= EMBED_PRELOAD_RADIUS,
+                    isMuted,
+                  })}
+
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-4 pb-16 pt-10 text-white">
+                    <div className="pointer-events-auto space-y-1.5">
+                      {video.category?.name && (
+                        <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold bg-white/15 text-white backdrop-blur">
+                          {video.category.name}
+                        </span>
+                      )}
+                      {video.slug ? (
+                        <Link to={`/article/${video.slug}`} data-reels-control="true">
+                          <h2 className="mt-1 text-base font-semibold text-white headline-hover">
+                            {video.title}
+                          </h2>
+                        </Link>
+                      ) : (
+                        <h2 className="mt-1 text-base font-semibold text-white">
                           {video.title}
                         </h2>
-                      </Link>
-                    ) : (
-                      <h2 className="mt-2 text-base font-semibold text-white">
-                        {video.title}
-                      </h2>
-                    )}
-                    <div className="mt-3 flex items-center justify-between gap-2 text-xs text-white/75">
-                      <a
-                        href={video.facebookUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-reels-control="true"
-                        className="inline-flex items-center gap-1 text-primary-300 hover:text-primary-200"
-                      >
-                        {translateText('Open on Facebook')} <ArrowUpRight className="w-3.5 h-3.5" />
-                      </a>
-                      <span>{formatRelativeTime(video.publishedAt)}</span>
+                      )}
+                      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-white/75">
+                        <a
+                          href={video.facebookUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-reels-control="true"
+                          className="inline-flex items-center gap-1 text-primary-300 hover:text-primary-200"
+                        >
+                          {translateText('Open on Facebook')} <ArrowUpRight className="w-3.5 h-3.5" />
+                        </a>
+                        <span>{formatRelativeTime(video.publishedAt)}</span>
+                      </div>
                     </div>
                   </div>
                 </article>

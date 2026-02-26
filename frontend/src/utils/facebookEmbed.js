@@ -168,7 +168,7 @@ function resolveVideoDisplayMode(value) {
 
 export function buildFacebookEmbedConfig(
   videoUrl,
-  { display = 'auto', forceReel = false, autoplay = false, mute } = {},
+  { display = 'auto', forceReel = false, autoplay = false, mute, cacheKey } = {},
 ) {
   const normalized = normalizeFacebookUrl(videoUrl);
   const fallbackCandidate = normalizeFacebookCandidateUrl(videoUrl);
@@ -179,6 +179,9 @@ export function buildFacebookEmbedConfig(
   const displayMode = resolveVideoDisplayMode(display);
   const isReel = Boolean(forceReel) || displayMode === 'reel' || (displayMode === 'auto' && contentType === 'reel');
   const params = new URLSearchParams({ href });
+  if (cacheKey !== undefined && cacheKey !== null && String(cacheKey).length > 0) {
+    params.set('player_id', String(cacheKey));
+  }
 
   if (contentType === 'post') {
     params.set('show_text', 'true');

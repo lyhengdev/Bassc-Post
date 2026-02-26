@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c6bd4a1f-cf94-4630-b9b3-459250876b8d" name="Changes" comment="--change-authenticate" />
+    <list default="true" id="c6bd4a1f-cf94-4630-b9b3-459250876b8d" name="Changes" comment="--change-authenticate">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useLanguage.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/useLanguage.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/facebookEmbed.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/facebookEmbed.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -133,7 +138,8 @@
       <workItem from="1771638586392" duration="10624000" />
       <workItem from="1771740589566" duration="1671000" />
       <workItem from="1771809115614" duration="45139000" />
-      <workItem from="1771989012686" duration="19752000" />
+      <workItem from="1771989012686" duration="21928000" />
+      <workItem from="1772080900399" duration="8226000" />
     </task>
     <task id="LOCAL-00001" summary="--change-authenticate">
       <option name="closed" value="true" />
