@@ -6,6 +6,25 @@ function normalizePathname(pathname = '/') {
   return compact.replace(/\/+$/, '');
 }
 
+function detectFacebookTypeFromParsedUrl(parsed) {
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+  const path = normalizePathname(parsed.pathname).toLowerCase();
+  const hasVideoQuery = parsed.searchParams.has('v') || parsed.searchParams.has('video_id');
+
+  if (path.includes('/reel/') || path.includes('/reels/') || path.includes('/share/r/')) return 'reel';
+  if (
+    host === 'fb.watch'
+    || path.includes('/videos/')
+    || path === '/watch'
+    || path.startsWith('/watch/')
+    || path.includes('/share/v/')
+    || hasVideoQuery
+  ) {
+    return 'video';
+  }
+  return 'post';
+}
+
 function hasPathIdentifier(pathname, marker) {
   const markerIndex = pathname.indexOf(marker);
   if (markerIndex < 0) return false;
@@ -130,17 +149,12 @@ export function normalizeFacebookUrl(value) {
 }
 
 export function detectFacebookContentType(value) {
-  const normalized = normalizeFacebookUrl(value);
+  const normalized = normalizeFacebookUrl(value) || normalizeFacebookCandidateUrl(value);
   if (!normalized) return 'unknown';
 
   try {
     const parsed = new URL(normalized);
-    const isFbWatchHost = parsed.hostname.toLowerCase().replace(/^www\./, '') === 'fb.watch';
-    const path = normalizePathname(parsed.pathname).toLowerCase();
-    if (path.includes('/reel/') || path.includes('/reels/')) return 'reel';
-    if (isFbWatchHost) return 'video';
-    if (path.includes('/videos/') || path === '/watch' || path.startsWith('/watch/')) return 'video';
-    return 'post';
+    return detectFacebookTypeFromParsedUrl(parsed);
   } catch {
     return 'unknown';
   }
@@ -157,12 +171,14 @@ export function buildFacebookEmbedConfig(
   { display = 'auto', forceReel = false, autoplay = false } = {},
 ) {
   const normalized = normalizeFacebookUrl(videoUrl);
-  if (!normalized) return null;
+  const fallbackCandidate = normalizeFacebookCandidateUrl(videoUrl);
+  const href = normalized || fallbackCandidate;
+  if (!href) return null;
 
-  const contentType = detectFacebookContentType(normalized);
+  const contentType = detectFacebookContentType(href);
   const displayMode = resolveVideoDisplayMode(display);
   const isReel = Boolean(forceReel) || displayMode === 'reel' || (displayMode === 'auto' && contentType === 'reel');
-  const params = new URLSearchParams({ href: normalized });
+  const params = new URLSearchParams({ href });
 
   if (contentType === 'post') {
     params.set('show_text', 'true');

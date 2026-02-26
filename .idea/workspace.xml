@@ -6,12 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="c6bd4a1f-cf94-4630-b9b3-459250876b8d" name="Changes" comment="--change-authenticate">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useLanguage.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/useLanguage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/ArticleEditorPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/ArticleEditorPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/article-detail.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/article-detail.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/home.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/misc.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/misc.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -141,7 +135,7 @@
       <workItem from="1771638586392" duration="10624000" />
       <workItem from="1771740589566" duration="1671000" />
       <workItem from="1771809115614" duration="45139000" />
-      <workItem from="1771989012686" duration="17259000" />
+      <workItem from="1771989012686" duration="17970000" />
     </task>
     <task id="LOCAL-00001" summary="--change-authenticate">
       <option name="closed" value="true" />
