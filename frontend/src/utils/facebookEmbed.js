@@ -190,9 +190,9 @@ export function buildFacebookEmbedConfig(
   }
 
   params.set('show_text', 'false');
-  params.set('autoplay', autoplay ? 'true' : 'false');
+  params.set('autoplay', autoplay ? '1' : '0');
   const shouldMute = typeof mute === 'boolean' ? mute : autoplay;
-  params.set('mute', shouldMute ? 'true' : 'false');
+  params.set('mute', shouldMute ? '1' : '0');
   return {
     src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
     contentType,

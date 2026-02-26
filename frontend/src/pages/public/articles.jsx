@@ -617,6 +617,12 @@ export function VideosPage() {
     setActiveReelIndex(0);
   }, [resetKey]);
 
+  useEffect(() => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = 0;
+  }, [resetKey]);
+
   const isControlTarget = (target) => {
     if (typeof Element === 'undefined' || !target) return false;
     if (target instanceof Element) {
@@ -807,10 +813,11 @@ export function VideosPage() {
       <div className="h-full w-full bg-black flex items-center justify-center">
         <div className="h-full max-w-full aspect-[9/16]">
           <iframe
+            key={`${video.id}-${isActive ? 'active' : 'idle'}`}
             title={video.title || 'Video'}
             src={embedConfig.src}
             className="w-full h-full border-0"
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allow="autoplay; fullscreen; clipboard-write; encrypted-media; picture-in-picture; web-share"
             allowFullScreen
             loading={isActive ? 'eager' : 'lazy'}
             referrerPolicy="origin-when-cross-origin"
