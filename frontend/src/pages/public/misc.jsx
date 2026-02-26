@@ -7,70 +7,8 @@ import { ArticleContent } from '../../components/article/index.jsx';
 import { Button, ArticleDetailSkeleton, Input, Textarea } from '../../components/common/index.jsx';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildMediaUrl, formatDate, cn, formatRelativeTime } from '../../utils';
+import { buildFacebookEmbedConfig, normalizeFacebookUrl } from '../../utils/facebookEmbed';
 import useLanguage from '../../hooks/useLanguage';
-
-function normalizeExternalUrl(value) {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return '';
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  try {
-    const parsed = new URL(withProtocol);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function normalizeFacebookUrl(value) {
-  const normalized = normalizeExternalUrl(value);
-  if (!normalized) return '';
-  try {
-    const parsed = new URL(normalized);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'fb.watch' || host.endsWith('facebook.com')) {
-      return parsed.toString();
-    }
-    return '';
-  } catch {
-    return '';
-  }
-}
-
-function detectFacebookContentType(url) {
-  const normalized = normalizeFacebookUrl(url);
-  if (!normalized) return 'unknown';
-  try {
-    const parsed = new URL(normalized);
-    const path = parsed.pathname.toLowerCase();
-    if (path.includes('/reel/') || path.includes('/reels/')) return 'reel';
-    if (path.includes('/videos/') || path.startsWith('/watch') || parsed.searchParams.has('v')) return 'video';
-    return 'post';
-  } catch {
-    return 'unknown';
-  }
-}
-
-function buildFacebookEmbedConfig(url) {
-  const normalized = normalizeFacebookUrl(url);
-  if (!normalized) return null;
-  const type = detectFacebookContentType(normalized);
-  const params = new URLSearchParams({ href: normalized });
-  if (type === 'post') {
-    params.set('show_text', 'true');
-    return {
-      src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
-      aspectClass: 'aspect-[4/5]',
-    };
-  }
-  params.set('show_text', 'false');
-  params.set('autoplay', 'false');
-  params.set('mute', 'false');
-  return {
-    src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
-    aspectClass: type === 'reel' ? 'aspect-[9/16]' : 'aspect-[16/9]',
-  };
-}
 
 export function ContactPage() {
   const { translateText } = useLanguage();
@@ -538,7 +476,7 @@ export function PreviewPage() {
 
   const { title, excerpt, content, featuredImage, tags, postType, videoUrl } = previewData;
   const imageUrl = buildMediaUrl(featuredImage) || 'https://picsum.photos/seed/preview/1200/600';
-  const normalizedVideoUrl = postType === 'video' ? normalizeExternalUrl(videoUrl) : '';
+  const normalizedVideoUrl = postType === 'video' ? normalizeFacebookUrl(videoUrl) : '';
   const videoEmbed = postType === 'video' ? buildFacebookEmbedConfig(normalizedVideoUrl) : null;
 
   return (
@@ -655,7 +593,7 @@ export function PreviewByIdPage() {
 
   const { title, excerpt, content, featuredImage, author, createdAt, publishedAt, status, postType, videoUrl } = article;
   const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${id}/1200/600`;
-  const normalizedVideoUrl = postType === 'video' ? normalizeExternalUrl(videoUrl) : '';
+  const normalizedVideoUrl = postType === 'video' ? normalizeFacebookUrl(videoUrl) : '';
   const videoEmbed = postType === 'video' ? buildFacebookEmbedConfig(normalizedVideoUrl) : null;
   const authorName = author?.fullName || `${author?.firstName || ''} ${author?.lastName || ''}`.trim() || 'Unknown';
   const displayDate = publishedAt || createdAt;

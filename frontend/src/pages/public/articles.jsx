@@ -12,83 +12,11 @@ import { BodyAd } from '../../components/ads/index.js';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { InlineAdGroup, createAdTracker, getSectionIndexAfterRows } from '../../components/ads/inlineAds.jsx';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
+import { buildFacebookEmbedConfig, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
 import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
 import useLanguage from '../../hooks/useLanguage';
 
 // ==================== HOME PAGE ====================
-
-function normalizeExternalUrl(value) {
-  if (typeof value !== 'string') return '';
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-
-  try {
-    const parsed = new URL(withProtocol);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function normalizeFacebookUrl(value) {
-  const normalized = normalizeExternalUrl(value);
-  if (!normalized) return '';
-
-  try {
-    const parsed = new URL(normalized);
-    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    return hostname === 'fb.watch' || hostname.endsWith('facebook.com') ? parsed.toString() : '';
-  } catch {
-    return '';
-  }
-}
-
-function detectFacebookContentType(videoUrl) {
-  const normalized = normalizeFacebookUrl(videoUrl);
-  if (!normalized) return 'unknown';
-
-  try {
-    const parsed = new URL(normalized);
-    const path = parsed.pathname.toLowerCase();
-    const hasVideoQuery = parsed.searchParams.has('v');
-    const isFbWatchHost = parsed.hostname.toLowerCase().replace(/^www\./, '') === 'fb.watch';
-    const isReel = path.includes('/reel/') || path.includes('/reels/');
-    if (isReel) return 'reel';
-    if (isFbWatchHost || path.includes('/videos/') || path === '/watch' || path.startsWith('/watch/') || hasVideoQuery) {
-      return 'video';
-    }
-    return 'post';
-  } catch {
-    return 'unknown';
-  }
-}
-
-function buildFacebookEmbedConfig(videoUrl, { forceReel = false, autoplay = false } = {}) {
-  const normalized = normalizeFacebookUrl(videoUrl);
-  if (!normalized) return null;
-
-  const contentType = detectFacebookContentType(normalized);
-  const isReel = forceReel || contentType === 'reel';
-  const params = new URLSearchParams({ href: normalized });
-
-  if (contentType === 'post') {
-    params.set('show_text', 'true');
-    return {
-      src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
-      aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[4/5]',
-    };
-  }
-
-  params.set('show_text', 'false');
-  params.set('autoplay', autoplay ? 'true' : 'false');
-  params.set('mute', 'false');
-  return {
-    src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
-    aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[16/9]',
-  };
-}
 
 function ArticleCardNews({ article }) {
   const { translateText } = useLanguage();
@@ -669,7 +597,7 @@ export function VideosPage() {
   )) || [];
   const videos = allArticles
     .map((article, index) => {
-      const facebookUrl = normalizeFacebookUrl(article?.videoUrl || '');
+      const facebookUrl = normalizeFacebookCandidateUrl(article?.videoUrl || '');
       return {
         id: article?._id || article?.slug || `video-${index}`,
         facebookUrl,

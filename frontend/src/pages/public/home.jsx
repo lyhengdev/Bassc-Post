@@ -9,6 +9,7 @@ import { Button } from '../../components/common/index.jsx';
 import { BodyAd } from '../../components/ads/index.js';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
+import { buildFacebookEmbedConfig, detectFacebookContentType, normalizeExternalUrl, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
 import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
 import useLanguage from '../../hooks/useLanguage';
 
@@ -23,89 +24,6 @@ const HOME_TYPE = {
     cardTitle: 'text-base sm:text-lg lg:text-xl font-semibold text-dark-900 dark:text-white',
     cardTitleAll: 'text-base sm:text-lg lg:text-lg font-semibold text-dark-900 dark:text-white mt-1 leading-snug headline-hover line-clamp-2',
 };
-
-function normalizeExternalUrl(value) {
-  if (typeof value !== 'string') return '';
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-
-  try {
-    const parsed = new URL(withProtocol);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function normalizeFacebookUrl(value) {
-  const normalized = normalizeExternalUrl(value);
-  if (!normalized) return '';
-
-  try {
-    const parsed = new URL(normalized);
-    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    const isFacebookHost = hostname === 'fb.watch' || hostname.endsWith('facebook.com');
-    return isFacebookHost ? parsed.toString() : '';
-  } catch {
-    return '';
-  }
-}
-
-function detectFacebookContentType(videoUrl) {
-  const normalized = normalizeFacebookUrl(videoUrl);
-  if (!normalized) return 'unknown';
-
-  try {
-    const parsed = new URL(normalized);
-    const path = parsed.pathname.toLowerCase();
-    const hasVideoQuery = parsed.searchParams.has('v');
-    const isFbWatchHost = parsed.hostname.toLowerCase().replace(/^www\./, '') === 'fb.watch';
-    const isReel = path.includes('/reel/') || path.includes('/reels/');
-    if (isReel) return 'reel';
-    if (isFbWatchHost || path.includes('/videos/') || path === '/watch' || path.startsWith('/watch/') || hasVideoQuery) {
-      return 'video';
-    }
-    return 'post';
-  } catch {
-    return 'unknown';
-  }
-}
-
-function resolveVideoDisplayMode(value) {
-  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : 'auto';
-  if (normalized === 'reel' || normalized === 'landscape' || normalized === 'auto') return normalized;
-  return 'auto';
-}
-
-function buildFacebookEmbedConfig(videoUrl, display = 'auto') {
-  const normalized = normalizeFacebookUrl(videoUrl);
-  if (!normalized) return null;
-
-  const contentType = detectFacebookContentType(normalized);
-  const displayMode = resolveVideoDisplayMode(display);
-  const isReel = displayMode === 'reel' || (displayMode === 'auto' && contentType === 'reel');
-  const params = new URLSearchParams({ href: normalized });
-
-  if (contentType === 'post') {
-    params.set('show_text', 'true');
-    return {
-      src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
-      contentType,
-      aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[4/5]',
-    };
-  }
-
-  params.set('show_text', 'false');
-  params.set('autoplay', 'false');
-  params.set('mute', 'false');
-  return {
-    src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
-    contentType,
-    aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[16/9]',
-  };
-}
 
 function formatVideoDate(value) {
   if (!value) return '';
@@ -1186,7 +1104,7 @@ function VideoSection({ section }) {
   const videoArticles = videoData?.data?.articles || [];
   const normalizedVideos = videoArticles
     .map((article, index) => {
-      const facebookUrl = normalizeFacebookUrl(article?.videoUrl || '');
+      const facebookUrl = normalizeFacebookCandidateUrl(article?.videoUrl || '');
       const contentType = detectFacebookContentType(facebookUrl);
       const defaultHeadline = contentType === 'reel'
         ? translateText('Facebook Reel')
@@ -1213,7 +1131,7 @@ function VideoSection({ section }) {
   }, [resetKey]);
 
   const featuredIndex = normalizedVideos.findIndex((item) => {
-    const embedConfig = buildFacebookEmbedConfig(item.facebookUrl, item.display);
+    const embedConfig = buildFacebookEmbedConfig(item.facebookUrl, { display: item.display });
     return embedConfig?.aspectClass !== 'aspect-[9/16]';
   });
   const resolvedFeaturedIndex = featuredIndex >= 0 ? featuredIndex : 0;
@@ -1226,7 +1144,7 @@ function VideoSection({ section }) {
   const viewAllLabel = (section?.settings?.viewAllLabel || '').trim() || translateText('View all');
 
   const renderVideoEmbed = (video, { eager = false } = {}) => {
-    const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, video.display);
+    const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, { display: video.display });
     const isFailed = Boolean(failedEmbeds[video.id]);
     if (!embedConfig || isFailed) {
       const fallbackAspectClass = embedConfig?.aspectClass || (video.display === 'reel' ? 'aspect-[9/16]' : 'aspect-[16/9]');

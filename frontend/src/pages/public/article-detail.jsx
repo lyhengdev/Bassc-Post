@@ -12,76 +12,10 @@ import { BodyAd } from '../../components/ads/index.js';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { InlineAdGroup } from '../../components/ads/inlineAds.jsx';
 import { buildMediaUrl, formatDate, cn, formatRelativeTime } from '../../utils';
+import { buildFacebookEmbedConfig, normalizeFacebookUrl } from '../../utils/facebookEmbed';
 import { useAuthStore } from '../../stores/authStore';
 import { SidebarAdSlot } from './shared/rightSidebarAds.jsx';
 import useLanguage from '../../hooks/useLanguage';
-
-function normalizeExternalUrl(value) {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return '';
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  try {
-    const parsed = new URL(withProtocol);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function normalizeFacebookUrl(value) {
-  const normalized = normalizeExternalUrl(value);
-  if (!normalized) return '';
-  try {
-    const parsed = new URL(normalized);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'fb.watch' || host.endsWith('facebook.com')) {
-      return parsed.toString();
-    }
-    return '';
-  } catch {
-    return '';
-  }
-}
-
-function detectFacebookContentType(url) {
-  const normalized = normalizeFacebookUrl(url);
-  if (!normalized) return 'unknown';
-  try {
-    const parsed = new URL(normalized);
-    const path = parsed.pathname.toLowerCase();
-    const isReel = path.includes('/reel/') || path.includes('/reels/');
-    if (isReel) return 'reel';
-    if (path.includes('/videos/') || path.startsWith('/watch') || parsed.searchParams.has('v')) {
-      return 'video';
-    }
-    return 'post';
-  } catch {
-    return 'unknown';
-  }
-}
-
-function buildFacebookEmbedConfig(url) {
-  const normalized = normalizeFacebookUrl(url);
-  if (!normalized) return null;
-  const contentType = detectFacebookContentType(normalized);
-  const params = new URLSearchParams({ href: normalized });
-  if (contentType === 'post') {
-    params.set('show_text', 'true');
-    return {
-      src: `https://www.facebook.com/plugins/post.php?${params.toString()}`,
-      aspectClass: 'aspect-[4/5]',
-    };
-  }
-  const isReel = contentType === 'reel';
-  params.set('show_text', 'false');
-  params.set('autoplay', 'false');
-  params.set('mute', 'false');
-  return {
-    src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
-    aspectClass: isReel ? 'aspect-[9/16]' : 'aspect-[16/9]',
-  };
-}
 
 function NewsListWithExcerpt({ articles, isLoading, emptyMessage, imageSize = 'md' }) {
   const { translateText } = useLanguage();
@@ -650,7 +584,7 @@ export function ArticlePage() {
   const articleSlug = article?.slug || slug;
   // featuredImage is a string URL, not an object
   const imageUrl = buildMediaUrl(featuredImage) || `https://picsum.photos/seed/${articleSlug}/1200/600`;
-  const normalizedVideoUrl = postType === 'video' ? normalizeExternalUrl(videoUrl) : '';
+  const normalizedVideoUrl = postType === 'video' ? normalizeFacebookUrl(videoUrl) : '';
   const videoEmbed = postType === 'video' ? buildFacebookEmbedConfig(normalizedVideoUrl) : null;
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const normalizeShareBase = (value = '') =>
