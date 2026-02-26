@@ -560,6 +560,7 @@ export function VideosPage() {
   const STEP_ANIMATION_MS = 80;
   const limit = 8;
   const [failedEmbeds, setFailedEmbeds] = useState({});
+  const [activeReelIndex, setActiveReelIndex] = useState(0);
 
   const {
     data: videosPages,
@@ -613,6 +614,7 @@ export function VideosPage() {
 
   useEffect(() => {
     setFailedEmbeds({});
+    setActiveReelIndex(0);
   }, [resetKey]);
 
   const isControlTarget = (target) => {
@@ -639,6 +641,7 @@ export function VideosPage() {
     if (!viewport) return;
     const itemHeight = viewport.clientHeight || 1;
     const boundedIndex = Math.max(0, Math.min(videos.length - 1, index));
+    setActiveReelIndex(boundedIndex);
     const targetTop = boundedIndex * itemHeight;
 
     if (!animate) {
@@ -766,8 +769,20 @@ export function VideosPage() {
     }, TOUCH_LOCK_MS);
   };
 
-  const renderVideoEmbed = (video) => {
-    const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, { forceReel: true, autoplay: true });
+  const handleReelsScroll = () => {
+    const viewport = reelsViewportRef.current;
+    if (!viewport) return;
+    const itemHeight = viewport.clientHeight || 1;
+    const nextIndex = Math.max(0, Math.min(videos.length - 1, Math.round(viewport.scrollTop / itemHeight)));
+    setActiveReelIndex(nextIndex);
+  };
+
+  const renderVideoEmbed = (video, { isActive = false } = {}) => {
+    const embedConfig = buildFacebookEmbedConfig(video.facebookUrl, {
+      forceReel: true,
+      autoplay: isActive,
+      mute: isActive,
+    });
     const isFailed = Boolean(failedEmbeds[video.id]);
 
     if (!embedConfig || isFailed) {
@@ -789,17 +804,19 @@ export function VideosPage() {
     }
 
     return (
-      <div className="h-full w-full bg-black">
-        <iframe
-          title={video.title || 'Video'}
-          src={embedConfig.src}
-          className="w-full h-full border-0"
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="origin-when-cross-origin"
-          onError={() => setFailedEmbeds((prev) => (prev[video.id] ? prev : { ...prev, [video.id]: true }))}
-        />
+      <div className="h-full w-full bg-black flex items-center justify-center">
+        <div className="h-full max-w-full aspect-[9/16]">
+          <iframe
+            title={video.title || 'Video'}
+            src={embedConfig.src}
+            className="w-full h-full border-0"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+            loading={isActive ? 'eager' : 'lazy'}
+            referrerPolicy="origin-when-cross-origin"
+            onError={() => setFailedEmbeds((prev) => (prev[video.id] ? prev : { ...prev, [video.id]: true }))}
+          />
+        </div>
       </div>
     );
   };
@@ -821,6 +838,7 @@ export function VideosPage() {
               onTouchStart={handleReelsTouchStart}
               onTouchMove={handleReelsTouchMove}
               onTouchEnd={handleReelsTouchEnd}
+              onScroll={handleReelsScroll}
               onTouchCancel={() => { touchActiveRef.current = false; }}
               className="relative h-[100dvh] overflow-y-scroll no-scrollbar overscroll-y-none touch-pan-y snap-y snap-mandatory bg-black sm:rounded-2xl sm:border sm:border-dark-800 sm:shadow-xl"
             >
@@ -849,7 +867,7 @@ export function VideosPage() {
                   key={video.id}
                   className="relative h-[100dvh] snap-start snap-always"
                 >
-                  {renderVideoEmbed(video)}
+                  {renderVideoEmbed(video, { isActive: videos[activeReelIndex]?.id === video.id })}
 
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-4 pb-4 pt-10 text-white">
                     {video.category?.name && (

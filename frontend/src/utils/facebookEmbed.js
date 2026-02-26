@@ -168,7 +168,7 @@ function resolveVideoDisplayMode(value) {
 
 export function buildFacebookEmbedConfig(
   videoUrl,
-  { display = 'auto', forceReel = false, autoplay = false } = {},
+  { display = 'auto', forceReel = false, autoplay = false, mute } = {},
 ) {
   const normalized = normalizeFacebookUrl(videoUrl);
   const fallbackCandidate = normalizeFacebookCandidateUrl(videoUrl);
@@ -191,7 +191,8 @@ export function buildFacebookEmbedConfig(
 
   params.set('show_text', 'false');
   params.set('autoplay', autoplay ? 'true' : 'false');
-  params.set('mute', 'false');
+  const shouldMute = typeof mute === 'boolean' ? mute : autoplay;
+  params.set('mute', shouldMute ? 'true' : 'false');
   return {
     src: `https://www.facebook.com/plugins/video.php?${params.toString()}`,
     contentType,
