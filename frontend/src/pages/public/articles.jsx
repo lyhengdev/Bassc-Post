@@ -2,7 +2,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Clock, Eye, Search, X, TrendingUp, User, ArrowUpRight, ExternalLink, Volume2, VolumeX, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowRight, Clock, Eye, Search, X, TrendingUp, User, ArrowUpRight, ExternalLink, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useCategories, usePublicSettings } from '../../hooks/useApi';
 import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
@@ -13,7 +13,7 @@ import { BodyAd } from '../../components/ads/index.js';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { InlineAdGroup, createAdTracker, getSectionIndexAfterRows } from '../../components/ads/inlineAds.jsx';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
-import { buildFacebookEmbedConfig, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
+import { buildFacebookEmbedConfig, normalizeExternalUrl, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
 import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
 import useLanguage from '../../hooks/useLanguage';
 
@@ -36,6 +36,16 @@ const REEL_MOTION_PRESETS = {
 
 // Change this in one place to tune reels feel.
 const ACTIVE_REEL_MOTION_PRESET = 'cinematic';
+const REELS_QUALITY_MODES = ['auto', 'data', 'best'];
+const REELS_QUALITY_STORAGE_KEY = 'reelsQualityMode';
+const REELS_LAST_POSITION_STORAGE_KEY = 'reelsLastPositionV1';
+const REELS_PREVIEW_HOLD_MS = 220;
+const REELS_PREVIEW_SPEED = 1.75;
+const REELS_RENDER_WINDOW_BEFORE = 5;
+const REELS_RENDER_WINDOW_AFTER = 7;
+const REELS_STATE_KEEP_BEFORE = 8;
+const REELS_STATE_KEEP_AFTER = 10;
+const REELS_STALL_SKIP_MS = 6500;
 
 // ==================== HOME PAGE ====================
 
@@ -567,6 +577,16 @@ export function VideosPage() {
   const touchActiveRef = useRef(false);
   const touchLockRef = useRef(false);
   const autoplayRetryTimerRef = useRef(null);
+  const mobileRailHideTimerRef = useRef(null);
+  const holdPreviewTimerRef = useRef(null);
+  const holdPreviewVideoIdRef = useRef('');
+  const holdPreviewActiveRef = useRef(false);
+  const controlTouchGuardTimerRef = useRef(null);
+  const controlTouchGuardRef = useRef(false);
+  const detailCardHideTimerRef = useRef(null);
+  const reelStallTimerRef = useRef(null);
+  const stalledSkipCountsRef = useRef({});
+  const hasRestoredPositionRef = useRef(false);
   const hasUserGestureRef = useRef(false);
   const activeReelIndexRef = useRef(0);
   const WHEEL_LOCK_MS = motionPreset.wheelLockMs;
@@ -583,13 +603,41 @@ export function VideosPage() {
   const [showAutoplayPrompt, setShowAutoplayPrompt] = useState(true);
   const [loadingEmbeds, setLoadingEmbeds] = useState({});
   const [saveDataEnabled, setSaveDataEnabled] = useState(false);
+  const [qualityMode, setQualityMode] = useState(REELS_QUALITY_MODES[0]);
   const [isMuted, setIsMuted] = useState(true); // Always let FB control audio; start muted for autoplay
-  const embedPreloadRadius = saveDataEnabled ? 0 : 1;
+  const [showMobileRail, setShowMobileRail] = useState(false);
+  const [activeDirectVideoPlaying, setActiveDirectVideoPlaying] = useState(false);
+  const [showDetailCard, setShowDetailCard] = useState(true);
+  const embedPreloadRadius = useMemo(() => {
+    if (qualityMode === 'best') return 2;
+    if (qualityMode === 'data') return 0;
+    return saveDataEnabled ? 0 : 1;
+  }, [qualityMode, saveDataEnabled]);
+  const autoplayAggressive = useMemo(() => {
+    if (qualityMode === 'best') return true;
+    if (qualityMode === 'data') return false;
+    return !saveDataEnabled;
+  }, [qualityMode, saveDataEnabled]);
+  const qualityModeLabel = useMemo(() => {
+    if (qualityMode === 'data') return translateText('Data Saver');
+    if (qualityMode === 'best') return translateText('Best');
+    return translateText('Auto');
+  }, [qualityMode, translateText]);
+  const effectiveModeLabel = useMemo(() => {
+    if (qualityMode === 'auto') {
+      return saveDataEnabled ? translateText('Data Saver') : translateText('Best');
+    }
+    return qualityModeLabel;
+  }, [qualityMode, qualityModeLabel, saveDataEnabled, translateText]);
   const detailRenderRadius = embedPreloadRadius + 2;
   const mutedAutoplayStartedRef = useRef(false);
   const isTouchDevice = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return 'ontouchstart' in window || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0);
+  }, []);
+  const supportsPointerEvents = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return 'PointerEvent' in window;
   }, []);
   const [showMobileHint, setShowMobileHint] = useState(false);
 
@@ -604,8 +652,9 @@ export function VideosPage() {
 
   const [showGestureOverlay, setShowGestureOverlay] = useState(() => !isTouchDevice && !getGestureDone());
 
-  const queueAutoplayRetry = useCallback((delay = 0) => {
+  const queueAutoplayRetry = useCallback((delay = 0, { force = false } = {}) => {
     if (isTouchDevice) return;
+    if (!force && !autoplayAggressive) return;
     if (typeof window === 'undefined') return;
     if (autoplayRetryTimerRef.current) {
       window.clearTimeout(autoplayRetryTimerRef.current);
@@ -614,7 +663,124 @@ export function VideosPage() {
       autoplayRetryTimerRef.current = null;
       setPlaySession((value) => value + 1);
     }, Math.max(0, delay));
-  }, [isTouchDevice]);
+  }, [autoplayAggressive, isTouchDevice]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedMode = window.localStorage.getItem(REELS_QUALITY_STORAGE_KEY);
+      if (storedMode && REELS_QUALITY_MODES.includes(storedMode)) {
+        setQualityMode(storedMode);
+      }
+    } catch {
+      // Ignore storage failures (e.g., Safari private mode).
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!REELS_QUALITY_MODES.includes(qualityMode)) return;
+    try {
+      window.localStorage.setItem(REELS_QUALITY_STORAGE_KEY, qualityMode);
+    } catch {
+      // Ignore storage failures (e.g., Safari private mode).
+    }
+  }, [qualityMode]);
+
+  const clearMobileRailTimer = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (mobileRailHideTimerRef.current) {
+      window.clearTimeout(mobileRailHideTimerRef.current);
+      mobileRailHideTimerRef.current = null;
+    }
+  }, []);
+
+  const showMobileRailTemporarily = useCallback(() => {
+    if (!isTouchDevice || showGestureOverlay) return;
+    if (typeof window === 'undefined') return;
+    setShowMobileRail(true);
+    clearMobileRailTimer();
+    mobileRailHideTimerRef.current = window.setTimeout(() => {
+      mobileRailHideTimerRef.current = null;
+      setShowMobileRail(false);
+    }, 2000);
+  }, [clearMobileRailTimer, isTouchDevice, showGestureOverlay]);
+
+  const clearHoldPreviewTimer = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (holdPreviewTimerRef.current) {
+      window.clearTimeout(holdPreviewTimerRef.current);
+      holdPreviewTimerRef.current = null;
+    }
+  }, []);
+
+  const resetHoldPreviewSpeed = useCallback(() => {
+    clearHoldPreviewTimer();
+    const previewVideoId = holdPreviewVideoIdRef.current;
+    if (previewVideoId) {
+      const node = directVideoRefs.current[previewVideoId];
+      if (node) {
+        try {
+          node.playbackRate = 1;
+        } catch {
+          // Ignore playbackRate failures in restricted browsers.
+        }
+      }
+    }
+    holdPreviewVideoIdRef.current = '';
+    holdPreviewActiveRef.current = false;
+  }, [clearHoldPreviewTimer]);
+
+  const beginHoldPreviewSpeed = useCallback((videoId) => {
+    if (!videoId || typeof window === 'undefined') return;
+    resetHoldPreviewSpeed();
+    holdPreviewVideoIdRef.current = videoId;
+    holdPreviewTimerRef.current = window.setTimeout(() => {
+      holdPreviewTimerRef.current = null;
+      const node = directVideoRefs.current[videoId];
+      if (!node || node.paused) return;
+      try {
+        node.playbackRate = REELS_PREVIEW_SPEED;
+        holdPreviewActiveRef.current = true;
+      } catch {
+        holdPreviewActiveRef.current = false;
+      }
+    }, REELS_PREVIEW_HOLD_MS);
+  }, [resetHoldPreviewSpeed]);
+
+  const getDirectVideoPreload = useCallback((isActive) => {
+    if (qualityMode === 'data') return isActive ? 'metadata' : 'none';
+    if (qualityMode === 'best') return isActive ? 'auto' : 'metadata';
+    return isActive ? 'metadata' : 'none';
+  }, [qualityMode]);
+
+  const clearDetailCardTimer = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (detailCardHideTimerRef.current) {
+      window.clearTimeout(detailCardHideTimerRef.current);
+      detailCardHideTimerRef.current = null;
+    }
+  }, []);
+
+  const showDetailCardTemporarily = useCallback((duration = 2200, { canAutoHide = false } = {}) => {
+    setShowDetailCard(true);
+    clearDetailCardTimer();
+    if (!isTouchDevice || !canAutoHide || !activeDirectVideoPlaying) return;
+    detailCardHideTimerRef.current = window.setTimeout(() => {
+      detailCardHideTimerRef.current = null;
+      setShowDetailCard(false);
+    }, duration);
+  }, [activeDirectVideoPlaying, clearDetailCardTimer, isTouchDevice]);
+
+  const showDetailCardWithDelay = useCallback((duration = 2200) => {
+    setShowDetailCard(true);
+    clearDetailCardTimer();
+    if (!isTouchDevice) return;
+    detailCardHideTimerRef.current = window.setTimeout(() => {
+      detailCardHideTimerRef.current = null;
+      setShowDetailCard(false);
+    }, duration);
+  }, [clearDetailCardTimer, isTouchDevice]);
 
   const {
     data: videosPages,
@@ -653,14 +819,16 @@ export function VideosPage() {
 
   const videos = useMemo(() => {
     const seenIds = new Set();
-    return allArticles
+    const deduped = allArticles
       .map((article, index) => {
-        const facebookUrl = normalizeFacebookCandidateUrl(article?.videoUrl || '');
+        const rawVideoUrl = normalizeExternalUrl(article?.videoUrl || '');
+        const facebookUrl = normalizeFacebookCandidateUrl(rawVideoUrl);
         const directUrl = article?.directVideoUrl
           || article?.videoFileUrl
           || article?.videoFile?.url
           || article?.video?.url
           || article?.file?.url
+          || (facebookUrl ? '' : rawVideoUrl)
           || '';
         const sourceUrl = facebookUrl || directUrl;
         const id = article?._id || article?.slug || `video-${index}`;
@@ -669,6 +837,7 @@ export function VideosPage() {
           facebookUrl,
           directUrl,
           sourceUrl,
+          sourceFingerprint: sourceUrl.toLowerCase(),
           title: article?.title || '',
           excerpt: article?.excerpt || '',
           slug: article?.slug || '',
@@ -682,6 +851,20 @@ export function VideosPage() {
         seenIds.add(item.id);
         return true;
       });
+    if (deduped.length < 3) {
+      return deduped.map(({ sourceFingerprint: _sourceFingerprint, ...video }) => video);
+    }
+    const remaining = [...deduped];
+    const diversified = [];
+    let previousFingerprint = '';
+    while (remaining.length > 0) {
+      let pickIndex = remaining.findIndex((item) => item.sourceFingerprint !== previousFingerprint);
+      if (pickIndex < 0) pickIndex = 0;
+      const [picked] = remaining.splice(pickIndex, 1);
+      diversified.push(picked);
+      previousFingerprint = picked.sourceFingerprint;
+    }
+    return diversified.map(({ sourceFingerprint: _sourceFingerprint, ...video }) => video);
   }, [allArticles]);
 
   const feedIdentity = useMemo(() => {
@@ -691,6 +874,10 @@ export function VideosPage() {
   const firstVideoHasDirect = Boolean(videos[0]?.directUrl);
   const activeVideo = videos[activeReelIndex] || null;
   const activeVideoId = activeVideo?.id || '';
+  const activeUsesDirectPlayer = Boolean(activeVideo?.directUrl && (isTouchDevice || !activeVideo?.facebookUrl));
+  const suppressBottomHints = Boolean(isTouchDevice && activeUsesDirectPlayer && activeDirectVideoPlaying);
+  const renderWindowStart = Math.max(0, activeReelIndex - REELS_RENDER_WINDOW_BEFORE);
+  const renderWindowEnd = Math.min(videos.length - 1, activeReelIndex + REELS_RENDER_WINDOW_AFTER);
 
   useEffect(() => {
     if (videos.length === 0) {
@@ -721,6 +908,7 @@ export function VideosPage() {
     setFailedEmbeds({});
     setActiveReelIndex(0);
     activeReelIndexRef.current = 0;
+    hasRestoredPositionRef.current = false;
     setPlaySession(1);
     const gestureDone = getGestureDone();
     const shouldHideOverlays = gestureDone || hasUserGestureRef.current || (isTouchDevice && firstVideoHasDirect);
@@ -728,6 +916,8 @@ export function VideosPage() {
     setShowAutoplayPrompt(!shouldHideOverlays);
     setLoadingEmbeds({});
     setIsMuted(true);
+    setActiveDirectVideoPlaying(false);
+    setShowDetailCard(true);
     // iPhone/Android: avoid replay-loop CTA; desktop keeps explicit first-play affordance.
     setShowGestureOverlay(!isTouchDevice && !shouldHideOverlays);
     if (shouldHideOverlays && typeof window !== 'undefined') {
@@ -738,6 +928,18 @@ export function VideosPage() {
       }
     }
     mutedAutoplayStartedRef.current = false;
+    clearDetailCardTimer();
+    stalledSkipCountsRef.current = {};
+    if (reelStallTimerRef.current) {
+      window.clearTimeout(reelStallTimerRef.current);
+      reelStallTimerRef.current = null;
+    }
+    controlTouchGuardRef.current = false;
+    if (controlTouchGuardTimerRef.current) {
+      window.clearTimeout(controlTouchGuardTimerRef.current);
+      controlTouchGuardTimerRef.current = null;
+    }
+    resetHoldPreviewSpeed();
     directVideoRefs.current = {};
     if (autoplayRetryTimerRef.current) {
       window.clearTimeout(autoplayRetryTimerRef.current);
@@ -747,7 +949,7 @@ export function VideosPage() {
       window.cancelAnimationFrame(scrollFrameRef.current);
       scrollFrameRef.current = null;
     }
-  }, [feedIdentity, firstVideoHasDirect, getGestureDone, isTouchDevice]);
+  }, [clearDetailCardTimer, feedIdentity, firstVideoHasDirect, getGestureDone, isTouchDevice, resetHoldPreviewSpeed]);
 
   useEffect(() => {
     if (!isTouchDevice) return undefined;
@@ -763,6 +965,58 @@ export function VideosPage() {
     viewport.scrollTop = 0;
   }, [feedIdentity]);
 
+  useEffect(() => {
+    if (hasRestoredPositionRef.current) return;
+    if (videos.length < 1) return;
+    hasRestoredPositionRef.current = true;
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(REELS_LAST_POSITION_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+      let targetIndex = -1;
+      if (parsed.videoId) {
+        targetIndex = videos.findIndex((video) => video.id === parsed.videoId);
+      }
+      const canUseStoredIndex = !parsed.language || parsed.language === language;
+      const parsedIndex = Number(parsed.index);
+      if (targetIndex < 0 && canUseStoredIndex && Number.isInteger(parsedIndex)) {
+        targetIndex = Math.max(0, Math.min(videos.length - 1, parsedIndex));
+      }
+      if (targetIndex >= 0) {
+        const viewport = reelsViewportRef.current;
+        const itemHeight = viewport?.clientHeight || 1;
+        activeReelIndexRef.current = targetIndex;
+        setActiveReelIndex(targetIndex);
+        if (viewport) {
+          viewport.scrollTop = targetIndex * itemHeight;
+        }
+      }
+    } catch {
+      // Ignore storage failures (e.g., Safari private mode).
+    }
+  }, [language, videos]);
+
+  useEffect(() => {
+    if (!activeVideoId) return;
+    if (typeof window === 'undefined') return;
+    if (activeReelIndexRef.current !== activeReelIndex) return;
+    try {
+      window.localStorage.setItem(
+        REELS_LAST_POSITION_STORAGE_KEY,
+        JSON.stringify({
+          videoId: activeVideoId,
+          index: activeReelIndex,
+          language,
+          updatedAt: Date.now(),
+        }),
+      );
+    } catch {
+      // Ignore storage failures (e.g., Safari private mode).
+    }
+  }, [activeReelIndex, activeVideoId, language]);
+
   const isControlTarget = (target) => {
     if (typeof Element === 'undefined' || !target) return false;
     if (target instanceof Element) {
@@ -776,6 +1030,18 @@ export function VideosPage() {
 
   useEffect(() => {
     return () => {
+      clearMobileRailTimer();
+      resetHoldPreviewSpeed();
+      clearDetailCardTimer();
+      if (reelStallTimerRef.current) {
+        window.clearTimeout(reelStallTimerRef.current);
+        reelStallTimerRef.current = null;
+      }
+      controlTouchGuardRef.current = false;
+      if (controlTouchGuardTimerRef.current) {
+        window.clearTimeout(controlTouchGuardTimerRef.current);
+        controlTouchGuardTimerRef.current = null;
+      }
       if (transitionFrameRef.current) {
         window.cancelAnimationFrame(transitionFrameRef.current);
       }
@@ -787,7 +1053,7 @@ export function VideosPage() {
         autoplayRetryTimerRef.current = null;
       }
     };
-  }, []);
+  }, [clearDetailCardTimer, clearMobileRailTimer, resetHoldPreviewSpeed]);
 
   useEffect(() => {
     const handleResumePlayback = () => {
@@ -813,10 +1079,26 @@ export function VideosPage() {
 
   useEffect(() => {
     const connection = typeof navigator !== 'undefined' ? navigator.connection || navigator.webkitConnection || navigator.mozConnection : null;
-    if (connection && typeof connection.saveData === 'boolean') {
+    if (!connection || typeof connection.saveData !== 'boolean') return undefined;
+    const syncSaveDataMode = () => {
       setSaveDataEnabled(Boolean(connection.saveData));
-    }
+    };
+    syncSaveDataMode();
+    if (typeof connection.addEventListener !== 'function') return undefined;
+    connection.addEventListener('change', syncSaveDataMode);
+    return () => {
+      connection.removeEventListener('change', syncSaveDataMode);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isTouchDevice || showGestureOverlay || videos.length < 1) {
+      setShowMobileRail(false);
+      clearMobileRailTimer();
+      return;
+    }
+    showMobileRailTemporarily();
+  }, [activeReelIndex, clearMobileRailTimer, isTouchDevice, showGestureOverlay, showMobileRailTemporarily, videos.length]);
 
   const startPlayback = useCallback(() => {
     if (hasUserGestureRef.current) {
@@ -834,15 +1116,16 @@ export function VideosPage() {
         // Ignore storage failures (e.g., Safari private mode).
       }
     }
-    queueAutoplayRetry();
+    queueAutoplayRetry(0, { force: true });
   }, [queueAutoplayRetry]);
 
   const handleViewportGestureCapture = useCallback((event) => {
     if (!isTouchDevice) return;
     if (isControlTarget(event.target)) return;
+    showMobileRailTemporarily();
     if (!showGestureOverlay && hasUserGestureRef.current) return;
     startPlayback();
-  }, [isTouchDevice, showGestureOverlay, startPlayback]);
+  }, [isTouchDevice, showGestureOverlay, showMobileRailTemporarily, startPlayback]);
 
   const jumpToReel = useCallback((index, { animate = true } = {}) => {
     const viewport = reelsViewportRef.current;
@@ -932,10 +1215,37 @@ export function VideosPage() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, jumpToReel, videos.length]);
 
   const handleThumbStep = useCallback((direction) => {
+    showMobileRailTemporarily();
     startPlayback();
-    // Thumb controls on phone should feel immediate and never lock the screen.
-    moveReelByStep(direction, { animate: false, force: true });
-  }, [moveReelByStep, startPlayback]);
+    // Keep button navigation smooth while still allowing quick repeated taps.
+    moveReelByStep(direction, { animate: true, force: true });
+  }, [moveReelByStep, showMobileRailTemporarily, startPlayback]);
+
+  const armControlTouchGuard = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    controlTouchGuardRef.current = true;
+    if (controlTouchGuardTimerRef.current) {
+      window.clearTimeout(controlTouchGuardTimerRef.current);
+    }
+    controlTouchGuardTimerRef.current = window.setTimeout(() => {
+      controlTouchGuardTimerRef.current = null;
+      controlTouchGuardRef.current = false;
+    }, 350);
+  }, []);
+
+  const handleStepControlTouch = useCallback((event, direction) => {
+    event.preventDefault();
+    event.stopPropagation();
+    armControlTouchGuard();
+    handleThumbStep(direction);
+  }, [armControlTouchGuard, handleThumbStep]);
+
+  const handleStepControlClick = useCallback((event, direction) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (controlTouchGuardRef.current) return;
+    handleThumbStep(direction);
+  }, [handleThumbStep]);
 
   const handleReelsWheel = (event) => {
     const viewport = reelsViewportRef.current;
@@ -1007,6 +1317,7 @@ export function VideosPage() {
     if (scrollFrameRef.current) return;
     scrollFrameRef.current = window.requestAnimationFrame(() => {
       scrollFrameRef.current = null;
+      showMobileRailTemporarily();
       const itemHeight = viewport.clientHeight || 1;
       const nextIndex = Math.max(0, Math.min(videos.length - 1, Math.round(viewport.scrollTop / itemHeight)));
       if (nextIndex !== activeReelIndexRef.current) {
@@ -1086,8 +1397,84 @@ export function VideosPage() {
   }, [activeVideoId, isMuted, playSession]);
 
   useEffect(() => {
+    resetHoldPreviewSpeed();
+  }, [activeVideoId, resetHoldPreviewSpeed]);
+
+  useEffect(() => {
     maybePrefetchMore(activeReelIndex);
   }, [activeReelIndex, maybePrefetchMore]);
+
+  useEffect(() => {
+    if (videos.length < 1) return;
+    const keepStart = Math.max(0, activeReelIndex - REELS_STATE_KEEP_BEFORE);
+    const keepEnd = Math.min(videos.length - 1, activeReelIndex + REELS_STATE_KEEP_AFTER);
+    const keepIds = new Set();
+    for (let index = keepStart; index <= keepEnd; index += 1) {
+      const id = videos[index]?.id;
+      if (id) keepIds.add(id);
+    }
+    const pruneState = (prev) => {
+      let changed = false;
+      const next = {};
+      Object.entries(prev).forEach(([id, value]) => {
+        if (keepIds.has(id)) {
+          next[id] = value;
+          return;
+        }
+        changed = true;
+      });
+      return changed ? next : prev;
+    };
+    setLoadingEmbeds(pruneState);
+    setFailedEmbeds(pruneState);
+  }, [activeReelIndex, videos]);
+
+  useEffect(() => {
+    if (!isTouchDevice) return;
+    if (!activeVideoId) return;
+    if (loadingEmbeds[activeVideoId] === false) return;
+    if (failedEmbeds[activeVideoId]) return;
+    if (reelStallTimerRef.current) {
+      window.clearTimeout(reelStallTimerRef.current);
+    }
+    reelStallTimerRef.current = window.setTimeout(() => {
+      reelStallTimerRef.current = null;
+      if (loadingEmbeds[activeVideoId] === false) return;
+      const currentIndex = activeReelIndexRef.current;
+      const currentVideo = videos[currentIndex];
+      if (!currentVideo || currentVideo.id !== activeVideoId) return;
+      const skipCount = stalledSkipCountsRef.current[activeVideoId] || 0;
+      if (skipCount >= 1) return;
+      stalledSkipCountsRef.current[activeVideoId] = skipCount + 1;
+      moveReelByStep(1, { animate: false, force: true });
+    }, REELS_STALL_SKIP_MS);
+    return () => {
+      if (reelStallTimerRef.current) {
+        window.clearTimeout(reelStallTimerRef.current);
+        reelStallTimerRef.current = null;
+      }
+    };
+  }, [activeVideoId, failedEmbeds, isTouchDevice, loadingEmbeds, moveReelByStep, videos]);
+
+  useEffect(() => {
+    setActiveDirectVideoPlaying(false);
+    showDetailCardWithDelay(2200);
+  }, [activeVideoId, showDetailCardWithDelay]);
+
+  useEffect(() => {
+    if (!isTouchDevice || !activeUsesDirectPlayer) return;
+    if (!activeDirectVideoPlaying) {
+      clearDetailCardTimer();
+      return;
+    }
+    showDetailCardTemporarily(1200, { canAutoHide: activeUsesDirectPlayer });
+  }, [
+    activeDirectVideoPlaying,
+    activeUsesDirectPlayer,
+    clearDetailCardTimer,
+    isTouchDevice,
+    showDetailCardTemporarily,
+  ]);
 
   const retryEmbed = (videoId) => {
     setFailedEmbeds((prev) => {
@@ -1106,33 +1493,57 @@ export function VideosPage() {
     mutedAutoplayStartedRef.current = true;
     hasUserGestureRef.current = true; // allows autoplay retries
     setShowSwipeHint(false);
-    queueAutoplayRetry(0);
+    queueAutoplayRetry(0, { force: true });
   }, [queueAutoplayRetry, videos.length]);
 
-  const toggleMute = useCallback(() => {
-    startPlayback();
-    setShowAutoplayPrompt(false);
-    setShowMobileHint(false);
-    setIsMuted((prev) => {
-      const next = !prev;
-      const node = activeVideoId ? directVideoRefs.current[activeVideoId] : null;
-      if (node) {
-        node.muted = next;
-        if (!next && node.volume === 0) {
-          node.volume = 1;
-        }
-        const playAttempt = node.play?.();
-        if (playAttempt && typeof playAttempt.catch === 'function') {
-          playAttempt.catch(() => {});
-        }
-      }
-      return next;
+  const cycleQualityMode = useCallback(() => {
+    showMobileRailTemporarily();
+    setQualityMode((prev) => {
+      const currentIndex = REELS_QUALITY_MODES.indexOf(prev);
+      if (currentIndex < 0) return REELS_QUALITY_MODES[0];
+      return REELS_QUALITY_MODES[(currentIndex + 1) % REELS_QUALITY_MODES.length];
     });
-    queueAutoplayRetry(0);
-  }, [activeVideoId, queueAutoplayRetry, startPlayback]);
+  }, [showMobileRailTemporarily]);
+
+  const toggleDetailCard = useCallback(() => {
+    if (!isTouchDevice) return;
+    if (showDetailCard) {
+      clearDetailCardTimer();
+      setShowDetailCard(false);
+      return;
+    }
+    showDetailCardWithDelay(2200);
+  }, [
+    clearDetailCardTimer,
+    isTouchDevice,
+    showDetailCard,
+    showDetailCardWithDelay,
+  ]);
+
+  const handleDetailToggleTouch = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleDetailCard();
+  }, [toggleDetailCard]);
+
+  const handleDetailToggleClick = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleDetailCard();
+  }, [toggleDetailCard]);
 
   const renderVideoEmbed = (video, { isActive = false, shouldRenderIframe = true, isMuted: muted = true } = {}) => {
     const shouldUseDirectPlayer = Boolean(video.directUrl && (isTouchDevice || !video.facebookUrl));
+    const handleHoldPreviewStart = (event) => {
+      if (!isActive) return;
+      if (event?.pointerType === 'mouse' && event.button !== 0) return;
+      showMobileRailTemporarily();
+      startPlayback();
+      beginHoldPreviewSpeed(video.id);
+    };
+    const handleHoldPreviewEnd = () => {
+      resetHoldPreviewSpeed();
+    };
 
     if (!shouldRenderIframe) {
       return <div className="h-full w-full bg-black" aria-hidden="true" />;
@@ -1149,7 +1560,7 @@ export function VideosPage() {
           playsInline
           loop
           controls
-          preload={isActive ? 'metadata' : 'none'}
+          preload={getDirectVideoPreload(isActive)}
           ref={(node) => {
             if (node) {
               directVideoRefs.current[video.id] = node;
@@ -1162,7 +1573,25 @@ export function VideosPage() {
             setFailedEmbeds((prev) => (prev[video.id] ? prev : { ...prev, [video.id]: true }));
             setLoadingEmbeds((prev) => ({ ...prev, [video.id]: false }));
           }}
-          onPlay={startPlayback}
+          onPointerDown={handleHoldPreviewStart}
+          onPointerUp={handleHoldPreviewEnd}
+          onPointerCancel={handleHoldPreviewEnd}
+          onPointerLeave={handleHoldPreviewEnd}
+          onTouchStart={!supportsPointerEvents ? handleHoldPreviewStart : undefined}
+          onTouchEnd={!supportsPointerEvents ? handleHoldPreviewEnd : undefined}
+          onTouchCancel={!supportsPointerEvents ? handleHoldPreviewEnd : undefined}
+          onPause={() => {
+            handleHoldPreviewEnd();
+            if (video.id === activeVideoId) {
+              setActiveDirectVideoPlaying(false);
+            }
+          }}
+          onPlay={() => {
+            if (video.id === activeVideoId) {
+              setActiveDirectVideoPlaying(true);
+            }
+            startPlayback();
+          }}
         />
       );
     }
@@ -1281,12 +1710,12 @@ export function VideosPage() {
                         <button
                           type="button"
                           data-reels-control="true"
-                          className="inline-flex items-center justify-center rounded-full border border-white/30 bg-black/55 h-8 w-8 text-white backdrop-blur-md shadow-lg hover:bg-black/75 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
-                          onClick={toggleMute}
-                          aria-label={translateText(isMuted ? 'Unmute video' : 'Mute video')}
-                          title={translateText(isMuted ? 'Unmute video' : 'Mute video')}
+                          className="inline-flex min-w-16 items-center justify-center rounded-full border border-white/30 bg-black/55 px-2.5 py-1.5 text-[10px] font-semibold text-white backdrop-blur-md shadow-lg hover:bg-black/75 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
+                          onClick={cycleQualityMode}
+                          aria-label={`${translateText('Video quality mode')}: ${qualityModeLabel}`}
+                          title={`${translateText('Switch quality mode')} (${translateText('Current')}: ${effectiveModeLabel})`}
                         >
-                          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                          {qualityModeLabel}
                         </button>
                         <Link
                           to="/articles"
@@ -1311,7 +1740,7 @@ export function VideosPage() {
 	                  </div>
 	                </div>
 
-		              {showSwipeHint && (
+		              {showSwipeHint && !suppressBottomHints && (
 		                <div className={cn(
                       'pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] z-30 flex px-3 transition-opacity duration-300',
                       isTouchDevice ? 'justify-start pr-20' : 'justify-center'
@@ -1322,15 +1751,13 @@ export function VideosPage() {
 		                </div>
 		              )}
 
-		              {showAutoplayPrompt && (
+		              {showAutoplayPrompt && !suppressBottomHints && (
 		                <div className={cn(
                       'pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+2.75rem)] z-30 flex px-3 transition-opacity duration-300',
                       isTouchDevice ? 'justify-start pr-20' : 'justify-center'
                     )}>
 		                  <div className="rounded-full border border-white/15 bg-black/70 text-white/95 text-xs font-medium tracking-[0.01em] px-3.5 py-1.5 shadow-lg backdrop-blur-md">
-		                    {translateText(isMuted
-		                      ? 'Tap the speaker to unmute'
-	                      : 'Autoplay with sound is on')}
+		                    {translateText('Use player controls for sound')}
 	                  </div>
 	                </div>
 	              )}
@@ -1353,7 +1780,7 @@ export function VideosPage() {
                     </div>
 		              )}
 
-		              {isTouchDevice && showMobileHint && !showGestureOverlay && (
+		              {isTouchDevice && showMobileHint && !showGestureOverlay && !suppressBottomHints && (
 		                <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+2.75rem)] flex justify-start pr-20 px-3 z-30">
 		                  <div className="rounded-full border border-white/15 bg-black/70 text-white/95 text-xs font-medium tracking-[0.01em] px-3.5 py-1.5 shadow-lg backdrop-blur-md">
 		                    {translateText('Tap play, then use Facebook controls for sound')}
@@ -1362,14 +1789,39 @@ export function VideosPage() {
 		              )}
 
                   {isTouchDevice && !showGestureOverlay && (
+                    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+2.7rem)] z-[75] flex justify-center px-3">
+                      <div className="pointer-events-none w-full max-w-[460px] flex justify-start">
+                        <button
+                          type="button"
+                          data-reels-control="true"
+                          onTouchEnd={handleDetailToggleTouch}
+                          onClick={handleDetailToggleClick}
+                          aria-label={translateText(showDetailCard ? 'Hide details' : 'Show details')}
+                          className="pointer-events-auto inline-flex touch-none items-center gap-1 rounded-r-2xl border border-white/20 border-l-0 bg-black/65 py-1.5 pl-2 pr-2.5 text-[11px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-black/80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
+                        >
+                          {showDetailCard ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                          <span>{translateText(showDetailCard ? 'Hide' : 'Show')}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isTouchDevice && !showGestureOverlay && (
                     <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] z-[70] flex justify-center px-3">
-                      <div className="pointer-events-none w-full max-w-[460px] flex justify-end">
-                        <div className="pointer-events-auto flex flex-col items-center gap-2">
+                      <div className="pointer-events-none relative w-full max-w-[460px] flex justify-end">
+                        <div
+                          className={cn(
+                            'pointer-events-auto flex flex-col items-center gap-2 transition-all duration-300',
+                            showMobileRail ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+                          )}
+                          aria-hidden={!showMobileRail}
+                        >
                           <button
                             type="button"
                             data-reels-control="true"
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white backdrop-blur-md shadow-lg hover:bg-black/85 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
-                            onClick={() => handleThumbStep(-1)}
+                            className="inline-flex h-11 w-11 touch-none items-center justify-center rounded-full border border-white/25 bg-black/70 text-white backdrop-blur-md shadow-lg hover:bg-black/85 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
+                            onTouchEnd={(event) => handleStepControlTouch(event, -1)}
+                            onClick={(event) => handleStepControlClick(event, -1)}
                             aria-label={translateText('Previous video')}
                           >
                             <ChevronUp className="w-5 h-5" />
@@ -1377,21 +1829,22 @@ export function VideosPage() {
                           <button
                             type="button"
                             data-reels-control="true"
-                            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/75 text-white backdrop-blur-md shadow-xl hover:bg-black/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
-                            onClick={toggleMute}
-                            aria-label={translateText(isMuted ? 'Unmute video' : 'Mute video')}
-                            title={translateText(isMuted ? 'Unmute video' : 'Mute video')}
+                            className="inline-flex h-11 w-11 touch-none items-center justify-center rounded-full border border-white/25 bg-black/70 text-white backdrop-blur-md shadow-lg hover:bg-black/85 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
+                            onTouchEnd={(event) => handleStepControlTouch(event, 1)}
+                            onClick={(event) => handleStepControlClick(event, 1)}
+                            aria-label={translateText('Next video')}
                           >
-                            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                            <ChevronDown className="w-5 h-5" />
                           </button>
                           <button
                             type="button"
                             data-reels-control="true"
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white backdrop-blur-md shadow-lg hover:bg-black/85 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
-                            onClick={() => handleThumbStep(1)}
-                            aria-label={translateText('Next video')}
+                            className="inline-flex min-w-14 items-center justify-center rounded-full border border-white/25 bg-black/70 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md shadow-lg hover:bg-black/85 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
+                            onClick={cycleQualityMode}
+                            aria-label={`${translateText('Video quality mode')}: ${qualityModeLabel}`}
+                            title={`${translateText('Switch quality mode')} (${translateText('Current')}: ${effectiveModeLabel})`}
                           >
-                            <ChevronDown className="w-5 h-5" />
+                            {qualityModeLabel}
                           </button>
                           <Link
                             to="/articles"
@@ -1401,18 +1854,49 @@ export function VideosPage() {
                             {translateText('News')}
                           </Link>
                         </div>
+                        <button
+                          type="button"
+                          data-reels-control="true"
+                          onClick={showMobileRailTemporarily}
+                          aria-label={translateText('Show controls')}
+                          className={cn(
+                            'pointer-events-auto absolute right-0 top-1/2 z-10 -translate-y-1/2 translate-x-[45%] rounded-l-2xl border border-white/20 border-r-0 bg-black/65 px-1.5 py-2 text-white shadow-lg backdrop-blur-md transition-all duration-300',
+                            showMobileRail ? 'opacity-0 pointer-events-none translate-x-[60%]' : 'opacity-95'
+                          )}
+                        >
+                          <span className="flex flex-col items-center leading-none">
+                            <ChevronUp className="h-3.5 w-3.5" />
+                            <ChevronDown className="-mt-0.5 h-3.5 w-3.5" />
+                          </span>
+                        </button>
                       </div>
                     </div>
                   )}
 
-              {videos.map((video, index) => (
-                (() => {
-                  const isActive = index === activeReelIndex;
-                  const shouldRenderIframe = Math.abs(index - activeReelIndex) <= embedPreloadRadius;
-                  const shouldRenderDetails = Math.abs(index - activeReelIndex) <= detailRenderRadius;
-	                  return (
-	                    <article
-	                      key={video.id}
+	              {videos.map((video, index) => (
+		                (() => {
+		                  const isActive = index === activeReelIndex;
+                      const shouldMaterializeReel = index >= renderWindowStart && index <= renderWindowEnd;
+		                  const shouldRenderIframe = shouldMaterializeReel && Math.abs(index - activeReelIndex) <= embedPreloadRadius;
+		                  const shouldRenderDetails = shouldMaterializeReel && Math.abs(index - activeReelIndex) <= detailRenderRadius;
+	                    const shouldCollapseDetailCard = (
+	                      isTouchDevice
+	                      && isActive
+	                      && !showDetailCard
+	                    );
+                      if (!shouldMaterializeReel) {
+                        return (
+                          <article
+                            key={video.id}
+                            className="relative h-[100dvh] snap-start snap-always"
+                          >
+                            <div className="h-full w-full bg-black" aria-hidden="true" />
+                          </article>
+                        );
+                      }
+		                  return (
+		                    <article
+		                      key={video.id}
 	                      className={cn(
                           'relative h-[100dvh] snap-start snap-always',
                           isActive ? 'opacity-100' : 'opacity-[0.98]'
@@ -1483,7 +1967,8 @@ export function VideosPage() {
 	                            <div
                                 className={cn(
                                   'pointer-events-auto rounded-[1.35rem] bg-gradient-to-t from-black/90 via-black/70 to-black/30 border border-white/10 backdrop-blur-md px-4 pt-3 pb-3.5 shadow-2xl transition-all duration-300',
-                                  isActive ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-90'
+                                  isActive ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-90',
+                                  shouldCollapseDetailCard && '-translate-x-[112%] opacity-0 pointer-events-none'
                                 )}
                               >
 	                              <div className="flex items-center justify-between gap-3 text-[11px] text-white/80">
@@ -1505,12 +1990,12 @@ export function VideosPage() {
 	                                  {video.title}
 	                                </h2>
 	                              )}
-	                              {video.excerpt && (
-	                                <p className="mt-2 text-sm leading-relaxed text-white/80 line-clamp-2">{video.excerpt}</p>
-	                              )}
-	                              <div className="mt-3.5 flex items-center gap-2">
-	                                {video.slug && (
-	                                  <Link
+		                              {video.excerpt && (
+		                                <p className="mt-2 text-sm leading-relaxed text-white/80 line-clamp-2">{video.excerpt}</p>
+		                              )}
+		                              <div className="mt-3.5 flex items-center gap-2">
+		                                {video.slug && (
+		                                  <Link
 	                                    to={`/article/${video.slug}`}
 	                                    data-reels-control="true"
 	                                    className="inline-flex items-center gap-2 rounded-full bg-white text-black px-3.5 py-1.5 text-xs font-semibold shadow hover:bg-white/90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-all duration-200"
