@@ -6,78 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="c6bd4a1f-cf94-4630-b9b3-459250876b8d" name="Changes" comment="--change-authenticate">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/backend/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/config/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/controllers/articleController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/articleController.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/controllers/notificationController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/notificationController.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/controllers/translationController.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/translationController.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/middleware/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/middleware/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/models/Article.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/Article.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/models/ArticleTranslation.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/ArticleTranslation.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/models/Notification.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/Notification.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/models/User.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/User.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/aiRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/aiRoutes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/articleRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/articleRoutes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/shareRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/shareRoutes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/translationRoutes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/translationRoutes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/services/notificationService.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/notificationService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/validators/articleValidator.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/validators/articleValidator.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/validators/userValidator.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/validators/userValidator.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/eslint.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/eslint.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/frontend/package-lock.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ads/AdsRow.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ads/AdsRow.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ads/BetweenSectionsSlot.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ads/BetweenSectionsSlot.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ads/BodyAd.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ads/BodyAd.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ads/PopupAdModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ads/PopupAdModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ads/inlineAds.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ads/inlineAds.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/article/ArticleCard-NEW.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/article/HeroSection-NEW.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/article/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/article/index.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/EditorJS.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/EditorJS.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/ErrorBoundary.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/ErrorBoundary.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/LoadingExamples.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/NotificationDropdown.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/NotificationDropdown.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/TopLoadingBar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/TopLoadingBar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/index.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/Header.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/Sidebar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/layout/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/layout/index.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useApi.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/useApi.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useLanguage.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/useLanguage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/SearchPage.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/AdFormPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/AdFormPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/AdsControlPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/AdsControlPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/AdvancedAnalyticsPage.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/AnalyticsPage.fixed.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/AnalyticsPage.large-dataset.jsx" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/ArticleEditorPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/ArticleEditorPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/CampaignBuilder.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/CampaignsPage.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/CommentsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/CommentsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/NewsletterPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/NewsletterPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/NotificationsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/NotificationsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/SiteSettingsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/SiteSettingsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/UsersPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/UsersPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/ad-collections/AdCollectionsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/ad-collections/AdCollectionsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/dashboard/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/dashboard/index.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/article-detail.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/article-detail.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/articles.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/auth.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/auth.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/home.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/misc.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/misc.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/public/shared/rightSidebarAds.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/public/shared/rightSidebarAds.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/api.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/stores/authStore.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/authStore.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/stores/notificationStore.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/notificationStore.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/analytics.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/analytics.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/notificationLink.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/notificationLink.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tailwind.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/vite.config.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -213,7 +142,7 @@
       <workItem from="1772351224760" duration="1676000" />
       <workItem from="1772417855194" duration="5560000" />
       <workItem from="1772676373620" duration="20627000" />
-      <workItem from="1772761379622" duration="7901000" />
+      <workItem from="1772761379622" duration="10051000" />
     </task>
     <task id="LOCAL-00001" summary="--change-authenticate">
       <option name="closed" value="true" />

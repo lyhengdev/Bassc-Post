@@ -42,6 +42,7 @@ export function ArticleEditorPage() {
   const translationEditorRef = useRef(null);
   const translationFormInitializedRef = useRef(false);
   const autoTranslatedLanguagesRef = useRef(new Set());
+  const translationWorkspaceInitializedRef = useRef(false);
   const isEditMode = Boolean(id);
   const user = useAuthStore((state) => state.user);
   const isTranslationContributorRole = ['translator', 'writer'].includes(user?.role);
@@ -88,7 +89,7 @@ export function ArticleEditorPage() {
     return { ...normalized, blocks: withIds };
   }, []);
 
-  const buildVideoFallbackContent = () => ({
+  const buildVideoFallbackContent = useCallback(() => ({
     time: Date.now(),
     blocks: [
       {
@@ -98,7 +99,7 @@ export function ArticleEditorPage() {
       },
     ],
     version: '2.28.2',
-  });
+  }), [excerpt, title]);
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: articleResponse, isLoading: _isLoadingArticle, isError: isArticleError } = useArticleById(id);
@@ -211,6 +212,10 @@ export function ArticleEditorPage() {
     activeTranslationRecord?.translationStatus ||
     'draft';
 
+  useEffect(() => {
+    translationWorkspaceInitializedRef.current = false;
+  }, [id]);
+
   const getSourceContentForTranslation = useCallback(async () => {
     if (editorRef.current?.save) {
       try {
@@ -229,8 +234,14 @@ export function ArticleEditorPage() {
       return normalizeContent(editorContentRef.current);
     }
 
+    if (postType === 'video') {
+      const fallback = normalizeContent(buildVideoFallbackContent());
+      editorContentRef.current = fallback;
+      return fallback;
+    }
+
     return normalizeContent({ blocks: [] });
-  }, [normalizeContent]);
+  }, [normalizeContent, postType, buildVideoFallbackContent]);
 
   const runAutoTranslate = useCallback(async (languageCode, options = {}) => {
     const { silent = false, force = false } = options;
@@ -350,6 +361,42 @@ export function ArticleEditorPage() {
     articleResponse,
     isLoadingTranslations,
     editableTranslationLanguages,
+    translationLanguage,
+    translations,
+    loadTranslationForm,
+  ]);
+
+  useEffect(() => {
+    if (!isEditMode || !isTranslationContributorRole || !articleResponse?.data?.article || isLoadingTranslations) return;
+    if (!['in_translation', 'changes_requested'].includes(translationWorkflowState)) return;
+    if (editableTranslationLanguages.length === 0) return;
+    if (translationWorkspaceInitializedRef.current) return;
+
+    if (workspaceLanguage !== baseLanguage) {
+      translationWorkspaceInitializedRef.current = true;
+      return;
+    }
+
+    const currentLanguage = String(translationLanguage || '').trim().toLowerCase();
+    const hasCurrentLanguage = editableTranslationLanguages.some((lang) => lang.code === currentLanguage);
+    const changesRequestedLanguage = translations.find((item) => item?.workflow?.translationState === 'changes_requested')?.language || '';
+    const preferredLanguage = changesRequestedLanguage || (hasCurrentLanguage ? currentLanguage : editableTranslationLanguages[0].code);
+
+    if (!preferredLanguage) return;
+
+    translationWorkspaceInitializedRef.current = true;
+    setWorkspaceLanguage(preferredLanguage);
+    setTranslationLanguage(preferredLanguage);
+    loadTranslationForm(preferredLanguage);
+  }, [
+    isEditMode,
+    isTranslationContributorRole,
+    articleResponse,
+    isLoadingTranslations,
+    translationWorkflowState,
+    editableTranslationLanguages,
+    workspaceLanguage,
+    baseLanguage,
     translationLanguage,
     translations,
     loadTranslationForm,
