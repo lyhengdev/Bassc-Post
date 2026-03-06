@@ -63,14 +63,6 @@ export function CommentsPage() {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedComments.length === comments.length) {
-      setSelectedComments([]);
-    } else {
-      setSelectedComments(comments.map((c) => c._id));
-    }
-  };
-
   if (isLoading) return <ContentLoader />;
 
   return (

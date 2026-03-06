@@ -131,6 +131,16 @@ export const isEditor = authorize('admin', 'editor');
 export const isWriter = authorize('admin', 'editor', 'writer');
 
 /**
+ * Check if user can work on translation workflows
+ */
+export const isTranslator = authorize('admin', 'editor', 'translator', 'writer');
+
+/**
+ * Check if user is any newsroom content staff role
+ */
+export const isContentStaff = authorize('admin', 'editor', 'writer', 'translator');
+
+/**
  * Check if user owns the resource or is admin
  */
 export const isOwnerOrAdmin = (getOwnerId) => {
@@ -169,5 +179,7 @@ export default {
   isAdmin,
   isEditor,
   isWriter,
+  isTranslator,
+  isContentStaff,
   isOwnerOrAdmin,
 };

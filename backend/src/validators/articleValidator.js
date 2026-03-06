@@ -1,6 +1,12 @@
 import { body, query, param } from 'express-validator';
 
 export const createArticleValidator = [
+  body('language')
+    .optional()
+    .trim()
+    .toLowerCase()
+    .isIn(['en', 'km', 'zh'])
+    .withMessage('Language must be one of: en, km, zh'),
   body('title')
     .trim()
     .notEmpty()
@@ -95,6 +101,12 @@ export const createArticleValidator = [
 
 export const updateArticleValidator = [
   param('id').isMongoId().withMessage('Invalid article ID'),
+  body('language')
+    .optional()
+    .trim()
+    .toLowerCase()
+    .isIn(['en', 'km', 'zh'])
+    .withMessage('Language must be one of: en, km, zh'),
   body('title')
     .optional()
     .trim()
@@ -235,6 +247,86 @@ export const rejectArticleValidator = [
     .withMessage('Reason cannot exceed 1000 characters'),
 ];
 
+const workflowLanguageValidator = () =>
+  body('language')
+    .trim()
+    .notEmpty()
+    .withMessage('Language is required')
+    .matches(/^[a-z]{2}([-_][a-z]{2})?$/i)
+    .withMessage('Language must be a valid ISO code');
+
+export const submitSourceWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+];
+
+export const approveSourceWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Notes cannot exceed 1000 characters'),
+  body('translatorId')
+    .optional({ checkFalsy: true })
+    .isMongoId()
+    .withMessage('translatorId must be a valid user ID'),
+];
+
+export const requestSourceChangesWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  body('reason')
+    .trim()
+    .notEmpty()
+    .withMessage('Reason is required')
+    .isLength({ max: 1000 })
+    .withMessage('Reason cannot exceed 1000 characters'),
+];
+
+export const submitTranslationWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  workflowLanguageValidator(),
+];
+
+export const approveTranslationWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  workflowLanguageValidator(),
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Notes cannot exceed 1000 characters'),
+];
+
+export const requestTranslationChangesWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  workflowLanguageValidator(),
+  body('reason')
+    .trim()
+    .notEmpty()
+    .withMessage('Reason is required')
+    .isLength({ max: 1000 })
+    .withMessage('Reason cannot exceed 1000 characters'),
+];
+
+export const finalApproveWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Notes cannot exceed 1000 characters'),
+];
+
+export const finalRejectWorkflowValidator = [
+  param('id').isMongoId().withMessage('Invalid article ID'),
+  body('reason')
+    .trim()
+    .notEmpty()
+    .withMessage('Reason is required')
+    .isLength({ max: 1000 })
+    .withMessage('Reason cannot exceed 1000 characters'),
+];
+
 export default {
   createArticleValidator,
   updateArticleValidator,
@@ -242,4 +334,12 @@ export default {
   searchArticlesValidator,
   approveArticleValidator,
   rejectArticleValidator,
+  submitSourceWorkflowValidator,
+  approveSourceWorkflowValidator,
+  requestSourceChangesWorkflowValidator,
+  submitTranslationWorkflowValidator,
+  approveTranslationWorkflowValidator,
+  requestTranslationChangesWorkflowValidator,
+  finalApproveWorkflowValidator,
+  finalRejectWorkflowValidator,
 };

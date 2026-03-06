@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { cn, buildMediaUrl } from '../../utils';
 
@@ -49,9 +49,14 @@ export function BodyAd({
   const hasTrackedImpression = useRef(false); // ✅ FIXED: Use ref instead of state
   
   const resolvedPlacement = placementOverride || ad.servedPlacement || ad.placementId || ad.placement;
-  const adForEvents = resolvedPlacement && ad.placement !== resolvedPlacement
-    ? { ...ad, placement: resolvedPlacement }
-    : ad;
+  const adForEvents = useMemo(
+    () => (
+      resolvedPlacement && ad.placement !== resolvedPlacement
+        ? { ...ad, placement: resolvedPlacement }
+        : ad
+    ),
+    [ad, resolvedPlacement]
+  );
 
   // Check if mobile
   useEffect(() => {
@@ -82,7 +87,7 @@ export function BodyAd({
     }
 
     return () => observer.disconnect();
-  }, [ad._id, onImpression, resolvedPlacement]); // ✅ FIXED: Removed hasImpression from dependencies
+  }, [ad._id, adForEvents, onImpression]); // ✅ FIXED: Removed hasImpression from dependencies
 
   const isSidebarOrPopup = resolvedPlacement === 'popup' || resolvedPlacement === 'right_sidebar' || resolvedPlacement === 'right_hero';
   const baseImageUrl = isSidebarOrPopup && ad.sidebarImageUrl
@@ -386,7 +391,7 @@ export function BodyAdSlot({
   paragraphIndex,
   placementId,
   ads = [],
-  globalSettings = {},
+  globalSettings: _globalSettings = {},
   pageType = 'all',
   isLoggedIn = false,
   className = '',

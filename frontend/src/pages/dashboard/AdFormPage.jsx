@@ -1,17 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowLeft,
   Image as ImageIcon,
-  Upload,
   X,
   Eye,
   Link as LinkIcon,
   Palette,
-  Settings,
   Save,
-  AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -74,14 +71,7 @@ export function AdFormPage() {
 
   // ==================== FETCH DATA ====================
 
-  useEffect(() => {
-    fetchCollection();
-    if (isEdit) {
-      fetchAd();
-    }
-  }, [collectionId, adId]);
-
-  const fetchCollection = async () => {
+  const fetchCollection = useCallback(async () => {
     try {
       const response = await api.get(`/ad-collections/${collectionId}`);
       setCollection(response.data.collection);
@@ -89,9 +79,9 @@ export function AdFormPage() {
       console.error('Error fetching collection:', error);
       toast.error('Failed to load collection');
     }
-  };
+  }, [collectionId]);
 
-  const fetchAd = async () => {
+  const fetchAd = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get(`/ads/${adId}`);
@@ -105,7 +95,14 @@ export function AdFormPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [adId]);
+
+  useEffect(() => {
+    fetchCollection();
+    if (isEdit) {
+      fetchAd();
+    }
+  }, [fetchCollection, fetchAd, isEdit]);
 
   // ==================== HANDLERS ====================
 

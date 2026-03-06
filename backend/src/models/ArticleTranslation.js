@@ -58,6 +58,54 @@ const editorContentSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const translationWorkflowTimestampsSchema = new mongoose.Schema(
+    {
+        submittedAt: { type: Date, default: null },
+        reviewedAt: { type: Date, default: null },
+    },
+    { _id: false }
+);
+
+const translationWorkflowReviewedBySchema = new mongoose.Schema(
+    {
+        submittedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        reviewer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+    },
+    { _id: false }
+);
+
+const translationWorkflowSchema = new mongoose.Schema(
+    {
+        translationState: {
+            type: String,
+            enum: ['draft', 'in_progress', 'submitted', 'approved', 'changes_requested'],
+            default: 'draft',
+            index: true,
+        },
+        timestamps: {
+            type: translationWorkflowTimestampsSchema,
+            default: () => ({}),
+        },
+        reviewedBy: {
+            type: translationWorkflowReviewedBySchema,
+            default: () => ({}),
+        },
+        reviewNotes: {
+            type: String,
+            default: '',
+        },
+    },
+    { _id: false }
+);
+
 const articleTranslationSchema = new mongoose.Schema(
     {
         // Reference to original article
@@ -165,6 +213,10 @@ const articleTranslationSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         },
+        workflow: {
+            type: translationWorkflowSchema,
+            default: () => ({}),
+        },
     },
     {
         timestamps: true,
@@ -178,6 +230,8 @@ articleTranslationSchema.index({ articleId: 1, language: 1 }, { unique: true });
 articleTranslationSchema.index({ slug: 1, language: 1 }, { unique: true }); // Unique slug per language
 articleTranslationSchema.index({ translationStatus: 1 });
 articleTranslationSchema.index({ language: 1, translationStatus: 1 });
+articleTranslationSchema.index({ articleId: 1, 'workflow.translationState': 1 });
+articleTranslationSchema.index({ 'workflow.translationState': 1, updatedAt: -1 });
 
 // Virtual: Get original article
 articleTranslationSchema.virtual('article', {
@@ -207,9 +261,22 @@ articleTranslationSchema.statics.getAllByLanguage = async function(language, fil
 
 // Instance: Mark as reviewed
 articleTranslationSchema.methods.markAsReviewed = async function(reviewerId) {
+    if (!this.workflow) {
+        this.workflow = {};
+    }
+    if (!this.workflow.timestamps) {
+        this.workflow.timestamps = {};
+    }
+    if (!this.workflow.reviewedBy) {
+        this.workflow.reviewedBy = {};
+    }
+
     this.translationStatus = 'published';
     this.lastReviewedAt = new Date();
     this.reviewedBy = reviewerId;
+    this.workflow.translationState = 'approved';
+    this.workflow.timestamps.reviewedAt = new Date();
+    this.workflow.reviewedBy.reviewer = reviewerId;
     return await this.save();
 };
 

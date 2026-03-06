@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { 
   Plus, 
-  Search, 
-  Filter,
+  Search,
   LayoutGrid,
   Eye,
   Edit2,
@@ -12,10 +11,7 @@ import {
   Play,
   Pause,
   TrendingUp,
-  Calendar,
-  Target,
   Image as ImageIcon,
-  BarChart3,
   Settings,
   ChevronRight,
   AlertCircle,
@@ -43,6 +39,7 @@ export function AdsControlPage() {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [placementFilter, setPlacementFilter] = useState('all');
   
@@ -53,13 +50,49 @@ export function AdsControlPage() {
   // Modals
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [collectionToDelete, setCollectionToDelete] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // ==================== FETCH COLLECTIONS ====================
-  
+
+  const fetchCollectionAds = useCallback(async (collectionId) => {
+    try {
+      setAdsLoading(true);
+      const response = await api.get(`/ad-collections/${collectionId}/ads`);
+      setAds(response.data.ads || []);
+    } catch (error) {
+      console.error('Error fetching ads:', error);
+      toast.error('Failed to load ads');
+    } finally {
+      setAdsLoading(false);
+    }
+  }, []);
+
+  const handleViewCollection = useCallback(async (collection) => {
+    setSelectedCollection(collection);
+    setView('collection-detail');
+    await fetchCollectionAds(collection._id);
+  }, [fetchCollectionAds]);
+
+  const fetchCollections = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (placementFilter !== 'all') params.append('placement', placementFilter);
+      if (appliedSearchTerm) params.append('search', appliedSearchTerm);
+
+      const response = await api.get(`/ad-collections?${params.toString()}`);
+      setCollections(response.data.collections || []);
+    } catch (error) {
+      console.error('Error fetching collections:', error);
+      toast.error('Failed to load collections');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, placementFilter, appliedSearchTerm]);
+
   useEffect(() => {
     fetchCollections();
-  }, [statusFilter, placementFilter]);
+  }, [fetchCollections]);
 
   useEffect(() => {
     if (!requestedCollectionId || autoOpenedRef.current || loading) return;
@@ -76,9 +109,7 @@ export function AdsControlPage() {
         const response = await api.get(`/ad-collections/${requestedCollectionId}`);
         const fetchedCollection = response.data.collection || response.data.data?.collection;
         if (fetchedCollection) {
-          setSelectedCollection(fetchedCollection);
-          setView('collection-detail');
-          await fetchCollectionAds(fetchedCollection._id);
+          await handleViewCollection(fetchedCollection);
         }
       } catch (error) {
         console.error('Error loading requested collection:', error);
@@ -88,52 +119,18 @@ export function AdsControlPage() {
     };
 
     openCollection();
-  }, [requestedCollectionId, collections, loading]);
-
-  const fetchCollections = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (placementFilter !== 'all') params.append('placement', placementFilter);
-      if (searchTerm) params.append('search', searchTerm);
-      
-      const response = await api.get(`/ad-collections?${params.toString()}`);
-      setCollections(response.data.collections || []);
-    } catch (error) {
-      console.error('Error fetching collections:', error);
-      toast.error('Failed to load collections');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ==================== FETCH COLLECTION ADS ====================
-  
-  const fetchCollectionAds = async (collectionId) => {
-    try {
-      setAdsLoading(true);
-      const response = await api.get(`/ad-collections/${collectionId}/ads`);
-      setAds(response.data.ads || []);
-    } catch (error) {
-      console.error('Error fetching ads:', error);
-      toast.error('Failed to load ads');
-    } finally {
-      setAdsLoading(false);
-    }
-  };
+  }, [requestedCollectionId, collections, loading, handleViewCollection]);
 
   // ==================== HANDLERS ====================
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchCollections();
-  };
-
-  const handleViewCollection = async (collection) => {
-    setSelectedCollection(collection);
-    setView('collection-detail');
-    await fetchCollectionAds(collection._id);
+    const nextSearchTerm = searchTerm.trim();
+    if (nextSearchTerm === appliedSearchTerm) {
+      fetchCollections();
+      return;
+    }
+    setAppliedSearchTerm(nextSearchTerm);
   };
 
   const handleBackToCollections = () => {
@@ -152,7 +149,7 @@ export function AdsControlPage() {
       await api.put(`/ad-collections/${collection._id}`, { status: newStatus });
       toast.success(`Collection ${newStatus === 'active' ? 'activated' : 'paused'}`);
       fetchCollections();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update status');
     }
   };
@@ -166,7 +163,7 @@ export function AdsControlPage() {
       setShowDeleteModal(false);
       setCollectionToDelete(null);
       fetchCollections();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete collection');
     }
   };
@@ -176,7 +173,7 @@ export function AdsControlPage() {
       await api.post(`/ad-collections/${collection._id}/duplicate`);
       toast.success('Collection duplicated successfully');
       fetchCollections();
-    } catch (error) {
+    } catch {
       toast.error('Failed to duplicate collection');
     }
   };
@@ -661,7 +658,7 @@ function AdCard({ ad, collectionId, onRefresh }) {
       toast.success('Ad deleted successfully');
       setShowDeleteModal(false);
       onRefresh();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete ad');
     }
   };
@@ -672,7 +669,7 @@ function AdCard({ ad, collectionId, onRefresh }) {
       await api.put(`/ads/${ad._id}`, { status: newStatus });
       toast.success(`Ad ${newStatus === 'active' ? 'activated' : 'paused'}`);
       onRefresh();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update status');
     }
   };

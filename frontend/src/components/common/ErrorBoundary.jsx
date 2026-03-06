@@ -2,6 +2,8 @@ import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import useLanguage from '../../hooks/useLanguage';
 
+const isDevEnv = Boolean(import.meta.env.DEV);
+
 // Error Boundary Class Component (required for catching React errors)
 class ErrorBoundaryClass extends React.Component {
   constructor(props) {
@@ -16,7 +18,7 @@ class ErrorBoundaryClass extends React.Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
     // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevEnv) {
       console.error('Error Boundary caught an error:', error, errorInfo);
     }
     // Here you could also log to an error reporting service
@@ -50,7 +52,6 @@ class ErrorBoundaryClass extends React.Component {
 // Default Error Fallback UI
 function DefaultErrorFallback({ error, errorInfo, reset }) {
   const { translateText } = useLanguage();
-  const isDev = process.env.NODE_ENV === 'development';
 
   return (
     <div className="min-h-[400px] flex items-center justify-center p-8">
@@ -65,7 +66,7 @@ function DefaultErrorFallback({ error, errorInfo, reset }) {
           {translateText('An unexpected error occurred. Please try again or go back to the home page.')}
         </p>
 
-        {isDev && error && (
+        {isDevEnv && error && (
           <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-left overflow-auto max-h-48">
             <p className="text-sm font-mono text-red-600 dark:text-red-400">
               {error.toString()}
@@ -102,7 +103,6 @@ function DefaultErrorFallback({ error, errorInfo, reset }) {
 // Page-level Error Fallback (full page)
 export function PageErrorFallback({ error, reset }) {
   const { translateText } = useLanguage();
-  const isDev = process.env.NODE_ENV === 'development';
 
   return (
     <div className="min-h-screen flex items-center justify-center p-8 bg-dark-50 dark:bg-dark-950">
@@ -117,7 +117,7 @@ export function PageErrorFallback({ error, reset }) {
           {translateText("We're sorry, but something unexpected happened. Our team has been notified.")}
         </p>
 
-        {isDev && error && (
+        {isDevEnv && error && (
           <div className="mb-8 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-left overflow-auto max-h-48">
             <p className="text-sm font-mono text-red-600 dark:text-red-400">
               {error.toString()}
@@ -147,7 +147,7 @@ export function PageErrorFallback({ error, reset }) {
 }
 
 // Compact Error Fallback (for smaller components)
-export function CompactErrorFallback({ error, reset }) {
+export function CompactErrorFallback({ error: _error, reset }) {
   const { translateText } = useLanguage();
   return (
     <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-center">

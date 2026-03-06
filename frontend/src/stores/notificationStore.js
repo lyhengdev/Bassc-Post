@@ -299,7 +299,7 @@ const useNotificationStore = create((set, get) => ({
         oscillator.stop();
         audioContext.close();
       }, 150);
-    } catch (error) {
+    } catch {
       // Silently fail if audio context is not available
     }
   },

@@ -25,7 +25,7 @@ export const updateUserValidator = [
     .withMessage('Bio cannot exceed 500 characters'),
   body('role')
     .optional()
-    .isIn(['admin', 'editor', 'writer', 'user'])
+    .isIn(['admin', 'editor', 'writer', 'translator', 'user'])
     .withMessage('Invalid role'),
   body('status')
     .optional()
@@ -108,7 +108,7 @@ export const listUsersValidator = [
     .withMessage('Limit must be between 1 and 100'),
   query('role')
     .optional()
-    .isIn(['admin', 'editor', 'writer', 'user'])
+    .isIn(['admin', 'editor', 'writer', 'translator', 'user'])
     .withMessage('Invalid role'),
   query('status')
     .optional()

@@ -7,10 +7,10 @@ import { useFeaturedArticles, useLatestArticles, useCategories, useArticles, use
 import { useHomepageAds, useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
 import { Button } from '../../components/common/index.jsx';
 import { BodyAd } from '../../components/ads/index.js';
-import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
 import { buildFacebookEmbedConfig, detectFacebookContentType, normalizeExternalUrl, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
-import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
+import { SidebarAdSlot } from './shared/rightSidebarAds.jsx';
+import { useRightSidebarStickyTop } from './shared/useRightSidebarStickyTop.js';
 import useLanguage from '../../hooks/useLanguage';
 
 const HOME_TYPE = {
@@ -1401,7 +1401,7 @@ export function HomePage() {
   const { t, translateText } = useLanguage();
   const navigate = useNavigate();
   const { data: publicSettings } = usePublicSettings();
-  const [latestLimit, setLatestLimit] = useState(8);
+  const [latestLimit] = useState(8);
   const [sectionArticleRegistry, setSectionArticleRegistry] = useState({});
   const { data: latest, isLoading: latestLoading, isFetching: isFetchingLatest } = useLatestArticles(latestLimit);
   const { data: trending, isLoading: trendingLoading } = useArticles({ page: 1, limit: 6, sort: '-viewCount' });

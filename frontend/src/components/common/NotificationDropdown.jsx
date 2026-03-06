@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Bell, Check, CheckCheck, Trash2, X, 
+  Bell, Check, CheckCheck, X, 
   FileText, MessageCircle, User, AlertCircle, Mail, Megaphone,
   ChevronRight
 } from 'lucide-react';
@@ -16,6 +16,10 @@ const typeIcons = {
   article_approved: Check,
   article_rejected: AlertCircle,
   article_submitted: FileText,
+  source_approved: Check,
+  translation_assigned: FileText,
+  translation_submitted: FileText,
+  admin_review_pending: AlertCircle,
   comment_received: MessageCircle,
   comment_reply: MessageCircle,
   comment_approved: Check,
@@ -33,6 +37,10 @@ const typeColors = {
   article_approved: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30',
   article_rejected: 'text-red-600 bg-red-100 dark:bg-red-900/30',
   article_submitted: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30',
+  source_approved: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30',
+  translation_assigned: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30',
+  translation_submitted: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30',
+  admin_review_pending: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30',
   comment_received: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30',
   comment_reply: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30',
   comment_approved: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30',

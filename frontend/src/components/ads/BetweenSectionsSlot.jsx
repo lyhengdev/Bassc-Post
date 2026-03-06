@@ -1,5 +1,5 @@
 import { useSelectAds } from '../../hooks/useAds';
-import { InlineAdGroup } from './inlineAds.jsx';
+import { InlineAdGroup } from './inlineAds';
 
 export function BetweenSectionsSlot({
   pageType = 'homepage',

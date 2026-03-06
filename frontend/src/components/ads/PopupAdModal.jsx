@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import { BodyAd } from './BodyAd.jsx';
 import { cn } from '../../utils';
+import { BodyAd } from './BodyAd';
 
 export function PopupAdModal({ ad, isOpen, onClose, onImpression, onClick }) {
-  if (!ad) return null;
   const [remaining, setRemaining] = useState(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  const popupSettings = ad.popupSettings || {};
-  const autoCloseEnabled = popupSettings.autoClose ?? ad.autoClose ?? true;
+  const safeAd = ad || {};
+  const popupSettings = safeAd.popupSettings || {};
+  const autoCloseEnabled = popupSettings.autoClose ?? safeAd.autoClose ?? true;
   const autoCloseSeconds = Number.isFinite(popupSettings.autoCloseSeconds)
     ? popupSettings.autoCloseSeconds
-    : Number.isFinite(ad.autoCloseSeconds)
-      ? ad.autoCloseSeconds
-      : parseInt(popupSettings.autoCloseSeconds || ad.autoCloseSeconds || 0, 10);
-  const showCloseButton = popupSettings.showCloseButton ?? ad.showCloseButton ?? true;
-  const backdropClickClose = popupSettings.backdropClickClose ?? ad.backdropClickClose ?? true;
+    : Number.isFinite(safeAd.autoCloseSeconds)
+      ? safeAd.autoCloseSeconds
+      : parseInt(popupSettings.autoCloseSeconds || safeAd.autoCloseSeconds || 0, 10);
+  const showCloseButton = popupSettings.showCloseButton ?? safeAd.showCloseButton ?? true;
+  const backdropClickClose = popupSettings.backdropClickClose ?? safeAd.backdropClickClose ?? true;
 
   useEffect(() => {
+    if (!ad) return undefined;
     if (!isOpen) return undefined;
     if (!autoCloseEnabled) return undefined;
     if (!autoCloseSeconds || autoCloseSeconds <= 0) return undefined;
@@ -35,7 +36,9 @@ export function PopupAdModal({ ad, isOpen, onClose, onImpression, onClick }) {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [autoCloseSeconds, autoCloseEnabled, isOpen]);
+  }, [ad, autoCloseSeconds, autoCloseEnabled, isOpen]);
+
+  if (!ad) return null;
 
   return (
     <div

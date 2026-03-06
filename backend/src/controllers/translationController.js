@@ -3,8 +3,122 @@ import CategoryTranslation from '../models/CategoryTranslation.js';
 import Article from '../models/Article.js';
 import Category from '../models/Category.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { successResponse, errorResponse, createdResponse } from '../utils/apiResponse.js';
+import { successResponse, errorResponse, createdResponse, badRequestResponse, forbiddenResponse } from '../utils/apiResponse.js';
 import slugify from 'slugify';
+
+const mapTranslationStatusToWorkflowState = (translationStatus = '') => {
+  switch (translationStatus) {
+    case 'published':
+      return 'approved';
+    case 'review':
+      return 'submitted';
+    case 'in_progress':
+      return 'in_progress';
+    case 'draft':
+    default:
+      return 'draft';
+  }
+};
+
+const WORKFLOW_SOURCE_STATES = Object.freeze({
+  APPROVED: 'approved',
+});
+
+const WORKFLOW_TRANSLATION_STATES = Object.freeze({
+  IN_TRANSLATION: 'in_translation',
+  CHANGES_REQUESTED: 'changes_requested',
+});
+const WORKFLOW_TRANSLATION_CONTRIBUTOR_ROLES = Object.freeze(['translator', 'writer']);
+
+const normalizeSlug = (value = '', fallback = 'translation') => {
+  const normalized = slugify(String(value || ''), {
+    lower: true,
+    strict: true,
+    trim: true,
+  });
+  return normalized || fallback;
+};
+
+const normalizeLanguage = (value = '') => String(value || '').trim().toLowerCase();
+
+const buildUniqueSlug = async ({
+  Model,
+  language,
+  baseValue,
+  fallbackBase = 'translation',
+  excludeId = null,
+}) => {
+  const baseSlug = normalizeSlug(baseValue, fallbackBase);
+  let candidate = baseSlug;
+  let counter = 1;
+
+  while (counter <= 500) {
+    const query = { language, slug: candidate };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+    const exists = await Model.exists(query);
+    if (!exists) {
+      return candidate;
+    }
+    counter += 1;
+    candidate = `${baseSlug}-${counter}`;
+  }
+
+  return `${baseSlug}-${Date.now()}`;
+};
+
+const getArticleWorkflow = (article = {}) => {
+  const workflow = article?.workflow || {};
+  return {
+    sourceReviewState: workflow.sourceReviewState || 'draft',
+    translationState: workflow.translationState || 'not_required',
+    assignedTranslator: workflow.assignedTranslator || null,
+  };
+};
+
+const enforceTranslatorWorkflowAccess = (res, article, user) => {
+  if (!WORKFLOW_TRANSLATION_CONTRIBUTOR_ROLES.includes(user?.role)) {
+    return true;
+  }
+
+  const workflow = getArticleWorkflow(article);
+  const assignedTranslatorId =
+    workflow.assignedTranslator?._id?.toString?.() ||
+    workflow.assignedTranslator?.toString?.() ||
+    workflow.assignedTranslator;
+  const currentUserId = user?._id?.toString?.() || user?._id;
+  const articleAuthorId =
+    article?.author?._id?.toString?.() ||
+    article?.author?.toString?.() ||
+    article?.author;
+
+  if (user?.role === 'writer') {
+    const isOwner = Boolean(articleAuthorId && currentUserId && articleAuthorId === currentUserId);
+    const isAssignedWriter = Boolean(assignedTranslatorId && currentUserId && assignedTranslatorId === currentUserId);
+    if (!isOwner && !isAssignedWriter) {
+      forbiddenResponse(res, 'Writers can only translate their own articles');
+      return false;
+    }
+  }
+
+  if (workflow.sourceReviewState !== WORKFLOW_SOURCE_STATES.APPROVED) {
+    badRequestResponse(res, 'Source must be approved before translation work can start');
+    return false;
+  }
+
+  if (![WORKFLOW_TRANSLATION_STATES.IN_TRANSLATION, WORKFLOW_TRANSLATION_STATES.CHANGES_REQUESTED].includes(workflow.translationState)) {
+    badRequestResponse(res, 'This article is not in an active translation stage');
+    return false;
+  }
+
+  if (assignedTranslatorId && currentUserId && assignedTranslatorId !== currentUserId) {
+    forbiddenResponse(res, 'This translation is assigned to another translator');
+    return false;
+  }
+
+  return true;
+};
 
 // ==================== ARTICLE TRANSLATIONS ====================
 
@@ -65,6 +179,10 @@ export const createArticleTranslation = asyncHandler(async (req, res) => {
     metaKeywords,
     isMachineTranslated,
   } = req.body;
+  const normalizedLanguage = normalizeLanguage(language);
+  if (!normalizedLanguage) {
+    return badRequestResponse(res, 'Translation language is required');
+  }
 
   // Check if article exists
   const article = await Article.findById(articleId);
@@ -72,23 +190,28 @@ export const createArticleTranslation = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Article not found', 404);
   }
 
+  if (!enforceTranslatorWorkflowAccess(res, article, req.user)) {
+    return;
+  }
+
   // Check if translation already exists
-  const existing = await ArticleTranslation.getByArticleAndLanguage(articleId, language);
+  const existing = await ArticleTranslation.getByArticleAndLanguage(articleId, normalizedLanguage);
   if (existing) {
     return errorResponse(res, 'Translation already exists for this language', 400);
   }
 
-  // Generate slug if not provided
-  const translationSlug = slug || slugify(title, {
-    lower: true,
-    strict: true,
-    trim: true,
-  }) + '-' + language;
+  // Generate collision-safe slug (prevents duplicate-key errors across same language).
+  const translationSlug = await buildUniqueSlug({
+    Model: ArticleTranslation,
+    language: normalizedLanguage,
+    baseValue: slug || `${title}-${normalizedLanguage}`,
+    fallbackBase: `article-${articleId}-${normalizedLanguage}`,
+  });
 
   // Create translation
   const translation = await ArticleTranslation.create({
     articleId,
-    language,
+    language: normalizedLanguage,
     title,
     slug: translationSlug,
     excerpt: excerpt || '',
@@ -99,11 +222,23 @@ export const createArticleTranslation = asyncHandler(async (req, res) => {
     isMachineTranslated: isMachineTranslated || false,
     translatedBy: req.user._id,
     translationStatus: 'draft',
+    workflow: {
+      translationState: 'draft',
+      timestamps: {
+        submittedAt: null,
+        reviewedAt: null,
+      },
+      reviewedBy: {
+        submittedBy: req.user._id,
+        reviewer: null,
+      },
+      reviewNotes: '',
+    },
   });
 
   // Update article's available languages
-  if (!article.availableLanguages.includes(language)) {
-    article.availableLanguages.push(language);
+  if (!article.availableLanguages.includes(normalizedLanguage)) {
+    article.availableLanguages.push(normalizedLanguage);
     await article.save();
   }
 
@@ -127,16 +262,37 @@ export const updateArticleTranslation = asyncHandler(async (req, res) => {
     translationStatus,
     qualityScore,
   } = req.body;
+  const normalizedLanguage = normalizeLanguage(language);
+  if (!normalizedLanguage) {
+    return badRequestResponse(res, 'Translation language is required');
+  }
 
-  const translation = await ArticleTranslation.getByArticleAndLanguage(articleId, language);
+  const translation = await ArticleTranslation.getByArticleAndLanguage(articleId, normalizedLanguage);
 
   if (!translation) {
     return errorResponse(res, 'Translation not found', 404);
   }
 
+  const article = await Article.findById(articleId);
+  if (!article) {
+    return errorResponse(res, 'Article not found', 404);
+  }
+
+  if (!enforceTranslatorWorkflowAccess(res, article, req.user)) {
+    return;
+  }
+
   // Update fields
   if (title) translation.title = title;
-  if (slug) translation.slug = slug;
+  if (slug) {
+    translation.slug = await buildUniqueSlug({
+      Model: ArticleTranslation,
+      language: normalizedLanguage,
+      baseValue: slug,
+      fallbackBase: `${translation.title || title || normalizedLanguage}-${normalizedLanguage}`,
+      excludeId: translation._id,
+    });
+  }
   if (excerpt !== undefined) translation.excerpt = excerpt;
   if (content) translation.content = content;
   if (metaTitle !== undefined) translation.metaTitle = metaTitle;
@@ -144,6 +300,23 @@ export const updateArticleTranslation = asyncHandler(async (req, res) => {
   if (metaKeywords !== undefined) translation.metaKeywords = metaKeywords;
   if (translationStatus) translation.translationStatus = translationStatus;
   if (qualityScore !== undefined) translation.qualityScore = qualityScore;
+
+  if (translationStatus) {
+    const workflowState = mapTranslationStatusToWorkflowState(translationStatus);
+    if (!translation.workflow) translation.workflow = {};
+    if (!translation.workflow.timestamps) translation.workflow.timestamps = {};
+    if (!translation.workflow.reviewedBy) translation.workflow.reviewedBy = {};
+
+    translation.workflow.translationState = workflowState;
+    if (workflowState === 'submitted' || workflowState === 'approved') {
+      translation.workflow.timestamps.submittedAt =
+        translation.workflow.timestamps.submittedAt || new Date();
+    }
+    if (workflowState === 'approved') {
+      translation.workflow.timestamps.reviewedAt = new Date();
+      translation.workflow.reviewedBy.reviewer = req.user._id;
+    }
+  }
 
   await translation.save();
 
@@ -247,6 +420,10 @@ export const createCategoryTranslation = asyncHandler(async (req, res) => {
     metaTitle,
     metaDescription,
   } = req.body;
+  const normalizedLanguage = normalizeLanguage(language);
+  if (!normalizedLanguage) {
+    return badRequestResponse(res, 'Translation language is required');
+  }
 
   // Check if category exists
   const category = await Category.findById(categoryId);
@@ -255,22 +432,22 @@ export const createCategoryTranslation = asyncHandler(async (req, res) => {
   }
 
   // Check if translation already exists
-  const existing = await CategoryTranslation.getByCategoryAndLanguage(categoryId, language);
+  const existing = await CategoryTranslation.getByCategoryAndLanguage(categoryId, normalizedLanguage);
   if (existing) {
     return errorResponse(res, 'Translation already exists for this language', 400);
   }
 
-  // Generate slug if not provided
-  const translationSlug = slug || slugify(name, {
-    lower: true,
-    strict: true,
-    trim: true,
-  }) + '-' + language;
+  const translationSlug = await buildUniqueSlug({
+    Model: CategoryTranslation,
+    language: normalizedLanguage,
+    baseValue: slug || `${name}-${normalizedLanguage}`,
+    fallbackBase: `category-${categoryId}-${normalizedLanguage}`,
+  });
 
   // Create translation
   const translation = await CategoryTranslation.create({
     categoryId,
-    language,
+    language: normalizedLanguage,
     name,
     slug: translationSlug,
     description: description || '',
@@ -281,8 +458,8 @@ export const createCategoryTranslation = asyncHandler(async (req, res) => {
   });
 
   // Update category's available languages
-  if (!category.availableLanguages.includes(language)) {
-    category.availableLanguages.push(language);
+  if (!category.availableLanguages.includes(normalizedLanguage)) {
+    category.availableLanguages.push(normalizedLanguage);
     await category.save();
   }
 
@@ -303,8 +480,12 @@ export const updateCategoryTranslation = asyncHandler(async (req, res) => {
     metaDescription,
     translationStatus,
   } = req.body;
+  const normalizedLanguage = normalizeLanguage(language);
+  if (!normalizedLanguage) {
+    return badRequestResponse(res, 'Translation language is required');
+  }
 
-  const translation = await CategoryTranslation.getByCategoryAndLanguage(categoryId, language);
+  const translation = await CategoryTranslation.getByCategoryAndLanguage(categoryId, normalizedLanguage);
 
   if (!translation) {
     return errorResponse(res, 'Translation not found', 404);
@@ -312,7 +493,15 @@ export const updateCategoryTranslation = asyncHandler(async (req, res) => {
 
   // Update fields
   if (name) translation.name = name;
-  if (slug) translation.slug = slug;
+  if (slug) {
+    translation.slug = await buildUniqueSlug({
+      Model: CategoryTranslation,
+      language: normalizedLanguage,
+      baseValue: slug,
+      fallbackBase: `${translation.name || name || normalizedLanguage}-${normalizedLanguage}`,
+      excludeId: translation._id,
+    });
+  }
   if (description !== undefined) translation.description = description;
   if (metaTitle !== undefined) translation.metaTitle = metaTitle;
   if (metaDescription !== undefined) translation.metaDescription = metaDescription;

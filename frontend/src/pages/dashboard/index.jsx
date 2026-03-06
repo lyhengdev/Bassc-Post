@@ -2,7 +2,25 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { BarChart3, FileText, Eye, Clock, CheckCircle, PenTool, TrendingUp, Plus, Edit, Trash2, Camera, AlertCircle, ExternalLink, Users, Layers, Activity, RotateCcw } from 'lucide-react';
-import { useDashboardSummary, useAnalyticsViews, useAnalyticsArticles, useAnalyticsAds, useMyArticles, useAdminArticles, usePendingArticles, useDeleteArticle, useApproveArticle, useRejectArticle, useUpdateProfile } from '../../hooks/useApi';
+import {
+  useDashboardSummary,
+  useAnalyticsViews,
+  useAnalyticsArticles,
+  useAnalyticsAds,
+  useMyArticles,
+  useAdminArticles,
+  useDeleteArticle,
+  useUpdateProfile,
+  useEditorWorkflowQueue,
+  useTranslatorWorkflowQueue,
+  useAdminWorkflowQueue,
+  useWorkflowSourceApprove,
+  useWorkflowSourceRequestChanges,
+  useWorkflowTranslationApprove,
+  useWorkflowTranslationRequestChanges,
+  useWorkflowFinalApprove,
+  useWorkflowFinalReject,
+} from '../../hooks/useApi';
 import { usersAPI } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import useLanguage from '../../hooks/useLanguage';
@@ -307,13 +325,25 @@ export function DashboardHome() {
 
   const stats = data?.stats || {};
   const role = user?.role;
-  const recentItems = data?.recentArticles || data?.recentPending || [];
-  const topArticles = data?.topArticles || [];
-  const viewsDaily = viewsAnalytics?.dailyData || [];
-  const publishedOverTime = articlesAnalytics?.publishedOverTime || [];
-  const statusBreakdown = articlesAnalytics?.statusBreakdown || {};
-  const categoryBreakdown = articlesAnalytics?.categoryBreakdown || [];
-  const adsDaily = adsAnalytics?.dailyData || [];
+  const recentItems = useMemo(
+    () => data?.recentArticles || data?.recentPending || [],
+    [data?.recentArticles, data?.recentPending]
+  );
+  const topArticles = useMemo(() => data?.topArticles || [], [data?.topArticles]);
+  const viewsDaily = useMemo(() => viewsAnalytics?.dailyData || [], [viewsAnalytics?.dailyData]);
+  const publishedOverTime = useMemo(
+    () => articlesAnalytics?.publishedOverTime || [],
+    [articlesAnalytics?.publishedOverTime]
+  );
+  const statusBreakdown = useMemo(
+    () => articlesAnalytics?.statusBreakdown || {},
+    [articlesAnalytics?.statusBreakdown]
+  );
+  const categoryBreakdown = useMemo(
+    () => articlesAnalytics?.categoryBreakdown || [],
+    [articlesAnalytics?.categoryBreakdown]
+  );
+  const adsDaily = useMemo(() => adsAnalytics?.dailyData || [], [adsAnalytics?.dailyData]);
 
   let statCards = [];
   if (role === 'admin') {
@@ -680,18 +710,28 @@ export function DashboardHome() {
           <div className="card p-6">
             <h2 className="font-semibold text-dark-900 dark:text-white mb-4">{translateText('Quick Actions')}</h2>
             <div className="space-y-3">
-              <Link to="/dashboard/articles/new" className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors">
-                <Plus className="w-5 h-5" />
-                <span className="font-medium">{translateText('Write New Post')}</span>
-              </Link>
-              <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors">
-                <FileText className="w-5 h-5" />
-                <span className="font-medium">{translateText('View My Posts')}</span>
-              </Link>
-              {(role === 'editor' || role === 'admin') && (
+              {(role === 'writer' || role === 'editor' || role === 'translator' || role === 'admin') && (
+                <Link to="/dashboard/articles/new" className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors">
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">{translateText('Write New Post')}</span>
+                </Link>
+              )}
+              {(role === 'writer' || role === 'editor' || role === 'translator' || role === 'admin') && (
+                <Link to="/dashboard/articles" className="flex items-center gap-3 p-3 rounded-xl bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700 transition-colors">
+                  <FileText className="w-5 h-5" />
+                  <span className="font-medium">{translateText('View My Posts')}</span>
+                </Link>
+              )}
+              {role === 'translator' && (
+                <Link to="/dashboard/pending" className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors">
+                  <Clock className="w-5 h-5" />
+                  <span className="font-medium">{translateText('Open Workflow Queue')}</span>
+                </Link>
+              )}
+              {(role === 'writer' || role === 'editor' || role === 'admin') && (
                 <Link to="/dashboard/pending" className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors">
                   <Clock className="w-5 h-5" />
-                  <span className="font-medium">{translateText('Review Pending Posts')}</span>
+                  <span className="font-medium">{translateText('Workflow Queue')}</span>
                 </Link>
               )}
               {role === 'admin' && (
@@ -718,6 +758,7 @@ export function MyArticlesPage() {
   const { t, translateText } = useLanguage();
   const { user } = useAuthStore();
   const isUserReady = !!user;
+  const canDeleteArticle = user?.role !== 'translator';
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [postTypeFilter, setPostTypeFilter] = useState('');
@@ -885,7 +926,9 @@ export function MyArticlesPage() {
                             <BarChart3 className="w-4 h-4 text-dark-500" />
                           </Link>
                           <button onClick={() => navigate(`/dashboard/articles/${article._id}/edit`)} className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"><Edit className="w-4 h-4 text-dark-500" /></button>
-                          <button onClick={() => setDeleteModal(article._id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                          {canDeleteArticle && (
+                            <button onClick={() => setDeleteModal(article._id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -947,7 +990,9 @@ export function MyArticlesPage() {
                       <BarChart3 className="w-4 h-4 text-dark-500" />
                     </Link>
                     <button onClick={() => navigate(`/dashboard/articles/${article._id}/edit`)} className="p-2 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition-colors"><Edit className="w-4 h-4 text-dark-500" /></button>
-                    <button onClick={() => setDeleteModal(article._id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                    {canDeleteArticle && (
+                      <button onClick={() => setDeleteModal(article._id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -987,129 +1032,382 @@ export function MyArticlesPage() {
       )}
 
       {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={!!deleteModal}
-        onClose={() => setDeleteModal(null)}
-        onConfirm={handleDelete}
-        title={translateText('Delete Post')}
-        message={translateText('Are you sure you want to delete this post? This action cannot be undone.')}
-        confirmText={translateText('Delete')}
-        variant="danger"
-        isLoading={isDeleting}
-        icon={Trash2}
-      />
+      {canDeleteArticle && (
+        <ConfirmModal
+          isOpen={!!deleteModal}
+          onClose={() => setDeleteModal(null)}
+          onConfirm={handleDelete}
+          title={translateText('Delete Post')}
+          message={translateText('Are you sure you want to delete this post? This action cannot be undone.')}
+          confirmText={translateText('Delete')}
+          variant="danger"
+          isLoading={isDeleting}
+          icon={Trash2}
+        />
+      )}
     </>
   );
 }
 
 export function PendingArticlesPage() {
   const { translateText } = useLanguage();
-  const { data, isLoading } = usePendingArticles();
-  const { mutate: approveArticle, isPending: isApproving } = useApproveArticle();
-  const { mutate: rejectArticle, isPending: isRejecting } = useRejectArticle();
-  const [rejectModal, setRejectModal] = useState(null);
-  const [approveModal, setApproveModal] = useState(null);
-  const [rejectReason, setRejectReason] = useState('');
+  const { user } = useAuthStore();
+  const role = user?.role;
+  const isTranslationContributor = role === 'translator' || role === 'writer';
+  const [activeEditorTab, setActiveEditorTab] = useState('source');
+  const [reasonModal, setReasonModal] = useState({
+    isOpen: false,
+    type: '',
+    articleId: '',
+    articleTitle: '',
+    language: '',
+  });
+  const [reasonInput, setReasonInput] = useState('');
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' });
 
-  const handleApprove = () => {
-    if (approveModal) {
-      approveArticle({ id: approveModal, notes: '' }, {
-        onSuccess: () => setApproveModal(null)
-      });
-    }
+  const editorQueueQuery = useEditorWorkflowQueue({}, { enabled: role === 'editor' });
+  const translatorQueueQuery = useTranslatorWorkflowQueue({}, { enabled: isTranslationContributor });
+  const adminQueueQuery = useAdminWorkflowQueue({}, { enabled: role === 'admin' });
+
+  const { mutate: sourceApprove, isPending: isApprovingSource } = useWorkflowSourceApprove();
+  const { mutate: sourceRequestChanges, isPending: isRequestingSourceChanges } = useWorkflowSourceRequestChanges();
+  const { mutate: translationApprove, isPending: isApprovingTranslation } = useWorkflowTranslationApprove();
+  const { mutate: translationRequestChanges, isPending: isRequestingTranslationChanges } = useWorkflowTranslationRequestChanges();
+  const { mutate: finalApprove, isPending: isFinalApproving } = useWorkflowFinalApprove();
+  const { mutate: finalReject, isPending: isFinalRejecting } = useWorkflowFinalReject();
+
+  const editorSourceQueue = editorQueueQuery.data?.data?.sourceReview || [];
+  const editorTranslationQueue = editorQueueQuery.data?.data?.translationReview || [];
+  const translatorAssignedTasks = translatorQueueQuery.data?.data?.assignedTasks || [];
+  const adminFinalQueue = adminQueueQuery.data?.data?.finalReview || [];
+
+  const isLoading =
+    (role === 'editor' && editorQueueQuery.isLoading) ||
+    (isTranslationContributor && translatorQueueQuery.isLoading) ||
+    (role === 'admin' && adminQueueQuery.isLoading);
+
+  const openReasonModal = ({ type, article, language = '' }) => {
+    setReasonInput('');
+    setReasonModal({
+      isOpen: true,
+      type,
+      articleId: article?._id || '',
+      articleTitle: article?.title || '',
+      language,
+    });
   };
 
-  const handleReject = () => {
-    if (!rejectReason.trim()) {
-      setAlertModal({ isOpen: true, message: translateText('Please provide a reason for rejection') });
+  const closeReasonModal = () => {
+    setReasonInput('');
+    setReasonModal({
+      isOpen: false,
+      type: '',
+      articleId: '',
+      articleTitle: '',
+      language: '',
+    });
+  };
+
+  const applyReasonAction = () => {
+    if (!reasonInput.trim()) {
+      setAlertModal({ isOpen: true, message: translateText('Please provide a reason') });
       return;
     }
-    rejectArticle({ id: rejectModal, reason: rejectReason }, {
-      onSuccess: () => {
-        setRejectModal(null);
-        setRejectReason('');
-      }
-    });
+
+    if (reasonModal.type === 'source') {
+      sourceRequestChanges(
+        { id: reasonModal.articleId, reason: reasonInput.trim() },
+        { onSuccess: closeReasonModal }
+      );
+      return;
+    }
+
+    if (reasonModal.type === 'translation') {
+      translationRequestChanges(
+        {
+          id: reasonModal.articleId,
+          language: reasonModal.language || 'zh',
+          reason: reasonInput.trim(),
+        },
+        { onSuccess: closeReasonModal }
+      );
+      return;
+    }
+
+    if (reasonModal.type === 'final') {
+      finalReject(
+        { id: reasonModal.articleId, reason: reasonInput.trim() },
+        { onSuccess: closeReasonModal }
+      );
+    }
   };
 
   if (isLoading) return <ContentLoader />;
 
+  const counts = editorQueueQuery.data?.data?.counts || {};
+
   return (
     <>
-      <Helmet><title>{`${translateText('Pending Posts')} - Bassac Post`}</title></Helmet>
+      <Helmet><title>{`${translateText('Workflow Queue')} - Bassac Post`}</title></Helmet>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">{translateText('Pending Review')}</h1>
-        <p className="text-dark-500">{translateText('Posts awaiting your approval')}</p>
+        <h1 className="text-2xl font-bold text-dark-900 dark:text-white">
+          {role === 'editor' && translateText('Editor Queue')}
+          {isTranslationContributor && translateText('Translation Queue')}
+          {role === 'admin' && translateText('Admin Final Queue')}
+        </h1>
+        <p className="text-dark-500">
+          {role === 'editor' && translateText('Review source submissions and translation submissions')}
+          {isTranslationContributor && translateText('Translation tasks ready for your action')}
+          {role === 'admin' && translateText('Final approval before public publish')}
+        </p>
       </div>
-      {data?.data?.length > 0 ? (
-        <div className="space-y-4">
-              {data.data.map((article) => (
-                <div key={article._id} className="card p-6">
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div className="flex-1 min-w-0 flex gap-4">
-                      <Link
-                        to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}
-                        className="block w-16 h-16 flex-shrink-0"
-                      >
-                        <img
-                          src={buildMediaUrl(article.featuredImage) || `https://picsum.photos/seed/${article.slug}/160/160`}
-                          alt={article.title}
-                          className="w-16 h-16 rounded-lg object-cover"
-                          loading="lazy"
-                        />
-                      </Link>
-                      <div className="min-w-0">
-                        <Link
-                          to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}
-                          className="font-semibold text-dark-900 dark:text-white mb-1 truncate block headline-hover"
-                        >
-                          {article.title}
-                        </Link>
-                        <p className="text-dark-500 text-sm mb-2">
-                          {translateText('By')} {article.author?.fullName || translateText('Unknown')} • {formatRelativeTime(article.createdAt)}
+
+      {role === 'editor' && (
+        <>
+          <div className="mb-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveEditorTab('source')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeEditorTab === 'source'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-dark-100 dark:bg-dark-800 text-dark-700 dark:text-dark-200'
+              }`}
+            >
+              {translateText('Source Review')} ({counts.sourceReview || editorSourceQueue.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveEditorTab('translation')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeEditorTab === 'translation'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-dark-100 dark:bg-dark-800 text-dark-700 dark:text-dark-200'
+              }`}
+            >
+              {translateText('Translation Review')} ({counts.translationReview || editorTranslationQueue.length})
+            </button>
+          </div>
+
+          {activeEditorTab === 'source' && (
+            editorSourceQueue.length > 0 ? (
+              <div className="space-y-4">
+                {editorSourceQueue.map((article) => (
+                  <div key={article._id} className="card p-5">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Link to={`/dashboard/articles/${article._id}/edit`} className="font-semibold text-dark-900 dark:text-white truncate">
+                            {article.title}
+                          </Link>
+                          <StatusBadge status={article.status} />
+                        </div>
+                        <p className="text-xs text-dark-500 mb-2">
+                          {translateText('By')} {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || translateText('Unknown')} • {formatRelativeTime(article.createdAt)}
                         </p>
-                        <p className="text-dark-600 dark:text-dark-400 line-clamp-2">{article.excerpt}</p>
+                        <p className="text-sm text-dark-600 dark:text-dark-300 line-clamp-2">{article.excerpt || '-'}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link to={`/dashboard/articles/${article._id}/edit`}>
+                          <Button variant="secondary" size="sm" leftIcon={<Edit className="w-4 h-4" />}>
+                            {translateText('Open')}
+                          </Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          onClick={() => sourceApprove({ id: article._id, notes: '' })}
+                          isLoading={isApprovingSource}
+                          leftIcon={<CheckCircle className="w-4 h-4" />}
+                        >
+                          {translateText('Approve Source')}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => openReasonModal({ type: 'source', article })}
+                          isLoading={isRequestingSourceChanges}
+                          leftIcon={<RotateCcw className="w-4 h-4" />}
+                        >
+                          {translateText('Request Changes')}
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Link to={article.status === 'published' ? `/article/${article.slug}` : `/preview/${article._id}`}>
-                        <Button variant="secondary" size="sm">{translateText('View')}</Button>
-                      </Link>
-                      <Button variant="secondary" size="sm" onClick={() => setApproveModal(article._id)}>{translateText('Approve')}</Button>
-                      <Button variant="danger" size="sm" onClick={() => setRejectModal(article._id)}>{translateText('Reject')}</Button>
-                    </div>
                   </div>
-                </div>
-              ))}
-        </div>
-      ) : (
-        <EmptyState icon={CheckCircle} title={translateText('All caught up!')} description={translateText('No posts pending review')} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={CheckCircle} title={translateText('All caught up')} description={translateText('No source submissions pending review')} />
+            )
+          )}
+
+          {activeEditorTab === 'translation' && (
+            editorTranslationQueue.length > 0 ? (
+              <div className="space-y-4">
+                {editorTranslationQueue.map((article) => {
+                  const languageOptions = Array.isArray(article.pendingTranslationLanguages) ? article.pendingTranslationLanguages : [];
+                  const selectedLanguage = languageOptions[0] || 'zh';
+                  return (
+                    <div key={article._id} className="card p-5">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Link to={`/dashboard/articles/${article._id}/edit`} className="font-semibold text-dark-900 dark:text-white truncate">
+                              {article.title}
+                            </Link>
+                            <StatusBadge status={article.status} />
+                          </div>
+                          <p className="text-xs text-dark-500 mb-2">
+                            {translateText('By')} {article.author?.fullName || `${article.author?.firstName || ''} ${article.author?.lastName || ''}`.trim() || translateText('Unknown')}
+                            {' • '}
+                            {translateText('Submitted')}: {formatRelativeTime(article.workflow?.timestamps?.translationSubmittedAt || article.updatedAt)}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Link to={`/dashboard/articles/${article._id}/edit`}>
+                            <Button variant="secondary" size="sm" leftIcon={<Edit className="w-4 h-4" />}>
+                              {translateText('Open')}
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            onClick={() => translationApprove({ id: article._id, language: selectedLanguage, notes: '' })}
+                            isLoading={isApprovingTranslation}
+                            leftIcon={<CheckCircle className="w-4 h-4" />}
+                          >
+                            {translateText('Approve Translation')}
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => openReasonModal({ type: 'translation', article, language: selectedLanguage })}
+                            isLoading={isRequestingTranslationChanges}
+                            leftIcon={<RotateCcw className="w-4 h-4" />}
+                          >
+                            {translateText('Request Changes')}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState icon={CheckCircle} title={translateText('All caught up')} description={translateText('No translation submissions pending review')} />
+            )
+          )}
+        </>
       )}
 
-      {/* Approve Confirmation Modal */}
-      <ConfirmModal
-        isOpen={!!approveModal}
-        onClose={() => setApproveModal(null)}
-        onConfirm={handleApprove}
-        title={translateText('Approve Post')}
-        message={translateText('Are you sure you want to approve this post for publication?')}
-        confirmText={translateText('Approve')}
-        variant="primary"
-        isLoading={isApproving}
-        icon={CheckCircle}
-      />
+      {isTranslationContributor && (
+        translatorAssignedTasks.length > 0 ? (
+          <div className="space-y-4">
+            {translatorAssignedTasks.map((article) => (
+              <div key={article._id} className="card p-5">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Link to={`/dashboard/articles/${article._id}/edit`} className="font-semibold text-dark-900 dark:text-white truncate">
+                        {article.title}
+                      </Link>
+                      <StatusBadge status={article.status} />
+                    </div>
+                    <p className="text-xs text-dark-500 mb-2">
+                      {translateText('Ready for translation')} • {formatRelativeTime(article.workflow?.timestamps?.sourceReviewedAt || article.updatedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link to={`/dashboard/articles/${article._id}/edit`}>
+                      <Button variant="secondary" size="sm" leftIcon={<Edit className="w-4 h-4" />}>
+                        {translateText('Open')}
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={CheckCircle} title={translateText('No translation tasks')} description={translateText('You are all caught up for translation tasks')} />
+        )
+      )}
 
-      {/* Reject Modal */}
-      <Modal isOpen={!!rejectModal} onClose={() => { setRejectModal(null); setRejectReason(''); }} title={translateText('Reject Post')}>
-        <Textarea label={translateText('Rejection Reason')} placeholder={translateText('Enter reason for rejection...')} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="mb-4" />
+      {role === 'admin' && (
+        adminFinalQueue.length > 0 ? (
+          <div className="space-y-4">
+            {adminFinalQueue.map((article) => (
+              <div key={article._id} className="card p-5">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Link to={`/dashboard/articles/${article._id}/edit`} className="font-semibold text-dark-900 dark:text-white truncate">
+                        {article.title}
+                      </Link>
+                      <StatusBadge status={article.status} />
+                    </div>
+                    <p className="text-xs text-dark-500 mb-2">
+                      {translateText('Ready for final review')} • {formatRelativeTime(article.workflow?.timestamps?.translationReviewedAt || article.updatedAt)}
+                    </p>
+                    <p className="text-sm text-dark-600 dark:text-dark-300 line-clamp-2">{article.excerpt || '-'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link to={`/dashboard/articles/${article._id}/edit`}>
+                      <Button variant="secondary" size="sm" leftIcon={<Edit className="w-4 h-4" />}>
+                        {translateText('Open')}
+                      </Button>
+                    </Link>
+                    <Button
+                      size="sm"
+                      onClick={() => finalApprove({ id: article._id, notes: '' })}
+                      isLoading={isFinalApproving}
+                      leftIcon={<CheckCircle className="w-4 h-4" />}
+                    >
+                      {translateText('Publish')}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => openReasonModal({ type: 'final', article })}
+                      isLoading={isFinalRejecting}
+                      leftIcon={<RotateCcw className="w-4 h-4" />}
+                    >
+                      {translateText('Reject')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={CheckCircle} title={translateText('No final approvals pending')} description={translateText('No articles are waiting for final admin review')} />
+        )
+      )}
+
+      <Modal
+        isOpen={reasonModal.isOpen}
+        onClose={closeReasonModal}
+        title={translateText('Provide Review Notes')}
+      >
+        <div className="mb-4">
+          <p className="text-sm text-dark-500 mb-2">{reasonModal.articleTitle}</p>
+          <Textarea
+            label={translateText('Reason')}
+            placeholder={translateText('Write clear change requests for the next assignee')}
+            value={reasonInput}
+            onChange={(event) => setReasonInput(event.target.value)}
+          />
+        </div>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => { setRejectModal(null); setRejectReason(''); }}>{translateText('Cancel')}</Button>
-          <Button variant="danger" onClick={handleReject} isLoading={isRejecting}>{translateText('Reject Post')}</Button>
+          <Button variant="secondary" onClick={closeReasonModal}>{translateText('Cancel')}</Button>
+          <Button
+            variant="danger"
+            onClick={applyReasonAction}
+            isLoading={isRequestingSourceChanges || isRequestingTranslationChanges || isFinalRejecting}
+          >
+            {translateText('Submit')}
+          </Button>
         </div>
       </Modal>
 
-      {/* Alert Modal */}
       <AlertModal
         isOpen={alertModal.isOpen}
         onClose={() => setAlertModal({ isOpen: false, message: '' })}
@@ -1360,7 +1658,7 @@ export function ProfilePage() {
       } else {
         toast.error(translateText('Upload failed'));
       }
-    } catch (error) {
+    } catch {
       toast.error(translateText('Upload failed'));
     } finally {
       setIsUploadingAvatar(false);

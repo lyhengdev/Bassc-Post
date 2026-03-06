@@ -1,5 +1,5 @@
-import { BodyAd } from './BodyAd.jsx';
 import { useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
+import { BodyAd } from './BodyAd';
 
 /**
  * AdsRow - reusable row of ads you can drop into any page/section.

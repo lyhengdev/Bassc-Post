@@ -31,19 +31,19 @@ router.get('/articles/:articleId', getArticleTranslations);
 // Get specific article translation
 router.get('/articles/:articleId/:language', getArticleTranslation);
 
-// Create article translation (admin/editor only)
+// Create article translation (admin/editor/translator/writer)
 router.post(
   '/articles/:articleId',
   authenticate,
-  authorize(['admin', 'editor']),
+  authorize(['admin', 'editor', 'translator', 'writer']),
   createArticleTranslation
 );
 
-// Update article translation (admin/editor only)
+// Update article translation (admin/editor/translator/writer)
 router.put(
   '/articles/:articleId/:language',
   authenticate,
-  authorize(['admin', 'editor']),
+  authorize(['admin', 'editor', 'translator', 'writer']),
   updateArticleTranslation
 );
 
@@ -55,11 +55,11 @@ router.delete(
   deleteArticleTranslation
 );
 
-// Publish article translation (admin/editor only)
+// Publish article translation (admin only)
 router.post(
   '/articles/:articleId/:language/publish',
   authenticate,
-  authorize(['admin', 'editor']),
+  authorize(['admin']),
   publishArticleTranslation
 );
 

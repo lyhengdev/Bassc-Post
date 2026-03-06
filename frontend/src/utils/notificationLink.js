@@ -19,6 +19,18 @@ export function resolveNotificationLink(notification) {
     return '/dashboard/pending';
   }
 
+  if (
+    notification.type === 'source_approved' ||
+    notification.type === 'translation_assigned' ||
+    notification.type === 'translation_submitted' ||
+    notification.type === 'admin_review_pending'
+  ) {
+    if (relatedId) {
+      return `/dashboard/articles/${relatedId}/edit`;
+    }
+    return '/dashboard/articles';
+  }
+
   if (link) {
     if (link.startsWith('/dashboard/articles/') && !link.includes('/edit') && !link.includes('/insights')) {
       const maybeId = link.split('/dashboard/articles/')[1];

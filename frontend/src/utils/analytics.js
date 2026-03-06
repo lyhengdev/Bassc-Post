@@ -111,8 +111,6 @@ class AnalyticsTracker {
     }
 
     const timing = window.performance.timing;
-    const navigation = window.performance.navigation;
-
     return {
       pageLoadTime: timing.loadEventEnd - timing.navigationStart,
       domInteractive: timing.domInteractive - timing.navigationStart,

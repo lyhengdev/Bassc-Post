@@ -11,10 +11,12 @@ import { ArticleCard } from '../../components/article/index.jsx';
 import { Button, Badge, ArticleListSkeleton, Input } from '../../components/common/index.jsx';
 import { BodyAd } from '../../components/ads/index.js';
 import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
-import { InlineAdGroup, createAdTracker, getSectionIndexAfterRows } from '../../components/ads/inlineAds.jsx';
+import { InlineAdGroup } from '../../components/ads/inlineAds.jsx';
+import { createAdTracker, getSectionIndexAfterRows } from '../../components/ads/inlineAds.helpers.js';
 import { buildMediaUrl, cn, formatRelativeTime, getCategoryAccent } from '../../utils';
 import { buildFacebookEmbedConfig, normalizeExternalUrl, normalizeFacebookCandidateUrl } from '../../utils/facebookEmbed';
-import { SidebarAdSlot, useRightSidebarStickyTop } from './shared/rightSidebarAds.jsx';
+import { SidebarAdSlot } from './shared/rightSidebarAds.jsx';
+import { useRightSidebarStickyTop } from './shared/useRightSidebarStickyTop.js';
 import useLanguage from '../../hooks/useLanguage';
 
 const REEL_MOTION_PRESETS = {
@@ -1585,6 +1587,11 @@ export function VideosPage() {
             if (video.id === activeVideoId) {
               setActiveDirectVideoPlaying(false);
             }
+          }}
+          onVolumeChange={(event) => {
+            if (video.id !== activeVideoId) return;
+            const node = event.currentTarget;
+            setIsMuted(node.muted);
           }}
           onPlay={() => {
             if (video.id === activeVideoId) {

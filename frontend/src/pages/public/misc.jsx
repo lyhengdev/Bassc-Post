@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Zap, Calendar, Clock, Facebook, Twitter, Linkedin, Search, TrendingUp, Star, Mail, MessageCircle, Send, CheckCircle, Link2, Globe2, ShieldCheck, Target, Users2, PenSquare, Newspaper, MapPin, Phone, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, Zap, Calendar, Clock, Facebook, Twitter, Linkedin, Search, TrendingUp, Star, Mail, MessageCircle, CheckCircle, Link2, Globe2, ShieldCheck, Target, Users2, PenSquare, Newspaper, MapPin, Phone, ArrowUpRight } from 'lucide-react';
 import { useLatestArticles, useArticleById, useSubmitContact, usePublicSettings } from '../../hooks/useApi';
 import { ArticleContent } from '../../components/article/index.jsx';
 import { Button, ArticleDetailSkeleton, Input, Textarea } from '../../components/common/index.jsx';
-import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildMediaUrl, formatDate, cn, formatRelativeTime } from '../../utils';
 import { buildFacebookEmbedConfig, normalizeFacebookUrl } from '../../utils/facebookEmbed';
 import useLanguage from '../../hooks/useLanguage';
@@ -444,7 +443,7 @@ export function PreviewPage() {
       } else {
         setError('No preview data found. Please go back to the editor.');
       }
-    } catch (e) {
+    } catch {
       setError('Failed to load preview data.');
     }
   }, []);

@@ -162,7 +162,18 @@ router.get('/:slug', async (req, res) => {
       : resolveUrl(siteUrl, imagePath);
     const sharePath = String(req.originalUrl || req.url || `/share/${resolvedArticle?.shareSlug || article.slug}`).split('?')[0] || `/share/${resolvedArticle?.shareSlug || article.slug}`;
     const shareUrl = resolveUrl(requestOrigin || siteUrl, sharePath);
-    const articleUrl = resolveUrl(siteUrl, `/article/${article.slug}`);
+    const articlePath = `/article/${article.slug}`;
+    const currentRequestPath = String(req.originalUrl || req.url || '').split('?')[0];
+    const currentRequestUrl = currentRequestPath ? resolveUrl(requestOrigin || siteUrl, currentRequestPath) : '';
+    let articleUrl = resolveUrl(siteUrl, articlePath);
+
+    // Guard against redirect loops when this renderer is mounted on /article as a legacy fallback.
+    if (currentRequestUrl && articleUrl && currentRequestUrl === articleUrl) {
+      const frontendBase = normalizeBaseUrl(configuredFrontendUrl);
+      if (frontendBase && frontendBase !== normalizeBaseUrl(requestOrigin)) {
+        articleUrl = resolveUrl(frontendBase, articlePath);
+      }
+    }
     const authorName = article.author
       ? (article.author.fullName || `${article.author.firstName || ''} ${article.author.lastName || ''}`.trim())
       : '';
@@ -170,7 +181,8 @@ router.get('/:slug', async (req, res) => {
     const modifiedTime = article.updatedAt ? new Date(article.updatedAt).toISOString() : publishedTime;
     const ogLocale = OG_LOCALE_BY_LANGUAGE[normalizeLanguage(article.language)] || 'en_US';
 
-    const disableRedirect = req.query.preview === '1' || isSocialCrawler(req);
+    const disableRedirectByLoop = Boolean(currentRequestUrl && articleUrl && currentRequestUrl === articleUrl);
+    const disableRedirect = req.query.preview === '1' || isSocialCrawler(req) || disableRedirectByLoop;
     const html = `<!doctype html>
 <html lang="en">
   <head>

@@ -156,7 +156,6 @@ export function PublicLayout() {
   const floatingBanner = settings?.floatingBanner;
   const hasTopBanner = floatingBanner?.enabled && floatingBanner?.position === 'top';
   const hasBottomBanner = floatingBanner?.enabled && floatingBanner?.position === 'bottom';
-  const bannerHeight = { small: 48, medium: 64, large: 80 }[floatingBanner?.height || 'medium'];
   const isSettingsBannerActive = settings && (hasTopBanner || hasBottomBanner);
   const searchParams = new URLSearchParams(location.search);
   const pageType = location.pathname === '/'
@@ -202,7 +201,7 @@ export function PublicLayout() {
     } else {
       setIsPopupOpen(false);
     }
-  }, [popupAd?._id, location.pathname]);
+  }, [popupAd, location.pathname]);
 
   return (
     <div className={cn('min-h-screen flex flex-col font-public', isImmersiveVideoRoute && 'bg-black')}>

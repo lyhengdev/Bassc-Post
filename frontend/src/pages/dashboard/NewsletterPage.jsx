@@ -16,7 +16,6 @@ const statusConfig = {
 export function NewsletterPage() {
   const [filter, setFilter] = useState({ status: '', search: '', page: 1 });
   const [selectedSubscriber, setSelectedSubscriber] = useState(null);
-  const [deleteModal, setDeleteModal] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch subscribers
@@ -35,7 +34,6 @@ export function NewsletterPage() {
       queryClient.invalidateQueries({ queryKey: ['newsletter'] });
       toast.success('Subscriber deleted');
       setSelectedSubscriber(null);
-      setDeleteModal(false);
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to delete');
@@ -60,7 +58,7 @@ export function NewsletterPage() {
       link.click();
       link.remove();
       toast.success('Export downloaded');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export');
     }
   };

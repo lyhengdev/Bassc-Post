@@ -17,6 +17,10 @@ const notificationSchema = new mongoose.Schema({
       'article_approved',       // Your article was approved
       'article_rejected',       // Your article was rejected
       'article_submitted',      // New article submitted for review
+      'source_approved',        // Source content approved by editor
+      'translation_assigned',   // Translation task assigned
+      'translation_submitted',  // Translation submitted for review
+      'admin_review_pending',   // Waiting for final admin review
       'comment_received',       // Someone commented on your article
       'comment_reply',          // Someone replied to your comment
       'comment_approved',       // Your comment was approved

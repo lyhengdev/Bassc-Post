@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Calendar, Eye, Facebook, Twitter, Linkedin, ArrowLeft, Mail, MessageCircle, ThumbsUp, Reply, Send, Trash2, CheckCircle, Link2 } from 'lucide-react';
+import { ArrowRight, Calendar, Eye, Facebook, Linkedin, ArrowLeft, Mail, MessageCircle, ThumbsUp, Reply, Send, Trash2, CheckCircle, Link2 } from 'lucide-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLatestArticles, useResolvedArticleBySlug, useRelatedArticles, usePublicSettings, useCreateComment, useLikeComment, useDeleteComment } from '../../hooks/useApi';
 import { useArticleAds, useSelectAds, useTrackAdEvent, useDeviceType } from '../../hooks/useAds';
@@ -9,7 +9,6 @@ import { articlesAPI, commentsAPI } from '../../services/api';
 import { ArticleContent } from '../../components/article/index.jsx';
 import { Button, Avatar, Badge, ArticleDetailSkeleton, Input, Textarea, ConfirmModal } from '../../components/common/index.jsx';
 import { BodyAd } from '../../components/ads/index.js';
-import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { InlineAdGroup } from '../../components/ads/inlineAds.jsx';
 import { buildMediaUrl, formatDate, cn, formatRelativeTime } from '../../utils';
 import { buildFacebookEmbedConfig, normalizeFacebookUrl } from '../../utils/facebookEmbed';
@@ -633,7 +632,7 @@ export function ArticlePage() {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       const textarea = document.createElement('textarea');
       textarea.value = shareUrl;
       textarea.style.position = 'fixed';

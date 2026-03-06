@@ -38,7 +38,17 @@ export const useAuthStore = create(
 
       isWriter: () => {
         const role = get().user?.role;
-        return ['writer', 'editor', 'admin'].includes(role);
+        return ['writer', 'translator', 'editor', 'admin'].includes(role);
+      },
+
+      isTranslator: () => {
+        const role = get().user?.role;
+        return ['writer', 'translator', 'editor', 'admin'].includes(role);
+      },
+
+      isContentStaff: () => {
+        const role = get().user?.role;
+        return ['writer', 'translator', 'editor', 'admin'].includes(role);
       },
 
       isEditor: () => {

@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import aiController from '../controllers/aiController.js';
-import { authenticate, isWriter } from '../middleware/auth.js';
+import { authenticate, isContentStaff } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
-// All AI routes require authentication and writer role
-router.use(authenticate, isWriter, aiLimiter);
+// All AI routes require authentication and content staff role
+router.use(authenticate, isContentStaff, aiLimiter);
 
 router.post('/grammar-check', aiController.grammarCheck);
 router.post('/headline-generator', aiController.generateHeadlines);

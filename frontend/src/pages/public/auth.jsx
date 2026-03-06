@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { useLogin, useRegister, useUpdateProfile } from '../../hooks/useApi';
 import { authAPI, usersAPI, newsletterAPI } from '../../services/api';
 import { Button, Avatar, Input, Textarea, Modal } from '../../components/common/index.jsx';
-import { BetweenSectionsSlot } from '../../components/ads/BetweenSectionsSlot.jsx';
 import { buildApiUrl, buildMediaUrl } from '../../utils';
 import { useAuthStore } from '../../stores/authStore';
 import useLanguage from '../../hooks/useLanguage';
@@ -991,7 +990,7 @@ export function AccountPage() {
       } else {
         toast.error(translateText('Upload failed'));
       }
-    } catch (error) {
+    } catch {
       toast.error(translateText('Upload failed'));
     } finally {
       setIsUploadingAvatar(false);
@@ -1228,7 +1227,7 @@ export function VerifyEmailPage() {
           setStatus('error');
           setMessage(data.message || 'Verification failed. The link may have expired.');
         }
-      } catch (error) {
+      } catch {
         setStatus('error');
         setMessage('An error occurred. Please try again later.');
       }
@@ -1452,7 +1451,7 @@ export function ForgotPasswordPage() {
         setStatus('error');
         setMessage(data.message || 'Something went wrong. Please try again.');
       }
-    } catch (error) {
+    } catch {
       setStatus('error');
       setMessage('An error occurred. Please try again later.');
     } finally {
@@ -1569,7 +1568,7 @@ export function ResetPasswordPage() {
         setStatus('error');
         setMessage(data.message || 'Reset failed. The link may have expired.');
       }
-    } catch (error) {
+    } catch {
       setStatus('error');
       setMessage('An error occurred. Please try again later.');
     } finally {

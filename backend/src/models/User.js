@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'editor', 'writer', 'user'],
+      enum: ['admin', 'editor', 'writer', 'translator', 'user'],
       default: 'user',
     },
     googleId: {

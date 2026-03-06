@@ -2,15 +2,14 @@ import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { 
-  Settings, Globe, Palette, Search, Bell, Shield, Code, 
-  Save, Upload, Eye, EyeOff, Plus, Trash2, GripVertical,
+  Settings, Globe, Palette, Search, Shield, Code, 
+  Save, Plus, Trash2,
   Facebook, Twitter, Instagram, Linkedin, Youtube, Github,
   MessageCircle, Send, Hash, Megaphone, ExternalLink
 } from 'lucide-react';
 import { useSiteSettings, useUpdateSettings, useUpdateBranding, useUpdateSEO, useToggleFeature } from '../../hooks/useApi';
 import { Button, Input, Textarea, ContentLoader } from '../../components/common/index.jsx';
 import { buildMediaUrl } from '../../utils';
-import toast from 'react-hot-toast';
 
 const SOCIAL_PLATFORMS = [
   { id: 'facebook', label: 'Facebook', icon: Facebook },

@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Bell, Check, CheckCheck, Trash2, RefreshCw,
   FileText, MessageCircle, User, AlertCircle, Mail, Megaphone,
-  Settings, Filter
+  Settings
 } from 'lucide-react';
 import { cn, formatRelativeTime } from '../../utils';
 import { resolveNotificationLink } from '../../utils/notificationLink';
@@ -131,7 +131,7 @@ export function NotificationsPage() {
       });
       toast.success('Preferences saved');
       setShowSettings(false);
-    } catch (error) {
+    } catch {
       toast.error('Failed to save preferences');
     }
     setIsSavingPrefs(false);

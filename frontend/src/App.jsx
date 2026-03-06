@@ -5,7 +5,6 @@ import useNotificationStore from './stores/notificationStore';
 import useLanguage from './hooks/useLanguage';
 import { PublicLayout, DashboardLayout } from './components/layout/index.jsx';
 import { 
-  ContentLoader, 
   ErrorBoundary, 
   PageErrorFallback, 
   TopLoadingBar, 
@@ -65,7 +64,7 @@ function getPostLoginPath(user) {
   return '/dashboard';
 }
 
-// Protected Route Component - for writer/editor/admin
+// Protected Route Component - for newsroom roles (writer/editor/translator/admin)
 function ProtectedRoute({ children, roles }) {
   const { isAuthenticated, user } = useAuthStore();
   const location = useLocation();
@@ -141,8 +140,9 @@ function ShareRedirectRoute() {
       return slug;
     }
   })();
+  const encodedSlug = encodeURIComponent(safeSlug);
 
-  return <Navigate to={`/article/${safeSlug}`} replace />;
+  return <Navigate to={`/article/${encodedSlug}`} replace />;
 }
 
 // 404 Page
@@ -272,14 +272,42 @@ export default function App() {
             }
           >
             <Route index element={<DashboardHome />} />
-            <Route path="articles" element={<MyArticlesPage />} />
-            <Route path="articles/new" element={<ArticleEditorPage />} />
-            <Route path="articles/:id/edit" element={<ArticleEditorPage />} />
-            <Route path="articles/:id/insights" element={<ArticleInsightsPage />} />
+            <Route
+              path="articles"
+              element={
+                <ProtectedRoute roles={['writer', 'editor', 'translator', 'admin']}>
+                  <MyArticlesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="articles/new"
+              element={
+                <ProtectedRoute roles={['writer', 'editor', 'translator', 'admin']}>
+                  <ArticleEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="articles/:id/edit"
+              element={
+                <ProtectedRoute roles={['writer', 'editor', 'translator', 'admin']}>
+                  <ArticleEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="articles/:id/insights"
+              element={
+                <ProtectedRoute roles={['writer', 'editor', 'admin']}>
+                  <ArticleInsightsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="pending"
               element={
-                <ProtectedRoute roles={['editor', 'admin']}>
+                <ProtectedRoute roles={['writer', 'editor', 'translator', 'admin']}>
                   <PendingArticlesPage />
                 </ProtectedRoute>
               }
@@ -427,7 +455,7 @@ export default function App() {
           <Route
             path="/preview/:id"
             element={
-              <ProtectedRoute roles={['admin', 'editor', 'writer']}>
+              <ProtectedRoute roles={['admin', 'editor', 'writer', 'translator']}>
                 <PreviewByIdPage />
               </ProtectedRoute>
             }

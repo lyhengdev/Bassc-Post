@@ -252,6 +252,39 @@ export function usePendingArticles(params = {}) {
   });
 }
 
+export function useEditorWorkflowQueue(params = {}, options = {}) {
+  return useQuery({
+    queryKey: ['articles', 'workflow', 'editor-queue', params],
+    queryFn: async () => {
+      const response = await articlesAPI.getEditorWorkflowQueue(params);
+      return response.data;
+    },
+    ...options,
+  });
+}
+
+export function useTranslatorWorkflowQueue(params = {}, options = {}) {
+  return useQuery({
+    queryKey: ['articles', 'workflow', 'translator-queue', params],
+    queryFn: async () => {
+      const response = await articlesAPI.getTranslatorWorkflowQueue(params);
+      return response.data;
+    },
+    ...options,
+  });
+}
+
+export function useAdminWorkflowQueue(params = {}, options = {}) {
+  return useQuery({
+    queryKey: ['articles', 'workflow', 'admin-queue', params],
+    queryFn: async () => {
+      const response = await articlesAPI.getAdminWorkflowQueue(params);
+      return response.data;
+    },
+    ...options,
+  });
+}
+
 export function useCreateArticle() {
   const queryClient = useQueryClient();
 
@@ -307,7 +340,7 @@ export function useApproveArticle() {
     mutationFn: ({ id, notes }) => articlesAPI.approve(id, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
-      toast.success('News approved and published');
+      toast.success('Source approved and moved to translation');
     },
     onError: (error) => {
       const message = error.response?.data?.message || 'Failed to approve article';
@@ -327,6 +360,128 @@ export function useRejectArticle() {
     },
     onError: (error) => {
       const message = error.response?.data?.message || 'Failed to reject article';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowSourceApprove() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, notes = '', translatorId = null }) =>
+      articlesAPI.approveSourceWorkflow(id, { notes, ...(translatorId ? { translatorId } : {}) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Source approved and moved to translation');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to approve source';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowSourceRequestChanges() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, reason }) => articlesAPI.requestSourceChangesWorkflow(id, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Source changes requested');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to request source changes';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowTranslationSubmit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, language }) => articlesAPI.submitTranslationWorkflow(id, { language }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Translation submitted for editor review');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to submit translation';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowTranslationApprove() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, language, notes = '' }) => articlesAPI.approveTranslationWorkflow(id, { language, notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Translation approved and sent to admin final review');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to approve translation';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowTranslationRequestChanges() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, language, reason }) => articlesAPI.requestTranslationChangesWorkflow(id, { language, reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Translation changes requested');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to request translation changes';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowFinalApprove() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, notes = '' }) => articlesAPI.finalApproveWorkflow(id, { notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Article published');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to publish article';
+      toast.error(message);
+    },
+  });
+}
+
+export function useWorkflowFinalReject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, reason }) => articlesAPI.finalRejectWorkflow(id, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'workflow'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      toast.success('Final rejection sent');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to reject in final review';
       toast.error(message);
     },
   });
@@ -758,7 +913,7 @@ export function useToggleFeature() {
   
   return useMutation({
     mutationFn: ({ feature, enabled }) => settingsAPI.toggleFeature(feature, enabled),
-    onSuccess: (_, { feature, enabled }) => {
+    onSuccess: (_, { enabled }) => {
       queryClient.invalidateQueries({ queryKey: ['siteSettings'] });
       toast.success(`Feature ${enabled ? 'enabled' : 'disabled'}`);
     },

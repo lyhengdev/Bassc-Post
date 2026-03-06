@@ -21,7 +21,7 @@ const getAuthToken = () => {
     try {
       const parsed = JSON.parse(state);
       return parsed.state?.accessToken;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -58,6 +58,8 @@ const EditorComponent = forwardRef(({ data, onChange, placeholder }, ref) => {
   const instanceRef = useRef(null);
   const isInitialized = useRef(false);
   const initialData = useRef(data);
+  const onChangeRef = useRef(onChange);
+  const placeholderRef = useRef(placeholder);
 
   useImperativeHandle(ref, () => ({
     save: async () => {
@@ -92,6 +94,11 @@ const EditorComponent = forwardRef(({ data, onChange, placeholder }, ref) => {
     }
   }, [data]);
 
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    placeholderRef.current = placeholder;
+  }, [onChange, placeholder]);
+
   // Do not re-render content after initialization to avoid EditorJS reset loops.
 
   useEffect(() => {
@@ -106,14 +113,14 @@ const EditorComponent = forwardRef(({ data, onChange, placeholder }, ref) => {
       try {
         instanceRef.current = new EditorJS({
           holder: editorRef.current,
-          placeholder: placeholder || 'Start writing your article...',
+          placeholder: placeholderRef.current || 'Start writing your article...',
           minHeight: 300,
           data: initialData.current || { blocks: [] },
           onChange: async () => {
-            if (onChange && instanceRef.current && instanceRef.current.save) {
+            if (onChangeRef.current && instanceRef.current && instanceRef.current.save) {
               try {
                 const content = await instanceRef.current.save();
-                onChange(content);
+                onChangeRef.current(content);
               } catch (error) {
                 console.error('Error in onChange:', error);
               }

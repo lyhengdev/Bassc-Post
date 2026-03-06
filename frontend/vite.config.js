@@ -1,7 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -71,7 +74,7 @@ export default defineConfig({
             // because those paths can become invalid after storage provider changes.
             urlPattern: ({ request, url }) =>
               request.destination === 'image' &&
-              !(url.origin === self.location.origin && url.pathname.startsWith('/uploads/')),
+              !(url.origin === globalThis.location.origin && url.pathname.startsWith('/uploads/')),
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
@@ -87,7 +90,7 @@ export default defineConfig({
           {
             urlPattern: ({ url, request }) =>
               request.method === 'GET' &&
-              url.origin === self.location.origin &&
+              url.origin === globalThis.location.origin &&
               url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
@@ -156,11 +159,14 @@ export default defineConfig({
         target: 'http://localhost:8888',
         changeOrigin: true,
         ws: true,
-        configure: (proxy, options) => {
+        configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
+            void err;
+            void req;
+            void res;
             // Silently ignore proxy errors
           });
-          proxy.on('proxyReqWs', (proxyReq, req, socket) => {
+          proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
             socket.on('error', () => {
               // Silently ignore socket errors
             });
@@ -172,5 +178,10 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    globals: true,
   },
 });

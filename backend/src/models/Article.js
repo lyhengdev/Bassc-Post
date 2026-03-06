@@ -52,6 +52,159 @@ const editorContentSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const workflowTimestampsSchema = new mongoose.Schema(
+    {
+        sourceSubmittedAt: { type: Date, default: null },
+        sourceReviewedAt: { type: Date, default: null },
+        translationSubmittedAt: { type: Date, default: null },
+        translationReviewedAt: { type: Date, default: null },
+        adminReviewedAt: { type: Date, default: null },
+    },
+    { _id: false }
+);
+
+const workflowReviewedBySchema = new mongoose.Schema(
+    {
+        sourceReviewer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        translationReviewer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        adminReviewer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+    },
+    { _id: false }
+);
+
+const workflowStateSnapshotSchema = new mongoose.Schema(
+    {
+        status: {
+            type: String,
+            enum: ['draft', 'pending', 'published', 'rejected', 'archived'],
+            default: 'draft',
+        },
+        sourceReviewState: {
+            type: String,
+            enum: ['draft', 'submitted', 'approved', 'changes_requested'],
+            default: 'draft',
+        },
+        translationState: {
+            type: String,
+            enum: ['not_required', 'in_translation', 'submitted', 'approved', 'changes_requested'],
+            default: 'not_required',
+        },
+        adminApprovalState: {
+            type: String,
+            enum: ['not_ready', 'pending_final_review', 'approved', 'rejected'],
+            default: 'not_ready',
+        },
+    },
+    { _id: false }
+);
+
+const workflowAuditEntrySchema = new mongoose.Schema(
+    {
+        action: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: [120, 'Workflow action cannot exceed 120 characters'],
+        },
+        actor: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        actorRole: {
+            type: String,
+            default: '',
+        },
+        notes: {
+            type: String,
+            default: '',
+        },
+        before: {
+            type: workflowStateSnapshotSchema,
+            default: null,
+        },
+        after: {
+            type: workflowStateSnapshotSchema,
+            default: null,
+        },
+        metadata: {
+            type: mongoose.Schema.Types.Mixed,
+            default: () => ({}),
+        },
+        at: {
+            type: Date,
+            default: Date.now,
+            index: true,
+        },
+    },
+    { _id: false }
+);
+
+const articleWorkflowSchema = new mongoose.Schema(
+    {
+        sourceReviewState: {
+            type: String,
+            enum: ['draft', 'submitted', 'approved', 'changes_requested'],
+            default: 'draft',
+            index: true,
+        },
+        translationState: {
+            type: String,
+            enum: ['not_required', 'in_translation', 'submitted', 'approved', 'changes_requested'],
+            default: 'not_required',
+            index: true,
+        },
+        adminApprovalState: {
+            type: String,
+            enum: ['not_ready', 'pending_final_review', 'approved', 'rejected'],
+            default: 'not_ready',
+            index: true,
+        },
+        assignedTranslator: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        timestamps: {
+            type: workflowTimestampsSchema,
+            default: () => ({}),
+        },
+        reviewedBy: {
+            type: workflowReviewedBySchema,
+            default: () => ({}),
+        },
+        sourceReviewNotes: {
+            type: String,
+            default: '',
+        },
+        translationReviewNotes: {
+            type: String,
+            default: '',
+        },
+        adminReviewNotes: {
+            type: String,
+            default: '',
+        },
+        auditTrail: {
+            type: [workflowAuditEntrySchema],
+            default: [],
+        },
+    },
+    { _id: false }
+);
+
 const articleSchema = new mongoose.Schema(
     {
         // Language support (default/original language)
@@ -204,6 +357,10 @@ const articleSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
+        workflow: {
+            type: articleWorkflowSchema,
+            default: () => ({}),
+        },
         // Version control
         version: {
             type: Number,
@@ -245,6 +402,11 @@ articleSchema.index({ status: 1, viewCount: -1 });
 
 // Pending articles for review (editors)
 articleSchema.index({ status: 1, createdAt: -1 });
+
+// Workflow queues
+articleSchema.index({ 'workflow.sourceReviewState': 1, updatedAt: -1 });
+articleSchema.index({ 'workflow.translationState': 1, 'workflow.assignedTranslator': 1, updatedAt: -1 });
+articleSchema.index({ 'workflow.adminApprovalState': 1, updatedAt: -1 });
 
 // Full-text search with weights
 articleSchema.index(

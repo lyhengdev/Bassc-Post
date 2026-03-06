@@ -214,6 +214,61 @@ class NotificationService {
     }
   }
 
+  async notifySourceApproved(article, authorId) {
+    return this.notify({
+      recipientId: authorId,
+      type: 'source_approved',
+      title: 'Source Approved',
+      message: `Your source article "${article.title}" is approved and moved to translation.`,
+      link: `/dashboard/articles/${article._id}/edit`,
+      relatedArticle: article._id,
+      sendEmail: true,
+    });
+  }
+
+  async notifyTranslationAssigned(article, translatorId, language = 'zh') {
+    return this.notify({
+      recipientId: translatorId,
+      type: 'translation_assigned',
+      title: 'Translation Assigned',
+      message: `"${article.title}" was assigned to you for ${String(language || 'zh').toUpperCase()} translation.`,
+      link: `/dashboard/articles/${article._id}/edit`,
+      relatedArticle: article._id,
+      priority: 'high',
+      sendEmail: true,
+      metadata: { language },
+    });
+  }
+
+  async notifyTranslationSubmitted(article, reviewerIds = [], language = 'zh') {
+    for (const reviewerId of reviewerIds) {
+      await this.notify({
+        recipientId: reviewerId,
+        type: 'translation_submitted',
+        title: 'Translation Submitted',
+        message: `"${article.title}" (${String(language || 'zh').toUpperCase()}) was submitted for translation review.`,
+        link: `/dashboard/articles/${article._id}/edit`,
+        relatedArticle: article._id,
+        metadata: { language },
+      });
+    }
+  }
+
+  async notifyAdminReviewPending(article, adminIds = []) {
+    for (const adminId of adminIds) {
+      await this.notify({
+        recipientId: adminId,
+        type: 'admin_review_pending',
+        title: 'Final Review Required',
+        message: `"${article.title}" is ready for final admin approval.`,
+        link: `/dashboard/articles/${article._id}/edit`,
+        relatedArticle: article._id,
+        priority: 'high',
+        sendEmail: true,
+      });
+    }
+  }
+
   async notifyCommentReceived(article, comment, authorId) {
     const commenterName = comment.author 
       ? `${comment.author.firstName} ${comment.author.lastName}` 

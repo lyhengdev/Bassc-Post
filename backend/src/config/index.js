@@ -2,6 +2,12 @@ import dotenv from 'dotenv';
 
 dotenv.config({quiet : true});
 
+const parseChatIds = (value = '') =>
+  String(value || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+
 // Security: Validate JWT secrets in production
 const isProduction = process.env.NODE_ENV === 'production';
 const jwtSecret = process.env.JWT_SECRET || 'default-secret-change-me';
@@ -67,6 +73,17 @@ const config = {
   // OpenAI
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
+  },
+
+  // Telegram notifications
+  telegram: {
+    enabled: process.env.TELEGRAM_ENABLED === 'true',
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    chatIds: {
+      editor: parseChatIds(process.env.TELEGRAM_EDITOR_CHAT_ID),
+      translator: parseChatIds(process.env.TELEGRAM_TRANSLATOR_CHAT_ID),
+      admin: parseChatIds(process.env.TELEGRAM_ADMIN_CHAT_ID),
+    },
   },
 
   // Azure Translator

@@ -113,7 +113,6 @@ export function ArticleCard({ article, variant = 'default', index = 0, priority 
     slug,
     excerpt,
     featuredImage,
-    category,
     author,
     publishedAt,
     viewCount,
@@ -358,11 +357,12 @@ function Block({ block }) {
     case 'paragraph':
       return <p dangerouslySetInnerHTML={{ __html: linkifyHtml(data.text) }} />;
 
-    case 'header':
+    case 'header': {
       const HeadingTag = `h${data.level}`;
       return <HeadingTag dangerouslySetInnerHTML={{ __html: linkifyHtml(data.text) }} />;
+    }
 
-    case 'list':
+    case 'list': {
       const ListTag = data.style === 'ordered' ? 'ol' : 'ul';
       return (
         <ListTag>
@@ -371,6 +371,7 @@ function Block({ block }) {
           ))}
         </ListTag>
       );
+    }
 
     case 'quote':
       return (

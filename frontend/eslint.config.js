@@ -51,6 +51,7 @@ export default [
       ],
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',
+      'react/jsx-uses-vars': 'error',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },

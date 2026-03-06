@@ -10,6 +10,7 @@
     "seed": "node src/utils/seed.js",
     "seed:videos": "node scripts/insertSampleVideos.js",
     "import:news": "node scripts/importRealNews.js --count=200",
+    "migrate:workflow": "node scripts/migrateWorkflowFields.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

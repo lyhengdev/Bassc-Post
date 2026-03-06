@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {Link, NavLink, useNavigate, useLocation} from 'react-router-dom';
 import {
     Search,
@@ -44,7 +44,7 @@ export default function Header() {
     const showDarkModeToggle = headerSettings.showDarkModeToggle !== false && features.enableDarkMode !== false;
     const showCategoriesNav = headerSettings.showCategories !== false;
     const isSticky = headerSettings.sticky !== false;
-    const canAccessDashboard = isAuthenticated && ['admin', 'editor', 'writer'].includes(user?.role);
+    const canAccessDashboard = isAuthenticated && ['admin', 'editor', 'writer', 'translator'].includes(user?.role);
 
     const normalizeLegacyVideoHref = (value = '/') => {
         const raw = String(value || '/').trim();
@@ -272,10 +272,7 @@ export default function Header() {
         setSearchOpen(true);
     };
 
-    const closeSearchOverlay = () => {
-        if (!searchOpen && !searchOverlayVisible && !searchCloseTimerRef.current) {
-            return;
-        }
+    const closeSearchOverlay = useCallback(() => {
         setSearchOpen(false);
         if (searchCloseTimerRef.current) {
             window.clearTimeout(searchCloseTimerRef.current);
@@ -284,7 +281,7 @@ export default function Header() {
             setSearchOverlayVisible(false);
             searchCloseTimerRef.current = null;
         }, SEARCH_OVERLAY_ANIMATION_MS);
-    };
+    }, []);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -338,11 +335,11 @@ export default function Header() {
 
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [searchOpen, showSearchToggle]);
+    }, [closeSearchOverlay, searchOpen, showSearchToggle]);
 
     useEffect(() => {
         closeSearchOverlay();
-    }, [location.pathname, location.search]);
+    }, [closeSearchOverlay, location.pathname, location.search]);
 
     useEffect(() => {
         return () => {

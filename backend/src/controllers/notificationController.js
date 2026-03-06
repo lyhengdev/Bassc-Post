@@ -153,7 +153,7 @@ export const updatePreferences = asyncHandler(async (req, res) => {
  * POST /api/notifications/announce
  */
 export const sendAnnouncement = asyncHandler(async (req, res) => {
-  const { title, message, targetRoles = ['user', 'writer', 'editor', 'admin'] } = req.body;
+  const { title, message, targetRoles = ['user', 'writer', 'translator', 'editor', 'admin'] } = req.body;
 
   if (!title || !message) {
     return badRequestResponse(res, 'Title and message are required');

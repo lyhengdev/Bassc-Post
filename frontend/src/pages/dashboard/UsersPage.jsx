@@ -76,6 +76,7 @@ export function UsersPage() {
     const config = {
       admin: { variant: 'danger', label: 'Admin' },
       editor: { variant: 'warning', label: 'Editor' },
+      translator: { variant: 'success', label: 'Translator' },
       writer: { variant: 'primary', label: 'Writer' },
       user: { variant: 'neutral', label: 'User' }
     };
@@ -268,6 +269,7 @@ export function UsersPage() {
               >
                 <option value="user">User</option>
                 <option value="writer">Writer</option>
+                <option value="translator">Translator</option>
                 <option value="editor">Editor</option>
                 <option value="admin">Admin</option>
               </select>
